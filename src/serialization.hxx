@@ -1,6 +1,7 @@
 #ifndef C02CDB99_AA83_45B0_83E7_8C8BC254A8A2
 #define C02CDB99_AA83_45B0_83E7_8C8BC254A8A2
 
+#include "userDefinedGameOption.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/fusion/adapted/struct/adapt_struct.hpp>
 #include <boost/fusion/adapted/struct/define_struct.hpp>
@@ -62,7 +63,6 @@ BOOST_FUSION_DEFINE_STRUCT ((shared_class), CreateGameLobbyError, (std::string, 
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), JoinGameLobby, (std::string, name) (std::string, password))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), JoinGameLobbySuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), JoinGameLobbyError, (std::string, name) (std::string, error))
-BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, ) // TODO-TEMPLATE add your game options here
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOptionError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), UserInGameLobby, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), UsersInGameLobby, (std::string, name) (std::vector<shared_class::UserInGameLobby>, users) (size_t, maxUserSize) (shared_class::GameOption, durakGameOption))

@@ -19,14 +19,14 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TARGET_NAME_LIB project_lib)
-add_library(${TARGET_NAME_LIB} OBJECT)
+add_library(${TARGET_NAME_LIB} INTERFACE)
 add_subdirectory(src) 
-target_include_directories(${TARGET_NAME_LIB} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(${TARGET_NAME_LIB} PUBLIC
+target_include_directories(${TARGET_NAME_LIB} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(${TARGET_NAME_LIB} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
-target_link_libraries(${TARGET_NAME_LIB} PUBLIC
+target_link_libraries(${TARGET_NAME_LIB} INTERFACE
 ${PROJECT_WARNINGS}
 ${PROJECT_OPTIONS}
   CONAN_PKG::range-v3
@@ -37,9 +37,11 @@ ${PROJECT_OPTIONS}
   CONAN_PKG::pipes
   CONAN_PKG::corrade
 )
-target_compile_definitions(${TARGET_NAME_LIB} PUBLIC "$<$<CONFIG:DEBUG>:DEBUG>")
-target_compile_definitions(${TARGET_NAME_LIB} PUBLIC _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+target_compile_definitions(${TARGET_NAME_LIB} INTERFACE "$<$<CONFIG:DEBUG>:DEBUG>")
+target_compile_definitions(${TARGET_NAME_LIB} INTERFACE _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 # target_compile_definitions(${TARGET_NAME_LIB} PUBLIC BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+
+
 
 # create executable
 OPTION(BUILD_TESTS "enable tests" OFF)
@@ -50,7 +52,8 @@ ENDIF(BUILD_TESTS)
 set(TARGET_NAME project)
 add_executable(${TARGET_NAME}  
   main.cxx
+  userDefinedGameOption.hxx
 )
 target_link_libraries(${TARGET_NAME} PUBLIC
   ${TARGET_NAME_LIB}
-)
+)               

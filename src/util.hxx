@@ -1,7 +1,7 @@
 #ifndef EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1
 #define EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1
 #include "confu_json/confu_json.hxx"
-#include "server/user.hxx"
+
 template <typename TypeToSend>
 std::string
 objectToStringWithObjectName (TypeToSend const &typeToSend)

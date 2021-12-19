@@ -1,4 +1,5 @@
 #include "src/database/database.hxx"
+#include "src/serialization.hxx"
 #include "src/server/server.hxx"
 #include <Corrade/Utility/Arguments.h>
 #include <boost/bind/bind.hpp>

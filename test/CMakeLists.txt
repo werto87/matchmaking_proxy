@@ -6,7 +6,7 @@ util.hxx
 util.cxx
 rating.cxx
 )
-add_subdirectory(logic)
+
 target_link_libraries(${TEST_TARGET_NAME}
     ${TARGET_NAME_LIB}
     CONAN_PKG::catch2

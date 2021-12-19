@@ -1,7 +1,6 @@
 target_sources(${TARGET_NAME_LIB} PRIVATE 
-${CMAKE_CURRENT_LIST_DIR}/util.hxx
-util.cxx
-serialization.hxx
+    util.hxx
+    serialization.hxx
 )
 
 add_subdirectory(database)

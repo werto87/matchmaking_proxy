@@ -1,8 +1,8 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include "src/serialization.hxx"
-#include "src/util.hxx"
+#include "../serialization.hxx"
+#include "../util.hxx"
 #include "user.hxx"
 #include <algorithm>
 #include <chrono>

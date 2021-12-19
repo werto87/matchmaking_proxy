@@ -1,7 +1,7 @@
 #ifndef BE8478DC_CF98_4643_A3A0_36C1F7C77C87
 #define BE8478DC_CF98_4643_A3A0_36C1F7C77C87
 
-#include "src/database/database.hxx"
+#include "../database/database.hxx"
 #include <boost/numeric/conversion/cast.hpp>
 #include <cstddef>
 #include <pipes/pipes.hpp>

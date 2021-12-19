@@ -1,13 +1,12 @@
 #ifndef E18680A5_3B06_4019_A849_6CDB82D14796
 #define E18680A5_3B06_4019_A849_6CDB82D14796
+#include "../database/database.hxx"
+#include "../pw_hash/passwordHash.hxx"
+#include "../serialization.hxx"
 #include "../server/gameLobby.hxx"
 #include "../server/user.hxx"
+#include "../util.hxx"
 #include "rating.hxx"
-#include "src/database/database.hxx"
-#include "src/pw_hash/passwordHash.hxx"
-#include "src/serialization.hxx"
-#include "src/server/gameLobby.hxx"
-#include "src/util.hxx"
 #include <algorithm>
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/string.hpp>

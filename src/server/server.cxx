@@ -101,6 +101,7 @@ Server::removeUser (std::list<std::shared_ptr<User>>::iterator user)
   user->get ()->ignoreLogin = false;
   user->get ()->ignoreCreateAccount = false;
   user->get ()->msgQueueClient.clear ();
+  user->get ()->connectionToGame->close ("Connection lost");
   users.erase (user);
 }
 

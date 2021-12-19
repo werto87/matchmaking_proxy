@@ -1,6 +1,7 @@
 #include "src/server/user.hxx"
 #include "server.hxx"
 #include "src/logic/game.hxx"
+#include "src/util.hxx"
 #include <iostream>
 #include <memory>
 
@@ -51,6 +52,7 @@ boost::asio::awaitable<void>
 User::writeToGame ()
 {
   std::weak_ptr<Websocket> connection = connectionToGame;
+  co_await connection.lock ()->async_write (buffer (objectToStringWithObjectName (shared_class::StartGame{})), use_awaitable);
   try
     {
       while (not connection.expired ())

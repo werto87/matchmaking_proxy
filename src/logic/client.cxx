@@ -77,17 +77,13 @@ auto const apiTypes = getApiTypes ();
 boost::asio::awaitable<void>
 startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users)
 {
-  // TODO find a way to pass port
   for (auto &user : users)
     {
       user->connectionToGame = std::make_shared<Websocket> (io_context);
       auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-
       co_await user->connectionToGame->next_layer ().async_connect (gameEndpoint, boost::asio::use_awaitable);
       user->connectionToGame->next_layer ().expires_never ();
-      // Set suggested timeout settings for the websocket
       user->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-      // Set a decorator to change the User-Agent of the handshake
       user->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
       co_await user->connectionToGame->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       co_spawn (
@@ -95,9 +91,22 @@ startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, 
       co_spawn (
           io_context, [user] { return user->writeToGame (); }, boost::asio::detached);
     }
-  // TODO maybe add handleMsg from server and handleMSg from user?
-  // TODO make the connection and send things and read things maybe push read message from game server into user msg queue?
-  // TODO we need a extra queue for this or it whould be possible for a user to FAKE server messages
+}
+
+std::set<std::string>
+getBlockedApiFromClientToGame ()
+{
+  auto result = std::set<std::string>{};
+  boost::hana::for_each (shared_class::blacklistClientToServer, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
+  return result;
+}
+
+auto const blockedApiFromClientToGame = getBlockedApiFromClientToGame ();
+
+bool
+allowedToSendToGameFromClient (std::string const &typeToSearch)
+{
+  return not blockedApiFromClientToGame.contains (typeToSearch);
 }
 
 boost::asio::awaitable<void>
@@ -105,16 +114,25 @@ handleMessageClient (std::string const &msg, boost::asio::io_context &io_context
 {
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
+
   if (splitMesssage.size () == 2)
     {
+      auto const &typeToSearch = splitMesssage.at (0);
+      auto const &objectAsString = splitMesssage.at (1);
       if (user->accountName && user->connectionToGame)
         {
-          user->sendMessageToGame (msg);
+          if (allowedToSendToGameFromClient (typeToSearch))
+            {
+              user->sendMessageToGame (msg);
+            }
+          else
+            {
+              user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "You are not allowed to send a message with this type to the game server" }));
+            }
         }
       else
         {
-          auto const &typeToSearch = splitMesssage.at (0);
-          auto const &objectAsString = splitMesssage.at (1);
+
           if (not apiTypes.contains (typeToSearch))
             {
               user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message type is not handled by server api" }));

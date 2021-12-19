@@ -128,4 +128,13 @@ JoinMatchMakingQueue
 }
 // clang-format on
 
+// clang-format off
+namespace shared_class{
+    // TODO-TEMPLATE add new type to handle in server and client here
+static boost::hana::tuple<
+StartGame
+  >  const blacklistClientToServer{};
+}
+// clang-format on
+
 #endif /* C02CDB99_AA83_45B0_83E7_8C8BC254A8A2 */

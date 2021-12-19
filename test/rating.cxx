@@ -1,7 +1,7 @@
-#include "../src/logic/rating.hxx"
-#include "src/database/database.hxx"
-#include "src/server/gameLobby.hxx"
-#include "src/server/user.hxx"
+#include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/server/gameLobby.hxx"
+#include "matchmaking_proxy/server/user.hxx"
 #include "test/util.hxx"
 #include <catch2/catch.hpp>
 #include <chrono>

@@ -20,3 +20,5 @@ target_include_directories(${TEST_TARGET_NAME} PRIVATE
 add_test(NAME ${TEST_TARGET_NAME}
     COMMAND ${TEST_TARGET_NAME} -r junit
 ) 
+
+target_compile_definitions(${TARGET_NAME_LIB} INTERFACE PATH_TO_USER_DEFINED_GAME_OPTION="test/userDefinedGameOption.hxx")

@@ -1,7 +1,7 @@
 #ifndef C02CDB99_AA83_45B0_83E7_8C8BC254A8A2
 #define C02CDB99_AA83_45B0_83E7_8C8BC254A8A2
 
-#include "../test/userDefinedGameOption.hxx"
+#include PATH_TO_USER_DEFINED_GAME_OPTION
 #include <boost/algorithm/string.hpp>
 #include <boost/fusion/adapted/struct/adapt_struct.hpp>
 #include <boost/fusion/adapted/struct/define_struct.hpp>

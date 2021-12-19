@@ -4,10 +4,8 @@
 #include <boost/fusion/adapted/struct/define_struct.hpp>
 #include <optional>
 #include <string>
-/*
- * These values are automatically set according to their cmake variables.
- */
-BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, )
+
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, ) // TODO-TEMPLATE add game options
 
 std::optional<std::string> inline errorInGameOption (shared_class::GameOption const &)
 {

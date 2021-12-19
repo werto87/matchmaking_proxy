@@ -4,7 +4,7 @@ certify/0.0.1@werto87/stable
 boost/1.77.0
 confu_soci/0.2.0@werto87/stable
 libsodium/1.0.18
-confu_json/0.0.7@werto87/stable
+confu_json/0.0.8@werto87/stable
 magic_enum/0.7.2 
 catch2/2.13.7
 pipes/1.0.0

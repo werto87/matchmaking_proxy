@@ -5,6 +5,7 @@ constant.hxx
 util.hxx
 util.cxx
 rating.cxx
+userDefinedGameOption.hxx
 )
 
 target_link_libraries(${TEST_TARGET_NAME}

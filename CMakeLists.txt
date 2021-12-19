@@ -50,10 +50,4 @@ IF(BUILD_TESTS)
     add_subdirectory(test) 
 ENDIF(BUILD_TESTS)
 set(TARGET_NAME project)
-add_executable(${TARGET_NAME}  
-  main.cxx
-  userDefinedGameOption.hxx
-)
-target_link_libraries(${TARGET_NAME} PUBLIC
-  ${TARGET_NAME_LIB}
-)               
+             

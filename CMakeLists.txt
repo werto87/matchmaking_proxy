@@ -20,7 +20,7 @@ conan_basic_setup(TARGETS)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TARGET_NAME_LIB project_lib)
 add_library(${TARGET_NAME_LIB} INTERFACE)
-add_subdirectory(src) 
+add_subdirectory(matchmaking_proxy) 
 target_include_directories(${TARGET_NAME_LIB} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(${TARGET_NAME_LIB} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

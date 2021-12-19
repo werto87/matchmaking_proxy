@@ -1,6 +1,6 @@
-#include "src/logic/logic.hxx"
+#include "client.hxx"
+#include "rating.hxx"
 #include "src/database/database.hxx"
-#include "src/game/rating.hxx"
 #include "src/pw_hash/passwordHash.hxx"
 #include "src/serialization.hxx"
 #include "src/server/gameLobby.hxx"
@@ -12,6 +12,8 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/this_coro.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/fusion/include/pair.hpp>
 #include <boost/fusion/include/sequence.hpp>
@@ -35,6 +37,7 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <pipes/filter.hpp>
@@ -43,6 +46,7 @@
 #include <pipes/transform.hpp>
 #include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find_if.hpp>
+#include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/all.hpp>
 #include <range/v3/iterator/insert_iterators.hpp>
 #include <range/v3/numeric/accumulate.hpp>
@@ -71,115 +75,146 @@ getApiTypes ()
 auto const apiTypes = getApiTypes ();
 
 boost::asio::awaitable<void>
-handleMessage (std::string const &msg, boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users)
+{
+  // TODO find a way to pass port
+  for (auto &user : users)
+    {
+      user->connectionToGame = std::make_shared<Websocket> (io_context);
+      auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+
+      co_await user->connectionToGame->next_layer ().async_connect (gameEndpoint, boost::asio::use_awaitable);
+      user->connectionToGame->next_layer ().expires_never ();
+      // Set suggested timeout settings for the websocket
+      user->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+      // Set a decorator to change the User-Agent of the handshake
+      user->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+      co_await user->connectionToGame->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+      co_spawn (
+          io_context, [user] { return user->readFromGame (); }, boost::asio::detached);
+      co_spawn (
+          io_context, [user] { return user->writeToGame (); }, boost::asio::detached);
+    }
+  // TODO maybe add handleMsg from server and handleMSg from user?
+  // TODO make the connection and send things and read things maybe push read message from game server into user msg queue?
+  // TODO we need a extra queue for this or it whould be possible for a user to FAKE server messages
+}
+
+boost::asio::awaitable<void>
+handleMessageClient (std::string const &msg, boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
   if (splitMesssage.size () == 2)
     {
-      // TODO-TEMPLATE to add a new type to handle here put it in sharedClasses it is in src/serialization.hxx
-      auto const &typeToSearch = splitMesssage.at (0);
-      auto const &objectAsString = splitMesssage.at (1);
-      if (not apiTypes.contains (typeToSearch))
+      if (user->accountName && user->connectionToGame)
         {
-          user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message type is not handled by server api" }));
+          user->sendMessageToGame (msg);
         }
       else
         {
-          if (typeToSearch == "CreateAccount")
+          auto const &typeToSearch = splitMesssage.at (0);
+          auto const &objectAsString = splitMesssage.at (1);
+          if (not apiTypes.contains (typeToSearch))
             {
-              co_await createAccountAndLogin (objectAsString, io_context, user, pool, gameLobbies, games);
-              user->ignoreCreateAccount = false;
-              user->ignoreLogin = false;
-            }
-          else if (typeToSearch == "LoginAccount")
-            {
-              co_await loginAccount (objectAsString, io_context, users, user, pool, gameLobbies, games);
-              user->ignoreCreateAccount = false;
-              user->ignoreLogin = false;
-            }
-          else if (typeToSearch == "LoginAccountCancel")
-            {
-              loginAccountCancel (user);
-            }
-          else if (typeToSearch == "CreateAccountCancel")
-            {
-              createAccountCancel (user);
-            }
-          else if (typeToSearch == "LoginAsGuest")
-            {
-              loginAsGuest (user);
-            }
-          else if (user->accountName)
-            {
-              if (typeToSearch == "BroadCastMessage")
-                {
-                  broadCastMessage (objectAsString, users, *user);
-                }
-              else if (typeToSearch == "JoinChannel")
-                {
-                  joinChannel (objectAsString, user);
-                }
-              else if (typeToSearch == "LeaveChannel")
-                {
-                  leaveChannel (objectAsString, user);
-                }
-              else if (typeToSearch == "LogoutAccount")
-                {
-                  logoutAccount (user, gameLobbies, games);
-                }
-              else if (typeToSearch == "CreateGameLobby")
-                {
-                  createGameLobby (objectAsString, user, gameLobbies);
-                }
-              else if (typeToSearch == "JoinGameLobby")
-                {
-                  joinGameLobby (objectAsString, user, gameLobbies);
-                }
-              else if (typeToSearch == "SetMaxUserSizeInCreateGameLobby")
-                {
-                  setMaxUserSizeInCreateGameLobby (objectAsString, user, gameLobbies);
-                }
-              else if (typeToSearch == "GameOption")
-                {
-                  setGameOption (objectAsString, user, gameLobbies);
-                }
-              else if (typeToSearch == "LeaveGameLobby")
-                {
-                  leaveGameLobby (user, gameLobbies);
-                }
-              else if (typeToSearch == "RelogTo")
-                {
-                  relogTo (objectAsString, user, gameLobbies, games);
-                }
-              else if (typeToSearch == "CreateGame")
-                {
-                  createGame (user, gameLobbies, io_context);
-                }
-              else if (typeToSearch == "LeaveGame")
-                {
-                  leaveGame (user, games);
-                }
-              else if (typeToSearch == "JoinMatchMakingQueue")
-                {
-                  joinMatchMakingQueue (user, gameLobbies, io_context, (stringToObject<shared_class::JoinMatchMakingQueue> (objectAsString).isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked);
-                }
-              else if (typeToSearch == "WantsToJoinGame")
-                {
-                  wantsToJoinGame (objectAsString, user, gameLobbies, games);
-                }
-              else if (typeToSearch == "LeaveQuickGameQueue")
-                {
-                  leaveMatchMakingQueue (user, gameLobbies);
-                }
-              else if (typeToSearch == "JoinRankedGameQueue")
-                {
-                  joinMatchMakingQueue (user, gameLobbies, io_context, GameLobby::LobbyType::MatchMakingSystemRanked);
-                }
+              user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message type is not handled by server api" }));
             }
           else
             {
-              user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Not logged in but login is needed" }));
+              if (typeToSearch == "CreateAccount")
+                {
+                  co_await createAccountAndLogin (objectAsString, io_context, user, pool, gameLobbies);
+                  user->ignoreCreateAccount = false;
+                  user->ignoreLogin = false;
+                }
+              else if (typeToSearch == "LoginAccount")
+                {
+                  co_await loginAccount (objectAsString, io_context, users, user, pool, gameLobbies);
+                  user->ignoreCreateAccount = false;
+                  user->ignoreLogin = false;
+                }
+              else if (typeToSearch == "LoginAccountCancel")
+                {
+                  loginAccountCancel (user);
+                }
+              else if (typeToSearch == "CreateAccountCancel")
+                {
+                  createAccountCancel (user);
+                }
+              else if (typeToSearch == "LoginAsGuest")
+                {
+                  loginAsGuest (user);
+                }
+              else if (user->accountName)
+                {
+                  if (typeToSearch == "BroadCastMessage")
+                    {
+                      broadCastMessage (objectAsString, users, *user);
+                    }
+                  else if (typeToSearch == "JoinChannel")
+                    {
+                      joinChannel (objectAsString, user);
+                    }
+                  else if (typeToSearch == "LeaveChannel")
+                    {
+                      leaveChannel (objectAsString, user);
+                    }
+                  else if (typeToSearch == "LogoutAccount")
+                    {
+                      logoutAccount (user, gameLobbies);
+                    }
+                  else if (typeToSearch == "CreateGameLobby")
+                    {
+                      createGameLobby (objectAsString, user, gameLobbies);
+                    }
+                  else if (typeToSearch == "JoinGameLobby")
+                    {
+                      joinGameLobby (objectAsString, user, gameLobbies);
+                    }
+                  else if (typeToSearch == "SetMaxUserSizeInCreateGameLobby")
+                    {
+                      setMaxUserSizeInCreateGameLobby (objectAsString, user, gameLobbies);
+                    }
+                  else if (typeToSearch == "GameOption")
+                    {
+                      setGameOption (objectAsString, user, gameLobbies);
+                    }
+                  else if (typeToSearch == "LeaveGameLobby")
+                    {
+                      leaveGameLobby (user, gameLobbies);
+                    }
+                  else if (typeToSearch == "RelogTo")
+                    {
+                      relogTo (objectAsString, user, gameLobbies);
+                    }
+                  else if (typeToSearch == "CreateGame")
+                    {
+                      createGame (user, gameLobbies, io_context);
+                    }
+                  else if (typeToSearch == "JoinMatchMakingQueue")
+                    {
+                      joinMatchMakingQueue (user, gameLobbies, io_context, (stringToObject<shared_class::JoinMatchMakingQueue> (objectAsString).isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked);
+                    }
+                  else if (typeToSearch == "WantsToJoinGame")
+                    {
+                      if (wantsToJoinGame (objectAsString, user, gameLobbies))
+                        {
+                          co_await startGame (io_context, pool, users);
+                        }
+                    }
+                  else if (typeToSearch == "LeaveQuickGameQueue")
+                    {
+                      leaveMatchMakingQueue (user, gameLobbies);
+                    }
+                  else if (typeToSearch == "JoinRankedGameQueue")
+                    {
+                      joinMatchMakingQueue (user, gameLobbies, io_context, GameLobby::LobbyType::MatchMakingSystemRanked);
+                    }
+                }
+              else
+                {
+                  user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Not logged in but login is needed" }));
+                }
             }
         }
     }
@@ -191,11 +226,11 @@ handleMessage (std::string const &msg, boost::asio::io_context &io_context, boos
 }
 
 boost::asio::awaitable<void>
-createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_context, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_context, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
 {
   if (user->accountName)
     {
-      logoutAccount (user, gameLobbies, games);
+      logoutAccount (user, gameLobbies);
     }
   auto createAccountObject = stringToObject<shared_class::CreateAccount> (objectAsString);
   soci::session sql (soci::sqlite3, databaseName);
@@ -230,11 +265,11 @@ createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_c
 }
 
 boost::asio::awaitable<void>
-loginAccount (std::string objectAsString, boost::asio::io_context &io_context, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+loginAccount (std::string objectAsString, boost::asio::io_context &io_context, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
 {
   if (user->accountName)
     {
-      logoutAccount (user, gameLobbies, games);
+      logoutAccount (user, gameLobbies);
     }
   auto loginAccountObject = stringToObject<shared_class::LoginAccount> (objectAsString);
   soci::session sql (soci::sqlite3, databaseName);
@@ -279,17 +314,6 @@ loginAccount (std::string objectAsString, boost::asio::io_context &io_context, s
                         }
                       co_return;
                     }
-                  else if (auto gameWithUser = ranges::find_if (games,
-                                                                [accountName = user->accountName] (auto const &game) {
-                                                                  auto accountNames = std::vector<std::string>{};
-                                                                  ranges::transform (game.users, ranges::back_inserter (accountNames), [] (std::shared_ptr<User> const &user) { return user->accountName.value (); });
-                                                                  return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                                                });
-                           gameWithUser != games.end ())
-                    {
-                      user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantToRelog{ loginAccountObject.accountName, "Back To Game" }));
-                      co_return;
-                    }
                   else
                     {
                       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ loginAccountObject.accountName }));
@@ -327,7 +351,7 @@ broadCastMessage (std::string const &objectAsString, std::list<std::shared_ptr<U
     }
   else
     {
-      sendingUser.msgQueue.push_back (objectToStringWithObjectName (shared_class::BroadCastMessageError{ broadCastMessageObject.channel, "account not logged in" }));
+      sendingUser.msgQueueClient.push_back (objectToStringWithObjectName (shared_class::BroadCastMessageError{ broadCastMessageObject.channel, "account not logged in" }));
       return;
     }
 }
@@ -378,32 +402,6 @@ errorInGameOption (shared_class::GameOption const &)
 {
   // TODO-TEMPLATE check Game option
   return std::nullopt;
-}
-
-void
-startGame (std::list<GameLobby>::iterator &gameLobby, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
-{
-  gameLobby->cancelTimer ();
-  gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::StartGame{}));
-  auto names = std::vector<std::string>{};
-  ranges::transform (gameLobby->_users, ranges::back_inserter (names), [] (auto const &tempUser) { return tempUser->accountName.value (); });
-  games.emplace_back (gameLobby->_users, gameLobby->lobbyAdminType, [accountName = user->accountName, &games] () {
-    if (auto gameWithUser = ranges::find_if (games,
-                                             [accountName] (auto const &game) {
-                                               auto accountNames = std::vector<std::string>{};
-                                               ranges::transform (game.users, ranges::back_inserter (accountNames), [] (auto const &user) { return user->accountName.value (); });
-                                               return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                             });
-        gameWithUser != games.end ())
-      {
-        if (gameWithUser->lobbyType == GameLobby::LobbyType::MatchMakingSystemRanked)
-          {
-            gameWithUser->gameOverChangeRating ();
-          }
-        games.erase (gameWithUser);
-      }
-  });
-  gameLobbies.erase (gameLobby);
 }
 
 void
@@ -670,7 +668,7 @@ leaveGameLobby (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 }
 
 void
-relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto relogToObject = stringToObject<shared_class::RelogTo> (objectAsString);
   if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
@@ -711,23 +709,6 @@ relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::lis
             }
         }
     }
-  else if (auto gameWithUser = ranges::find_if (games,
-                                                [accountName = user->accountName] (auto const &game) {
-                                                  auto accountNames = std::vector<std::string>{};
-                                                  ranges::transform (game.users, ranges::back_inserter (accountNames), [] (std::shared_ptr<User> const &user) { return user->accountName.value (); });
-                                                  return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                                });
-           gameWithUser != games.end ())
-    {
-      if (relogToObject.wantsToRelog)
-        {
-          gameWithUser->relogUser (user);
-        }
-      else
-        {
-          gameWithUser->removeUser (user);
-        }
-    }
   else if (relogToObject.wantsToRelog)
     {
       user->sendMessageToUser (objectToStringWithObjectName (shared_class::RelogToError{ "trying to reconnect into game lobby but game lobby does not exist anymore" }));
@@ -754,19 +735,6 @@ createAccountCancel (std::shared_ptr<User> user)
     }
 }
 
-void
-leaveGame (std::shared_ptr<User> user, std::list<Game> &games)
-{
-  if (auto game = ranges::find_if (games, [accountName = user->accountName.value ()] (Game const &_game) { return ranges::find_if (_game.users, [&accountName] (std::shared_ptr<User> const &user) { return user->accountName.value () == accountName; }) != _game.users.end (); }); game != games.end ())
-    {
-      game->removeUser (user);
-      user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameSuccess{}));
-    }
-  else
-    {
-      user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameError{ "Could not find a game for Account Name: " + user->accountName.value () }));
-    }
-}
 auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating)
@@ -849,8 +817,8 @@ joinMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobb
     }
 }
 
-void
-wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+bool
+wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   if (auto gameLobby = ranges::find_if (gameLobbies,
                                         [accountName = user->accountName] (auto const &gameLobby) {
@@ -866,7 +834,8 @@ wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, 
               gameLobby->readyUsers.push_back (user);
               if (gameLobby->readyUsers.size () == gameLobby->_users.size ())
                 {
-                  startGame (gameLobby, user, gameLobbies, games);
+                  gameLobbies.erase (gameLobby);
+                  return true;
                 }
             }
           else
@@ -892,6 +861,7 @@ wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, 
     {
       user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "No game to join" }));
     }
+  return false;
 }
 
 void
@@ -929,7 +899,7 @@ loginAsGuest (std::shared_ptr<User> user)
 }
 
 void
-removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto const findLobby = [userAccountName = user->accountName] (GameLobby const &gameLobby) {
     auto const &accountNamesToCheck = gameLobby.accountNames ();
@@ -945,24 +915,14 @@ removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &ga
         }
       gameLobbyWithUser = ranges::find_if (gameLobbies, findLobby);
     }
-  auto const findGame = [userAccountName = user->accountName] (Game const &game) {
-    auto const &gameUsers = game.users;
-    return ranges::find_if (gameUsers, [userAccountName] (std::shared_ptr<User> const &user) { return userAccountName == user->accountName; }) != gameUsers.end ();
-  };
-  auto gameWithUser = ranges::find_if (games, findGame);
-  while (gameWithUser != games.end ())
-    {
-      gameWithUser->removeUser (user);
-      gameWithUser = ranges::find_if (games, findGame);
-    }
 }
 
 void
-logoutAccount (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, std::list<Game> &games)
+logoutAccount (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
-  removeUserFromLobbyAndGame (user, gameLobbies, games);
+  removeUserFromLobbyAndGame (user, gameLobbies);
   user->accountName = {};
-  user->msgQueue.clear ();
+  user->msgQueueClient.clear ();
   user->communicationChannels.clear ();
   user->ignoreLogin = false;
   user->ignoreCreateAccount = false;

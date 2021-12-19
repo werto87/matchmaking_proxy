@@ -45,12 +45,10 @@ main (int argc, char *argv[])
       signals.async_wait ([&] (auto, auto) { io_context.stop (); });
       thread_pool pool{ 2 };
       auto server = Server{ io_context, pool };
+      auto const port = boost::lexical_cast<u_int16_t> (args.value ("port"));
+      auto const pathToSecrets = std::filesystem::path{ args.value ("pathToSecrets") };
       co_spawn (
-          io_context,
-          [&server, &args] {
-            return server.listener ({ ip::tcp::v4 (), boost::lexical_cast<u_int16_t> (args.value ("port")) }, args.value ("pathToSecrets"));
-          },
-          detached);
+          io_context, [&server, pathToSecrets, endpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), port }] { return server.listener (endpoint, pathToSecrets); }, detached);
       io_context.run ();
     }
   catch (std::exception &e)

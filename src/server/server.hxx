@@ -2,7 +2,6 @@
 #define AD140436_3FBA_4D63_8C0E_9113B92859E0
 
 #include "../database/database.hxx"
-#include "../game/game.hxx"
 #include "gameLobby.hxx"
 #include "user.hxx"
 #include <boost/asio.hpp>
@@ -34,7 +33,6 @@ private:
   boost::asio::thread_pool &_pool;
   std::list<std::shared_ptr<User>> users{};
   std::list<GameLobby> gameLobbies{};
-  std::list<Game> games{};
 };
 
 #endif /* AD140436_3FBA_4D63_8C0E_9113B92859E0 */

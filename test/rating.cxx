@@ -1,4 +1,4 @@
-#include "src/game/rating.hxx"
+#include "../src/logic/rating.hxx"
 #include "src/database/database.hxx"
 #include "src/server/gameLobby.hxx"
 #include "src/server/user.hxx"

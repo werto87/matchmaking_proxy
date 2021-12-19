@@ -1,4 +1,4 @@
-#include "src/logic/logic.hxx"
+#include "../../src/logic/client.hxx"
 #include "src/serialization.hxx"
 #include <boost/asio/co_spawn.hpp>
 #include <catch2/catch.hpp>

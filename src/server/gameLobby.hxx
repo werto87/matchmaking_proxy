@@ -15,6 +15,10 @@ struct GameLobby
 
   GameLobby () = default;
   GameLobby (std::string name, std::string password) : name{ std::move (name) }, password (std::move (password)) {}
+  ~GameLobby ()
+  {
+    if (_timer) _timer->cancel ();
+  }
 
   enum struct LobbyType
   {

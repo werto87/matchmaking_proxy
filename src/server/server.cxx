@@ -1,5 +1,5 @@
 #include "server.hxx"
-#include "../logic/logic.hxx"
+#include "../logic/client.hxx"
 #include <algorithm>
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
@@ -73,7 +73,7 @@ Server::readFromClient (std::list<std::shared_ptr<User>>::iterator user, SSLWebs
       for (;;)
         {
           auto readResult = co_await my_read (connection);
-          co_await handleMessage (readResult, _io_context, _pool, users, *user, gameLobbies, games);
+          co_await handleMessageClient (readResult, _io_context, _pool, users, *user, gameLobbies);
         }
     }
   catch (std::exception &e)
@@ -95,74 +95,79 @@ Server::removeUser (std::list<std::shared_ptr<User>>::iterator user)
 {
   if (user->get ()->accountName && not isRegistered (user->get ()->accountName.value ()))
     {
-      removeUserFromLobbyAndGame (*user, gameLobbies, games);
+      removeUserFromLobbyAndGame (*user, gameLobbies);
     }
   user->get ()->communicationChannels.clear ();
   user->get ()->ignoreLogin = false;
   user->get ()->ignoreCreateAccount = false;
-  user->get ()->msgQueue.clear ();
+  user->get ()->msgQueueClient.clear ();
   users.erase (user);
 }
 
 awaitable<void>
 Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
 {
-  auto executor = co_await this_coro::executor;
-  tcp_acceptor acceptor (executor, endpoint);
-  net::ssl::context ctx (net::ssl::context::tls_server);
-  ctx.set_verify_mode (ssl::context::verify_peer);
-  ctx.set_default_verify_paths ();
-
   try
     {
-      ctx.use_certificate_chain_file (pathToSecrets / "fullchain.pem");
-    }
-  catch (std::exception &e)
-    {
-      std::cout << "load fullchain: " << pathToSecrets / "fullchain.pem"
-                << " exception : " << e.what () << std::endl;
-    }
-  try
-    {
-      ctx.use_private_key_file (pathToSecrets / "privkey.pem", boost::asio::ssl::context::pem);
-    }
-  catch (std::exception &e)
-    {
-      std::cout << "load privkey: " << pathToSecrets / "privkey.pem"
-                << " exception : " << e.what () << std::endl;
-    }
-  try
-    {
-      ctx.use_tmp_dh_file (pathToSecrets / "dh2048.pem");
-    }
-  catch (std::exception &e)
-    {
-      std::cout << "load dh2048: " << pathToSecrets / "dh2048.pem"
-                << " exception : " << e.what () << std::endl;
-    }
-
-  boost::certify::enable_native_https_server_verification (ctx);
-  ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
-  for (;;)
-    {
+      auto executor = co_await this_coro::executor;
+      tcp_acceptor acceptor (executor, endpoint);
+      net::ssl::context ctx (net::ssl::context::tls_server);
+      ctx.set_verify_mode (ssl::context::verify_peer);
+      ctx.set_default_verify_paths ();
       try
         {
-          auto socket = co_await acceptor.async_accept ();
-          auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ std::move (socket), ctx });
-          users.emplace_back (std::make_shared<User> (User{}));
-          std::list<std::shared_ptr<User>>::iterator user = std::next (users.end (), -1);
-          connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
-          connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
-          co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
-          co_await connection->async_accept (use_awaitable);
-          co_spawn (
-              executor, [connection, this, &user] () mutable { return readFromClient (user, *connection); }, detached);
-          co_spawn (
-              executor, [connectionWeakPointer = std::weak_ptr<SSLWebsocket>{ connection }, &user] () mutable { return user->get ()->writeToClient (connectionWeakPointer); }, detached);
+          ctx.use_certificate_chain_file (pathToSecrets / "fullchain.pem");
         }
       catch (std::exception &e)
         {
-          std::cout << "Server::listener () connect  Exception : " << e.what () << std::endl;
+          std::cout << "load fullchain: " << pathToSecrets / "fullchain.pem"
+                    << " exception : " << e.what () << std::endl;
         }
+      try
+        {
+          ctx.use_private_key_file (pathToSecrets / "privkey.pem", boost::asio::ssl::context::pem);
+        }
+      catch (std::exception &e)
+        {
+          std::cout << "load privkey: " << pathToSecrets / "privkey.pem"
+                    << " exception : " << e.what () << std::endl;
+        }
+      try
+        {
+          ctx.use_tmp_dh_file (pathToSecrets / "dh2048.pem");
+        }
+      catch (std::exception &e)
+        {
+          std::cout << "load dh2048: " << pathToSecrets / "dh2048.pem"
+                    << " exception : " << e.what () << std::endl;
+        }
+      boost::certify::enable_native_https_server_verification (ctx);
+      ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
+      for (;;)
+        {
+          try
+            {
+              auto socket = co_await acceptor.async_accept ();
+              auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ std::move (socket), ctx });
+              users.emplace_back (std::make_shared<User> (User{}));
+              std::list<std::shared_ptr<User>>::iterator user = std::next (users.end (), -1);
+              connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
+              connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
+              co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
+              co_await connection->async_accept (use_awaitable);
+              co_spawn (
+                  executor, [connection, this, &user] () mutable { return readFromClient (user, *connection); }, detached);
+              co_spawn (
+                  executor, [connectionWeakPointer = std::weak_ptr<SSLWebsocket>{ connection }, &user] () mutable { return user->get ()->writeToClient (connectionWeakPointer); }, detached);
+            }
+          catch (std::exception &e)
+            {
+              std::cout << "Server::listener () connect  Exception : " << e.what () << std::endl;
+            }
+        }
+    }
+  catch (std::exception &e)
+    {
+      std::cout << "exception: " << e.what () << std::endl;
     }
 }

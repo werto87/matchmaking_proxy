@@ -1,4 +1,4 @@
-#include "src/game/rating.hxx"
+#include "rating.hxx"
 #include "src/database/database.hxx"
 #include <boost/numeric/conversion/cast.hpp>
 #include <cstddef>

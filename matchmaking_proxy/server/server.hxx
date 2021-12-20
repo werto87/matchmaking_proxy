@@ -113,7 +113,7 @@ public:
     user->get ()->ignoreLogin = false;
     user->get ()->ignoreCreateAccount = false;
     user->get ()->msgQueueClient.clear ();
-    user->get ()->connectionToGame->close ("Connection lost");
+    if (user->get ()->connectionToGame) user->get ()->connectionToGame->close ("Connection lost");
     users.erase (user);
   }
 

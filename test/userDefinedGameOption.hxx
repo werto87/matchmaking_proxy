@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 
-BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, ) // TODO-TEMPLATE add game options
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, (bool, someBool) (std::string, someString)) // TODO-TEMPLATE add game options
 
 std::optional<std::string> inline errorInGameOption (shared_class::GameOption const &)
 {

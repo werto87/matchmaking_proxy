@@ -67,8 +67,7 @@
 #include <variant>
 #include <vector>
 
-void
-removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto const findLobby = [userAccountName = user->accountName] (GameLobby const &gameLobby) {
     auto const &accountNamesToCheck = gameLobby.accountNames ();
@@ -86,8 +85,7 @@ removeUserFromLobbyAndGame (std::shared_ptr<User> user, std::list<GameLobby> &ga
     }
 }
 
-void
-logoutAccount (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline logoutAccount (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   removeUserFromLobbyAndGame (user, gameLobbies);
   user->accountName = {};
@@ -98,8 +96,7 @@ logoutAccount (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
   user->sendMessageToUser (objectToStringWithObjectName (shared_class::LogoutAccountSuccess{}));
 }
 
-std::set<std::string>
-getApiTypes ()
+std::set<std::string> inline getApiTypes ()
 {
   auto result = std::set<std::string>{};
   boost::hana::for_each (shared_class::sharedClasses, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
@@ -108,8 +105,7 @@ getApiTypes ()
 
 auto const apiTypes = getApiTypes ();
 
-boost::asio::awaitable<void>
-startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users)
+boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users)
 {
   for (auto &user : users)
     {
@@ -127,8 +123,7 @@ startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, 
     }
 }
 
-std::set<std::string>
-getBlockedApiFromClientToGame ()
+std::set<std::string> inline getBlockedApiFromClientToGame ()
 {
   auto result = std::set<std::string>{};
   boost::hana::for_each (shared_class::blacklistClientToServer, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
@@ -137,14 +132,9 @@ getBlockedApiFromClientToGame ()
 
 auto const blockedApiFromClientToGame = getBlockedApiFromClientToGame ();
 
-bool
-allowedToSendToGameFromClient (std::string const &typeToSearch)
-{
-  return not blockedApiFromClientToGame.contains (typeToSearch);
-}
+bool inline allowedToSendToGameFromClient (std::string const &typeToSearch) { return not blockedApiFromClientToGame.contains (typeToSearch); }
 
-boost::asio::awaitable<void>
-createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_context, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
+boost::asio::awaitable<void> inline createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_context, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
 {
   if (user->accountName)
     {
@@ -182,8 +172,7 @@ createAccountAndLogin (std::string objectAsString, boost::asio::io_context &io_c
     }
 }
 
-boost::asio::awaitable<void>
-loginAccount (std::string objectAsString, boost::asio::io_context &io_context, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
+boost::asio::awaitable<void> inline loginAccount (std::string objectAsString, boost::asio::io_context &io_context, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, boost::asio::thread_pool &pool, std::list<GameLobby> &gameLobbies)
 {
   if (user->accountName)
     {
@@ -253,8 +242,7 @@ loginAccount (std::string objectAsString, boost::asio::io_context &io_context, s
     }
 }
 
-void
-broadCastMessage (std::string const &objectAsString, std::list<std::shared_ptr<User>> &users, User &sendingUser)
+void inline broadCastMessage (std::string const &objectAsString, std::list<std::shared_ptr<User>> &users, User &sendingUser)
 {
   auto broadCastMessageObject = stringToObject<shared_class::BroadCastMessage> (objectAsString);
   if (sendingUser.accountName)
@@ -274,8 +262,7 @@ broadCastMessage (std::string const &objectAsString, std::list<std::shared_ptr<U
     }
 }
 
-void
-joinChannel (std::string const &objectAsString, std::shared_ptr<User> user)
+void inline joinChannel (std::string const &objectAsString, std::shared_ptr<User> user)
 {
   auto joinChannelObject = stringToObject<shared_class::JoinChannel> (objectAsString);
   if (user->accountName)
@@ -291,8 +278,7 @@ joinChannel (std::string const &objectAsString, std::shared_ptr<User> user)
     }
 }
 
-void
-leaveChannel (std::string const &objectAsString, std::shared_ptr<User> user)
+void inline leaveChannel (std::string const &objectAsString, std::shared_ptr<User> user)
 {
   auto leaveChannelObject = stringToObject<shared_class::LeaveChannel> (objectAsString);
   if (user->accountName)
@@ -315,8 +301,7 @@ leaveChannel (std::string const &objectAsString, std::shared_ptr<User> user)
     }
 }
 
-void
-askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context)
+void inline askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context)
 {
   gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::AskIfUserWantsToJoinGame{}));
   gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies] () {
@@ -342,8 +327,7 @@ askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby, std::list<GameLob
   });
 }
 
-void
-createGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context)
+void inline createGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context)
 {
   if (auto gameLobbyWithUser = ranges::find_if (gameLobbies,
                                                 [accountName = user->accountName] (auto const &gameLobby) {
@@ -388,8 +372,7 @@ createGame (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, boost
     }
 }
 
-void
-createGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline createGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto createGameLobbyObject = stringToObject<shared_class::CreateGameLobby> (objectAsString);
   if (ranges::find_if (gameLobbies, [gameLobbyName = createGameLobbyObject.name, lobbyPassword = createGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName; }) == gameLobbies.end ())
@@ -432,8 +415,7 @@ createGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, 
     }
 }
 
-void
-joinGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline joinGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto joinGameLobbyObject = stringToObject<shared_class::JoinGameLobby> (objectAsString);
   if (auto gameLobby = ranges::find_if (gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != gameLobbies.end ())
@@ -462,8 +444,7 @@ joinGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, st
     }
 }
 
-void
-setMaxUserSizeInCreateGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline setMaxUserSizeInCreateGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto setMaxUserSizeInCreateGameLobbyObject = stringToObject<shared_class::SetMaxUserSizeInCreateGameLobby> (objectAsString);
   auto accountNameToSearch = user->accountName.value ();
@@ -507,8 +488,7 @@ setMaxUserSizeInCreateGameLobby (std::string const &objectAsString, std::shared_
     }
 }
 
-void
-setGameOption (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline setGameOption (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto gameOption = stringToObject<shared_class::GameOption> (objectAsString);
   auto accountNameToSearch = user->accountName.value ();
@@ -545,8 +525,7 @@ setGameOption (std::string const &objectAsString, std::shared_ptr<User> user, st
     }
 }
 
-void
-leaveGameLobby (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline leaveGameLobby (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
                                                    [accountName = user->accountName] (auto const &gameLobby) {
@@ -578,8 +557,7 @@ leaveGameLobby (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
     }
 }
 
-void
-relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   auto relogToObject = stringToObject<shared_class::RelogTo> (objectAsString);
   if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
@@ -628,8 +606,7 @@ relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::lis
   return;
 }
 
-void
-loginAccountCancel (std::shared_ptr<User> user)
+void inline loginAccountCancel (std::shared_ptr<User> user)
 {
   if (not user->accountName)
     {
@@ -637,8 +614,7 @@ loginAccountCancel (std::shared_ptr<User> user)
     }
 }
 
-void
-createAccountCancel (std::shared_ptr<User> user)
+void inline createAccountCancel (std::shared_ptr<User> user)
 {
   if (not user->accountName)
     {
@@ -647,21 +623,15 @@ createAccountCancel (std::shared_ptr<User> user)
 }
 
 auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
-bool
-isInRatingrange (size_t userRating, size_t lobbyAverageRating)
+bool inline isInRatingrange (size_t userRating, size_t lobbyAverageRating)
 {
   auto const difference = userRating > lobbyAverageRating ? userRating - lobbyAverageRating : lobbyAverageRating - userRating;
   return difference < ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING;
 }
 
-bool
-checkRating (size_t userRating, std::vector<std::string> const &accountNames)
-{
-  return isInRatingrange (userRating, averageRating (accountNames));
-}
+bool inline checkRating (size_t userRating, std::vector<std::string> const &accountNames) { return isInRatingrange (userRating, averageRating (accountNames)); }
 
-bool
-matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameLobby::LobbyType const &lobbyType)
+bool inline matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameLobby::LobbyType const &lobbyType)
 {
   if (gameLobby.lobbyAdminType == lobbyType && gameLobby._users.size () < gameLobby.maxUserCount ())
     {
@@ -685,8 +655,7 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
   return false;
 }
 
-void
-joinMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context, GameLobby::LobbyType const &lobbyType)
+void inline joinMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context, GameLobby::LobbyType const &lobbyType)
 {
   if (ranges::find_if (gameLobbies,
                        [accountName = user->accountName] (auto const &gameLobby) {
@@ -728,8 +697,7 @@ joinMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobb
     }
 }
 
-bool
-wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+bool inline wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   if (auto gameLobby = ranges::find_if (gameLobbies,
                                         [accountName = user->accountName] (auto const &gameLobby) {
@@ -775,8 +743,7 @@ wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, 
   return false;
 }
 
-void
-leaveMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+void inline leaveMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   if (auto gameLobby = ranges::find_if (gameLobbies,
                                         [accountName = user->accountName] (auto const &gameLobby) {
@@ -799,8 +766,7 @@ leaveMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLob
     }
 }
 
-void
-loginAsGuest (std::shared_ptr<User> user)
+void inline loginAsGuest (std::shared_ptr<User> user)
 {
   if (not user->accountName)
     {
@@ -809,8 +775,7 @@ loginAsGuest (std::shared_ptr<User> user)
     }
 }
 
-boost::asio::awaitable<void>
-handleMessageClient (std::string const &msg, boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+boost::asio::awaitable<void> inline handleMessageClient (std::string const &msg, boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));

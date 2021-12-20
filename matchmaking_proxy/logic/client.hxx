@@ -757,8 +757,8 @@ boost::asio::awaitable<void> inline wantsToJoinGame (std::string const &objectAs
               gameLobby->readyUsers.push_back (user);
               if (gameLobby->readyUsers.size () == gameLobby->_users.size ())
                 {
-                  gameLobbies.erase (gameLobby);
                   co_await startGame (io_context, *gameLobby);
+                  gameLobbies.erase (gameLobby);
                 }
             }
           else

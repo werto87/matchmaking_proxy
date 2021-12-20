@@ -170,7 +170,7 @@ struct GameLobby
   }
 
   boost::asio::awaitable<void>
-  runTimer (std::shared_ptr<boost::asio::system_timer> timer, bool &waitingForAnswerToStartGame, std::function<void ()> gameOverCallback)
+  runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameOverCallback)
   {
     try
       {
@@ -194,13 +194,13 @@ struct GameLobby
   }
 
   void
-  startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameOverCallback)
+  startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver)
   {
     waitingForAnswerToStartGame = true;
     _timer = std::make_shared<boost::asio::system_timer> (io_context);
     _timer->expires_after (TIME_TO_ACCEPT_THE_INVITE);
     co_spawn (
-        _timer->get_executor (), [&] () { return runTimer (_timer, waitingForAnswerToStartGame, gameOverCallback); }, boost::asio::detached);
+        _timer->get_executor (), [=] () { return runTimer (_timer, gameInviteOver); }, boost::asio::detached);
   }
 
   void

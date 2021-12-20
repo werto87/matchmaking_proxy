@@ -1,6 +1,7 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
+#include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/server/user.hxx"
 #include "test/util.hxx"
 #include <catch2/catch.hpp>

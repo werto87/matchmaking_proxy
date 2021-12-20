@@ -105,7 +105,7 @@ std::set<std::string> inline getApiTypes ()
 
 auto const apiTypes = getApiTypes ();
 
-boost::asio::awaitable<std::string> inline sendStartGameToServer (boost::asio::io_context &io_context)
+boost::asio::awaitable<std::string> inline sendStartGameToServer (boost::asio::io_context &io_context, GameLobby const &gameLobby)
 {
   auto ws = Websocket{ io_context };
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
@@ -114,18 +114,21 @@ boost::asio::awaitable<std::string> inline sendStartGameToServer (boost::asio::i
   ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
   ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
   co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-  co_await ws.async_write (buffer (objectToStringWithObjectName (shared_class::StartGame{})));
+  auto startGame = shared_class::StartGame{};
+  ranges::transform (gameLobby._users, ranges::back_inserter (startGame.players), [] (std::shared_ptr<User> user) { return user->accountName.value (); });
+  startGame.gameOption = gameLobby.gameOption;
+  co_await ws.async_write (buffer (objectToStringWithObjectName (startGame)));
   flat_buffer buffer;
   co_await ws.async_read (buffer, use_awaitable);
   auto msg = buffers_to_string (buffer.data ());
   co_return msg;
 }
 
-boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &gameLobbyUsers)
+boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_context, GameLobby const &gameLobby)
 {
   try
     {
-      auto startServerAnswer = co_await sendStartGameToServer (io_context);
+      auto startServerAnswer = co_await sendStartGameToServer (io_context, gameLobby);
       std::vector<std::string> splitMesssage{};
       boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
       if (splitMesssage.size () == 2)
@@ -133,7 +136,7 @@ boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_conte
           auto const &typeToSearch = splitMesssage.at (0);
           if (typeToSearch == "GameStarted")
             {
-              for (auto &user : gameLobbyUsers)
+              for (auto &user : gameLobby._users)
                 {
                   user->connectionToGame = std::make_shared<Websocket> (io_context);
                   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
@@ -151,7 +154,7 @@ boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_conte
             }
           else if (typeToSearch == "StartGameError")
             {
-              for (auto &user : gameLobbyUsers)
+              for (auto &user : gameLobby._users)
                 {
                   user->sendMessageToUser (startServerAnswer);
                 }
@@ -738,7 +741,7 @@ void inline joinMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobb
     }
 }
 
-bool inline wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
+boost::asio::awaitable<void> inline wantsToJoinGame (std::string const &objectAsString, boost::asio::io_context &io_context, std::list<std::shared_ptr<User>> &users, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 {
   if (auto gameLobby = ranges::find_if (gameLobbies,
                                         [accountName = user->accountName] (auto const &gameLobby) {
@@ -755,7 +758,7 @@ bool inline wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<
               if (gameLobby->readyUsers.size () == gameLobby->_users.size ())
                 {
                   gameLobbies.erase (gameLobby);
-                  return true;
+                  co_await startGame (io_context, *gameLobby);
                 }
             }
           else
@@ -781,7 +784,6 @@ bool inline wantsToJoinGame (std::string const &objectAsString, std::shared_ptr<
     {
       user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "No game to join" }));
     }
-  return false;
 }
 
 void inline leaveMatchMakingQueue (std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
@@ -921,11 +923,7 @@ boost::asio::awaitable<void> inline handleMessageClient (std::string const &msg,
                     }
                   else if (typeToSearch == "WantsToJoinGame")
                     {
-                      if (wantsToJoinGame (objectAsString, user, gameLobbies))
-                        {
-                          // TODO do not user users here user gameLobby->users
-                          co_await startGame (io_context, pool, users);
-                        }
+                      co_await wantsToJoinGame (objectAsString, io_context, users, user, gameLobbies);
                     }
                   else if (typeToSearch == "LeaveQuickGameQueue")
                     {

@@ -26,7 +26,7 @@ using namespace boost::asio;
 
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
-using Websocket = boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>>;
+typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 struct User
 {
 
@@ -74,7 +74,6 @@ struct User
   writeToGame ()
   {
     std::weak_ptr<Websocket> connection = connectionToGame;
-    co_await connection.lock ()->async_write (buffer (objectToStringWithObjectName (shared_class::StartGame{})), use_awaitable);
     try
       {
         while (not connection.expired ())

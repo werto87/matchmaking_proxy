@@ -105,21 +105,62 @@ std::set<std::string> inline getApiTypes ()
 
 auto const apiTypes = getApiTypes ();
 
-boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &users)
+boost::asio::awaitable<std::string> inline sendStartGameToServer (boost::asio::io_context &io_context)
 {
-  for (auto &user : users)
+  auto ws = Websocket{ io_context };
+  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+  co_await ws.next_layer ().async_connect (gameEndpoint);
+  ws.next_layer ().expires_never ();
+  ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+  ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+  co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+  co_await ws.async_write (buffer (objectToStringWithObjectName (shared_class::StartGame{})));
+  flat_buffer buffer;
+  co_await ws.async_read (buffer, use_awaitable);
+  auto msg = buffers_to_string (buffer.data ());
+  co_return msg;
+}
+
+boost::asio::awaitable<void> inline startGame (boost::asio::io_context &io_context, boost::asio::thread_pool &pool, std::list<std::shared_ptr<User>> &gameLobbyUsers)
+{
+  try
     {
-      user->connectionToGame = std::make_shared<Websocket> (io_context);
-      auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-      co_await user->connectionToGame->next_layer ().async_connect (gameEndpoint, boost::asio::use_awaitable);
-      user->connectionToGame->next_layer ().expires_never ();
-      user->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-      user->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-      co_await user->connectionToGame->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-      co_spawn (
-          io_context, [user] { return user->readFromGame (); }, boost::asio::detached);
-      co_spawn (
-          io_context, [user] { return user->writeToGame (); }, boost::asio::detached);
+      auto startServerAnswer = co_await sendStartGameToServer (io_context);
+      std::vector<std::string> splitMesssage{};
+      boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
+      if (splitMesssage.size () == 2)
+        {
+          auto const &typeToSearch = splitMesssage.at (0);
+          if (typeToSearch == "GameStarted")
+            {
+              for (auto &user : gameLobbyUsers)
+                {
+                  user->connectionToGame = std::make_shared<Websocket> (io_context);
+                  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+                  co_await user->connectionToGame->next_layer ().async_connect (gameEndpoint, boost::asio::use_awaitable);
+                  user->connectionToGame->next_layer ().expires_never ();
+                  user->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+                  user->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+                  co_await user->connectionToGame->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+                  co_spawn (
+                      io_context, [user] { return user->readFromGame (); }, boost::asio::detached);
+                  co_spawn (
+                      io_context, [user] { return user->writeToGame (); }, boost::asio::detached);
+                  user->sendMessageToUser (startServerAnswer);
+                }
+            }
+          else if (typeToSearch == "StartGameError")
+            {
+              for (auto &user : gameLobbyUsers)
+                {
+                  user->sendMessageToUser (startServerAnswer);
+                }
+            }
+        }
+    }
+  catch (std::exception &e)
+    {
+      std::cout << "Start Game exception: " << e.what () << std::endl;
     }
 }
 
@@ -882,6 +923,7 @@ boost::asio::awaitable<void> inline handleMessageClient (std::string const &msg,
                     {
                       if (wantsToJoinGame (objectAsString, user, gameLobbies))
                         {
+                          // TODO do not user users here user gameLobby->users
                           co_await startGame (io_context, pool, users);
                         }
                     }

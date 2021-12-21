@@ -70,6 +70,7 @@ BOOST_FUSION_DEFINE_STRUCT ((shared_class), SetMaxUserSizeInCreateGameLobby, (si
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), SetMaxUserSizeInCreateGameLobbyError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), MaxUserSizeInCreateGameLobby, (size_t, maxUserSize))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), LeaveGame, )
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), LeaveGameServer, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), LeaveGameSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), LeaveGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((shared_class), LeaveGameLobby, )

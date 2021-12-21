@@ -831,7 +831,14 @@ boost::asio::awaitable<void> inline handleMessageClient (std::string const &msg,
         {
           if (allowedToSendToGameFromClient (typeToSearch))
             {
-              user->sendMessageToGame (msg);
+              if (typeToSearch == "LeaveGame")
+                {
+                  user->sendMessageToGame (objectToStringWithObjectName (shared_class::LeaveGameServer{ user->accountName.value () }));
+                }
+              else
+                {
+                  user->sendMessageToGame (msg);
+                }
             }
           else
             {
@@ -840,7 +847,6 @@ boost::asio::awaitable<void> inline handleMessageClient (std::string const &msg,
         }
       else
         {
-
           if (not apiTypes.contains (typeToSearch))
             {
               user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message type is not handled by server api" }));

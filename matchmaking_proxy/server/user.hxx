@@ -29,7 +29,7 @@ typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::t
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 struct User
 {
-
+  // TODO think about. Does it make sense to have the write and read things for game here? And only the writeToClient and not the read from client? maybe put everything in server? but what is whit the gameConnection?
   awaitable<void>
   writeToClient (std::weak_ptr<SSLWebsocket> &connection)
   {

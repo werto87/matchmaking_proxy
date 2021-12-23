@@ -102,7 +102,7 @@ struct User
                 auto tmpMsg = std::move (msgQueueGame.front ());
                 std::cout << " msg: " << tmpMsg << std::endl;
                 msgQueueGame.pop_front ();
-                co_await connection.lock ()->async_write (buffer (tmpMsg), use_awaitable);
+                co_await connection.lock ()->async_write (buffer (tmpMsg));
               }
           }
       }
@@ -117,7 +117,7 @@ struct User
   {
     std::cout << "read" << std::endl;
     flat_buffer buffer;
-    co_await ws_.async_read (buffer, use_awaitable);
+    co_await ws_.async_read (buffer);
     auto msg = buffers_to_string (buffer.data ());
     std::cout << "number of letters '" << msg.size () << "' msg: '" << msg << "'" << std::endl;
     co_return msg;

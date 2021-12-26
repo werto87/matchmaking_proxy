@@ -106,9 +106,12 @@ BOOST_FUSION_DEFINE_STRUCT ((shared_class), UnhandledMessageError, (std::string,
 namespace shared_class{
     // TODO-TEMPLATE add new type to handle in server and client here
 static boost::hana::tuple<
-JoinChannel,
 CreateAccount,
 LoginAccount,
+LoginAsGuest,
+CreateAccountCancel,
+LoginAccountCancel,
+JoinChannel,
 BroadCastMessage,
 LeaveChannel,
 LogoutAccount,
@@ -119,12 +122,9 @@ GameOption,
 LeaveGame,
 LeaveGameLobby,
 RelogTo,
-CreateAccountCancel,
-LoginAccountCancel,
 CreateGame,
 WantsToJoinGame,
 LeaveQuickGameQueue,
-LoginAsGuest,
 JoinMatchMakingQueue
   >  const sharedClasses{};
 }

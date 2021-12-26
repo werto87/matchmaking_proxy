@@ -6,6 +6,7 @@ util.hxx
 util.cxx
 rating.cxx
 userDefinedGameOption.hxx
+matchmaking.cxx
 )
 
 target_link_libraries(${TEST_TARGET_NAME}

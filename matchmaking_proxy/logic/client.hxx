@@ -2,7 +2,7 @@
 // #define E18680A5_3B06_4019_A849_6CDB82D14796
 // #include "../database/database.hxx"
 // #include "../pw_hash/passwordHash.hxx"
-// #include "../serialization.hxx"
+// #include "../userMatchmakingSerialization.hxx"
 // #include "../server/gameLobby.hxx"
 // #include "../server/user.hxx"
 // #include "../util.hxx"
@@ -93,13 +93,13 @@
 //   user->communicationChannels.clear ();
 //   user->ignoreLogin = false;
 //   user->ignoreCreateAccount = false;
-//   user->sendMessageToUser (objectToStringWithObjectName (shared_class::LogoutAccountSuccess{}));
+//   user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LogoutAccountSuccess{}));
 // }
 
 // std::set<std::string> inline getApiTypes ()
 // {
 //   auto result = std::set<std::string>{};
-//   boost::hana::for_each (shared_class::sharedClasses, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
+//   boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
 //   return result;
 // }
 
@@ -114,7 +114,7 @@
 //   ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
 //   ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
 //   co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-//   auto startGame = shared_class::StartGame{};
+//   auto startGame = user_matchmaking::StartGame{};
 //   ranges::transform (gameLobby._users, ranges::back_inserter (startGame.players), [] (std::shared_ptr<User> user) { return user->accountName.value (); });
 //   startGame.gameOption = gameLobby.gameOption;
 //   co_await ws.async_write (buffer (objectToStringWithObjectName (startGame)));
@@ -170,7 +170,7 @@
 // std::set<std::string> inline getBlockedApiFromClientToGame ()
 // {
 //   auto result = std::set<std::string>{};
-//   boost::hana::for_each (shared_class::blacklistClientToServer, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
+//   boost::hana::for_each (user_matchmaking::blacklistClientToServer, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
 //   return result;
 // }
 
@@ -184,11 +184,11 @@
 //     {
 //       logoutAccount (user, gameLobbies);
 //     }
-//   auto createAccountObject = stringToObject<shared_class::CreateAccount> (objectAsString);
+//   auto createAccountObject = stringToObject<user_matchmaking::CreateAccount> (objectAsString);
 //   soci::session sql (soci::sqlite3, databaseName);
 //   if (confu_soci::findStruct<database::Account> (sql, "accountName", createAccountObject.accountName))
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "account already created" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountObject.accountName, "account already created" }));
 //       co_return;
 //     }
 //   else
@@ -196,7 +196,7 @@
 //       auto hashedPw = co_await async_hash (pool, io_context, createAccountObject.password, boost::asio::use_awaitable);
 //       if (user->ignoreCreateAccount)
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "Canceled by User Request" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountObject.accountName, "Canceled by User Request" }));
 //           co_return;
 //         }
 //       else
@@ -204,12 +204,12 @@
 //           if (auto account = database::createAccount (createAccountObject.accountName, hashedPw))
 //             {
 //               user->accountName = account->accountName;
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ createAccountObject.accountName }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ createAccountObject.accountName }));
 //               co_return;
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "account already created" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountObject.accountName, "account already created" }));
 //               co_return;
 //             }
 //         }
@@ -222,13 +222,13 @@
 //     {
 //       logoutAccount (user, gameLobbies);
 //     }
-//   auto loginAccountObject = stringToObject<shared_class::LoginAccount> (objectAsString);
+//   auto loginAccountObject = stringToObject<user_matchmaking::LoginAccount> (objectAsString);
 //   soci::session sql (soci::sqlite3, databaseName);
 //   if (auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName))
 //     {
 //       if (std::find_if (users.begin (), users.end (), [accountName = account->accountName] (auto const &u) { return accountName == u->accountName; }) != users.end ())
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
 //           co_return;
 //         }
 //       else
@@ -237,7 +237,7 @@
 //             {
 //               if (user->ignoreLogin)
 //                 {
-//                   user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Canceled by User Request" }));
+//                   user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Canceled by User Request" }));
 //                   co_return;
 //                 }
 //               else
@@ -252,7 +252,7 @@
 //                     {
 //                       if (gameLobbyWithUser->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
 //                         {
-//                           user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantToRelog{ loginAccountObject.accountName, "Create Game Lobby" }));
+//                           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantToRelog{ loginAccountObject.accountName, "Create Game Lobby" }));
 //                         }
 //                       else
 //                         {
@@ -261,99 +261,99 @@
 //                             {
 //                               gameLobbies.erase (gameLobbyWithUser);
 //                             }
-//                           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ loginAccountObject.accountName }));
+//                           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ loginAccountObject.accountName }));
 //                         }
 //                       co_return;
 //                     }
 //                   else
 //                     {
-//                       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ loginAccountObject.accountName }));
+//                       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ loginAccountObject.accountName }));
 //                       co_return;
 //                     }
 //                 }
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
 //               co_return;
 //             }
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Incorrect username or password" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect username or password" }));
 //       co_return;
 //     }
 // }
 
 // void inline broadCastMessage (std::string const &objectAsString, std::list<std::shared_ptr<User>> &users, User &sendingUser)
 // {
-//   auto broadCastMessageObject = stringToObject<shared_class::BroadCastMessage> (objectAsString);
+//   auto broadCastMessageObject = stringToObject<user_matchmaking::BroadCastMessage> (objectAsString);
 //   if (sendingUser.accountName)
 //     {
 //       for (auto &user : users | ranges::views::filter ([channel = broadCastMessageObject.channel, accountName = sendingUser.accountName] (auto const &user) { return user->communicationChannels.find (channel) != user->communicationChannels.end (); }))
 //         {
 //           soci::session sql (soci::sqlite3, databaseName);
-//           auto message = shared_class::Message{ sendingUser.accountName.value (), broadCastMessageObject.channel, broadCastMessageObject.message };
+//           auto message = user_matchmaking::Message{ sendingUser.accountName.value (), broadCastMessageObject.channel, broadCastMessageObject.message };
 //           user->sendMessageToUser (objectToStringWithObjectName (std::move (message)));
 //         }
 //       return;
 //     }
 //   else
 //     {
-//       sendingUser.msgQueueClient.push_back (objectToStringWithObjectName (shared_class::BroadCastMessageError{ broadCastMessageObject.channel, "account not logged in" }));
+//       sendingUser.msgQueueClient.push_back (objectToStringWithObjectName (user_matchmaking::BroadCastMessageError{ broadCastMessageObject.channel, "account not logged in" }));
 //       return;
 //     }
 // }
 
 // void inline joinChannel (std::string const &objectAsString, std::shared_ptr<User> user)
 // {
-//   auto joinChannelObject = stringToObject<shared_class::JoinChannel> (objectAsString);
+//   auto joinChannelObject = stringToObject<user_matchmaking::JoinChannel> (objectAsString);
 //   if (user->accountName)
 //     {
 //       user->communicationChannels.insert (joinChannelObject.channel);
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinChannelSuccess{ joinChannelObject.channel }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinChannelSuccess{ joinChannelObject.channel }));
 //       return;
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinChannelError{ joinChannelObject.channel, { "user not logged in" } }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinChannelError{ joinChannelObject.channel, { "user not logged in" } }));
 //       return;
 //     }
 // }
 
 // void inline leaveChannel (std::string const &objectAsString, std::shared_ptr<User> user)
 // {
-//   auto leaveChannelObject = stringToObject<shared_class::LeaveChannel> (objectAsString);
+//   auto leaveChannelObject = stringToObject<user_matchmaking::LeaveChannel> (objectAsString);
 //   if (user->accountName)
 //     {
 //       if (user->communicationChannels.erase (leaveChannelObject.channel))
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelSuccess{ leaveChannelObject.channel }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveChannelSuccess{ leaveChannelObject.channel }));
 //           return;
 //         }
 //       else
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelError{ leaveChannelObject.channel, { "channel not found" } }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveChannelError{ leaveChannelObject.channel, { "channel not found" } }));
 //           return;
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelError{ leaveChannelObject.channel, { "user not logged in" } }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveChannelError{ leaveChannelObject.channel, { "user not logged in" } }));
 //       return;
 //     }
 // }
 
 // void inline askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby, std::list<GameLobby> &gameLobbies, boost::asio::io_context &io_context)
 // {
-//   gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::AskIfUserWantsToJoinGame{}));
+//   gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}));
 //   gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies] () {
 //     auto notReadyUsers = std::vector<std::shared_ptr<User>>{};
 //     ranges::copy_if (gameLobby->_users, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::shared_ptr<User> const &user) { return ranges::find_if (usersWhichAccepted, [user] (std::shared_ptr<User> const &userWhoAccepted) { return user->accountName.value () == userWhoAccepted->accountName.value (); }) == usersWhichAccepted.end (); });
 //     for (auto const &notReadyUser : notReadyUsers)
 //       {
-//         notReadyUser->sendMessageToUser (objectToStringWithObjectName (shared_class::AskIfUserWantsToJoinGameTimeOut{}));
+//         notReadyUser->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}));
 //         if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
 //           {
 //             gameLobby->removeUser (notReadyUser);
@@ -366,7 +366,7 @@
 //     else
 //       {
 //         gameLobby->readyUsers.clear ();
-//         gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::GameStartCanceled{}));
+//         gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
 //       }
 //   });
 // }
@@ -382,7 +382,7 @@
 //     {
 //       if (gameLobbyWithUser->getWaitingForAnswerToStartGame ())
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
 //         }
 //       else
 //         {
@@ -392,7 +392,7 @@
 //                 {
 //                   if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
 //                     {
-//                       user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ gameOptionError.value () }));
+//                       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ gameOptionError.value () }));
 //                     }
 //                   else
 //                     {
@@ -401,24 +401,24 @@
 //                 }
 //               else
 //                 {
-//                   user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "You need atleast two user to create a game" }));
+//                   user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "You need atleast two user to create a game" }));
 //                 }
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
 //             }
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "Could not find a game lobby for the user" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "Could not find a game lobby for the user" }));
 //     }
 // }
 
 // void inline createGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 // {
-//   auto createGameLobbyObject = stringToObject<shared_class::CreateGameLobby> (objectAsString);
+//   auto createGameLobbyObject = stringToObject<user_matchmaking::CreateGameLobby> (objectAsString);
 //   if (ranges::find_if (gameLobbies, [gameLobbyName = createGameLobbyObject.name, lobbyPassword = createGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName; }) == gameLobbies.end ())
 //     {
 //       if (auto gameLobbyWithUser = ranges::find_if (gameLobbies,
@@ -428,7 +428,7 @@
 //                                                     });
 //           gameLobbyWithUser != gameLobbies.end ())
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameLobbyError{ { "account has already a game lobby with the name: " + gameLobbyWithUser->name.value_or ("Quick Game Lobby") } }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameLobbyError{ { "account has already a game lobby with the name: " + gameLobbyWithUser->name.value_or ("Quick Game Lobby") } }));
 //           return;
 //         }
 //       else
@@ -441,12 +441,12 @@
 //           else
 //             {
 //               auto result = std::vector<std::string>{};
-//               auto usersInGameLobby = shared_class::UsersInGameLobby{};
+//               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
 //               usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
 //               usersInGameLobby.name = newGameLobby.name.value ();
 //               usersInGameLobby.durakGameOption = newGameLobby.gameOption;
-//               ranges::transform (newGameLobby.accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbySuccess{}));
+//               ranges::transform (newGameLobby.accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
 //               user->sendMessageToUser (objectToStringWithObjectName (usersInGameLobby));
 //               return;
 //             }
@@ -454,43 +454,43 @@
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameLobbyError{ { "lobby already exists with name: " + createGameLobbyObject.name } }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameLobbyError{ { "lobby already exists with name: " + createGameLobbyObject.name } }));
 //       return;
 //     }
 // }
 
 // void inline joinGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 // {
-//   auto joinGameLobbyObject = stringToObject<shared_class::JoinGameLobby> (objectAsString);
+//   auto joinGameLobbyObject = stringToObject<user_matchmaking::JoinGameLobby> (objectAsString);
 //   if (auto gameLobby = ranges::find_if (gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != gameLobbies.end ())
 //     {
 //       if (auto error = gameLobby->tryToAddUser (user))
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ joinGameLobbyObject.name, error.value () }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ joinGameLobbyObject.name, error.value () }));
 //           return;
 //         }
 //       else
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbySuccess{}));
-//           auto usersInGameLobby = shared_class::UsersInGameLobby{};
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
+//           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
 //           usersInGameLobby.maxUserSize = gameLobby->maxUserCount ();
 //           usersInGameLobby.name = gameLobby->name.value ();
 //           usersInGameLobby.durakGameOption = gameLobby->gameOption;
-//           ranges::transform (gameLobby->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+//           ranges::transform (gameLobby->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
 //           gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
 //           return;
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ joinGameLobbyObject.name, "wrong password name combination or lobby does not exists" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ joinGameLobbyObject.name, "wrong password name combination or lobby does not exists" }));
 //       return;
 //     }
 // }
 
 // void inline setMaxUserSizeInCreateGameLobby (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 // {
-//   auto setMaxUserSizeInCreateGameLobbyObject = stringToObject<shared_class::SetMaxUserSizeInCreateGameLobby> (objectAsString);
+//   auto setMaxUserSizeInCreateGameLobbyObject = stringToObject<user_matchmaking::SetMaxUserSizeInCreateGameLobby> (objectAsString);
 //   auto accountNameToSearch = user->accountName.value ();
 //   if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
 //                                                    [accountName = user->accountName] (auto const &gameLobby) {
@@ -501,7 +501,7 @@
 //     {
 //       if (gameLobbyWithAccount->getWaitingForAnswerToStartGame ())
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "It is not allowed to change lobby while ask to start a game is running" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "It is not allowed to change lobby while ask to start a game is running" }));
 //         }
 //       else
 //         {
@@ -509,25 +509,25 @@
 //             {
 //               if (auto errorMessage = gameLobbyWithAccount->setMaxUserCount (setMaxUserSizeInCreateGameLobbyObject.maxUserSize))
 //                 {
-//                   user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ errorMessage.value () }));
+//                   user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ errorMessage.value () }));
 //                   return;
 //                 }
 //               else
 //                 {
-//                   gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
+//                   gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
 //                   return;
 //                 }
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "you need to be admin in a game lobby to change the user size" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "you need to be admin in a game lobby to change the user size" }));
 //               return;
 //             }
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "could not find a game lobby for account" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "could not find a game lobby for account" }));
 //       return;
 //     }
 // }
@@ -545,7 +545,7 @@
 //     {
 //       if (gameLobbyWithAccount->getWaitingForAnswerToStartGame ())
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "It is not allowed to change game option while ask to start a game is running" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "It is not allowed to change game option while ask to start a game is running" }));
 //         }
 //       else
 //         {
@@ -557,14 +557,14 @@
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "you need to be admin in the create game lobby to change game option" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "you need to be admin in the create game lobby to change game option" }));
 //               return;
 //             }
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "could not find a game lobby for account" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "could not find a game lobby for account" }));
 //       return;
 //     }
 // }
@@ -585,25 +585,25 @@
 //             {
 //               gameLobbies.erase (gameLobbyWithAccount);
 //             }
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbySuccess{}));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
 //           return;
 //         }
 //       else
 //         {
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" }));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" }));
 //           return;
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" }));
 //       return;
 //     }
 // }
 
 // void inline relogTo (std::string const &objectAsString, std::shared_ptr<User> user, std::list<GameLobby> &gameLobbies)
 // {
-//   auto relogToObject = stringToObject<shared_class::RelogTo> (objectAsString);
+//   auto relogToObject = stringToObject<user_matchmaking::RelogTo> (objectAsString);
 //   if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
 //                                                    [accountName = user->accountName] (auto const &gameLobby) {
 //                                                      auto const &accountNames = gameLobby.accountNames ();
@@ -614,12 +614,12 @@
 //       if (relogToObject.wantsToRelog)
 //         {
 //           gameLobbyWithAccount->relogUser (user);
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::RelogToCreateGameLobbySuccess{}));
-//           auto usersInGameLobby = shared_class::UsersInGameLobby{};
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::RelogToCreateGameLobbySuccess{}));
+//           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
 //           usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
 //           usersInGameLobby.name = gameLobbyWithAccount->name.value ();
 //           usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-//           ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+//           ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
 //           user->sendMessageToUser (objectToStringWithObjectName (usersInGameLobby));
 //           return;
 //         }
@@ -632,11 +632,11 @@
 //             }
 //           else
 //             {
-//               auto usersInGameLobby = shared_class::UsersInGameLobby{};
+//               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
 //               usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
 //               usersInGameLobby.name = gameLobbyWithAccount->name.value ();
 //               usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-//               ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+//               ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
 //               gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
 //               return;
 //             }
@@ -644,7 +644,7 @@
 //     }
 //   else if (relogToObject.wantsToRelog)
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::RelogToError{ "trying to reconnect into game lobby but game lobby does not exist anymore" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::RelogToError{ "trying to reconnect into game lobby but game lobby does not exist anymore" }));
 //       return;
 //     }
 //   return;
@@ -712,11 +712,11 @@
 //         {
 //           if (auto error = gameLobbyToAddUser->tryToAddUser (user))
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ user->accountName.value (), error.value () }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ user->accountName.value (), error.value () }));
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueSuccess{}));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueSuccess{}));
 //               if (gameLobbyToAddUser->_users.size () == gameLobbyToAddUser->maxUserCount ())
 //                 {
 //                   askUsersToJoinGame (gameLobbyToAddUser, gameLobbies, io_context);
@@ -729,15 +729,15 @@
 //           gameLobby.lobbyAdminType = lobbyType;
 //           if (auto error = gameLobby.tryToAddUser (user))
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ user->accountName.value (), error.value () }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ user->accountName.value (), error.value () }));
 //             }
 //           gameLobbies.emplace_back (gameLobby);
-//           user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueSuccess{}));
+//           user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueSuccess{}));
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueError{ "User is allready in gamelobby" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueError{ "User is allready in gamelobby" }));
 //     }
 // }
 
@@ -750,7 +750,7 @@
 //                                         });
 //       gameLobby != gameLobbies.end ())
 //     {
-//       if (stringToObject<shared_class::WantsToJoinGame> (objectAsString).answer)
+//       if (stringToObject<user_matchmaking::WantsToJoinGame> (objectAsString).answer)
 //         {
 //           if (ranges::find_if (gameLobby->readyUsers, [accountName = user->accountName.value ()] (std::shared_ptr<User> _user) { return _user->accountName == accountName; }) == gameLobby->readyUsers.end ())
 //             {
@@ -763,7 +763,7 @@
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "You already accepted to join the game" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantsToJoinGameError{ "You already accepted to join the game" }));
 //             }
 //         }
 //       else
@@ -771,7 +771,7 @@
 //           gameLobby->cancelTimer ();
 //           if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameStartCanceledRemovedFromQueue{}));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
 //               gameLobby->removeUser (user);
 //               if (gameLobby->_users.empty ())
 //                 {
@@ -782,7 +782,7 @@
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "No game to join" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantsToJoinGameError{ "No game to join" }));
 //     }
 // }
 
@@ -795,7 +795,7 @@
 //                                         });
 //       gameLobby != gameLobbies.end ())
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveQuickGameQueueSuccess{}));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
 //       gameLobby->removeUser (user);
 //       gameLobby->cancelTimer ();
 //       if (gameLobby->_users.empty ())
@@ -805,7 +805,7 @@
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveQuickGameQueueError{ "User is not in queue" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueError{ "User is not in queue" }));
 //     }
 // }
 
@@ -814,7 +814,7 @@
 //   if (not user->accountName)
 //     {
 //       user->accountName = to_string (boost::uuids::random_generator () ());
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAsGuestSuccess{ user->accountName.value () }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ user->accountName.value () }));
 //     }
 // }
 
@@ -833,7 +833,7 @@
 //             {
 //               if (typeToSearch == "LeaveGame")
 //                 {
-//                   user->sendMessageToGame (objectToStringWithObjectName (shared_class::LeaveGameServer{ user->accountName.value () }));
+//                   user->sendMessageToGame (objectToStringWithObjectName (user_matchmaking::LeaveGameServer{ user->accountName.value () }));
 //                 }
 //               else
 //                 {
@@ -842,14 +842,14 @@
 //             }
 //           else
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "You are not allowed to send a message with this type to the game server" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::UnhandledMessageError{ msg, "You are not allowed to send a message with this type to the game server" }));
 //             }
 //         }
 //       else
 //         {
 //           if (not apiTypes.contains (typeToSearch))
 //             {
-//               user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message type is not handled by server api" }));
+//               user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::UnhandledMessageError{ msg, "Message type is not handled by server api" }));
 //             }
 //           else
 //             {
@@ -925,7 +925,7 @@
 //                     }
 //                   else if (typeToSearch == "JoinMatchMakingQueue")
 //                     {
-//                       joinMatchMakingQueue (user, gameLobbies, io_context, (stringToObject<shared_class::JoinMatchMakingQueue> (objectAsString).isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked);
+//                       joinMatchMakingQueue (user, gameLobbies, io_context, (stringToObject<user_matchmaking::JoinMatchMakingQueue> (objectAsString).isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked);
 //                     }
 //                   else if (typeToSearch == "WantsToJoinGame")
 //                     {
@@ -942,14 +942,14 @@
 //                 }
 //               else
 //                 {
-//                   user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Not logged in but login is needed" }));
+//                   user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::UnhandledMessageError{ msg, "Not logged in but login is needed" }));
 //                 }
 //             }
 //         }
 //     }
 //   else
 //     {
-//       user->sendMessageToUser (objectToStringWithObjectName (shared_class::UnhandledMessageError{ msg, "Message syntax error. Syntax is: ApiFunctionName|JsonObject" }));
+//       user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::UnhandledMessageError{ msg, "Message syntax error. Syntax is: ApiFunctionName|JsonObject" }));
 //     }
 //   co_return;
 // }

@@ -1,7 +1,6 @@
 #include "matchmaking_proxy/logic/matchmaking.hxx"
-
+#include "../matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/serialization.hxx"
 #include "test/util.hxx"
 #include <catch2/catch.hpp>
 #include <chrono>
@@ -10,7 +9,7 @@
 #include <iterator>
 #include <memory>
 
-using namespace shared_class;
+using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
 {
@@ -28,6 +27,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   SECTION ("CreateAccount", "[matchmaking]")
   {
     loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
+    REQUIRE (loginMachine.is (state<WaitingForPasswordHashed>));
     ioContext.run ();
     REQUIRE (loginMachine.is (state<Loggedin>));
   }
@@ -35,6 +35,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   {
     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
     loginMachine.process_event (LoginAccount{ "oldAcc", "abc" });
+    REQUIRE (loginMachine.is (state<WaitingForPasswordUnHashed>));
     ioContext.run ();
     REQUIRE (loginMachine.is (state<Loggedin>));
   }
@@ -130,7 +131,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   }
   SECTION ("GameOption", "[matchmaking]")
   {
-    loginMachine.process_event (GameOption{ true, "some string" });
+    loginMachine.process_event (shared_class::GameOption{ true, "some string" });
     REQUIRE (loginMachine.is (state<Loggedin>));
   }
   SECTION ("LeaveGameLobby", "[matchmaking]")

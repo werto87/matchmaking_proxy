@@ -1,8 +1,8 @@
 #ifndef F85705C8_6F01_4F50_98CA_5636F5F5E1C1
 #define F85705C8_6F01_4F50_98CA_5636F5F5E1C1
 
+#include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
-#include "matchmaking_proxy/serialization.hxx"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/io_context.hpp>
@@ -29,7 +29,75 @@ typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::t
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 struct User
 {
-  // TODO think about. Does it make sense to have the write and read things for game here? And only the writeToClient and not the read from client? maybe put everything in server? but what is whit the gameConnection?
+
+  awaitable<std::string>
+  my_read (SSLWebsocket &ws_)
+  {
+    std::cout << "read" << std::endl;
+    flat_buffer buffer;
+    co_await ws_.async_read (buffer, use_awaitable);
+    auto msg = buffers_to_string (buffer.data ());
+    std::cout << "number of letters '" << msg.size () << "' msg: '" << msg << "'" << std::endl;
+    co_return msg;
+  }
+
+  // awaitable<void>
+  // readFromClient (std::list<std::shared_ptr<User>>::iterator user, SSLWebsocket &connection)
+  // {
+  //   try
+  //     {
+  //       for (;;)
+  //         {
+  //           auto readResult = co_await my_read (connection);
+  //           co_await handleMessageClient (readResult, _io_context, _pool, users, *user, gameLobbies);
+  //         }
+  //     }
+  //   catch (std::exception &e)
+  //     {
+  //       removeUser (user);
+  //       std::cout << "read Exception: " << e.what () << std::endl;
+  //     }
+  // }
+
+  // bool
+  // isRegistered (std::string const &accountName)
+  // {
+  //   soci::session sql (soci::sqlite3, databaseName);
+  //   return confu_soci::findStruct<database::Account> (sql, "accountName", accountName).has_value ();
+  // }
+
+  // void
+  // removeUserFromLobby (std::shared_ptr<User> user)
+  // {
+  //   auto const findLobby = [userAccountName = user->accountName] (GameLobby const &gameLobby) {
+  //     auto const &accountNamesToCheck = gameLobby.accountNames ();
+  //     return ranges::find_if (accountNamesToCheck, [userAccountName] (std::string const &accountNameToCheck) { return userAccountName == accountNameToCheck; }) != accountNamesToCheck.end ();
+  //   };
+  //   if (auto gameLobbyWithUser = ranges::find_if (gameLobbies, findLobby); gameLobbyWithUser != gameLobbies.end ())
+  //     {
+  //       gameLobbyWithUser->removeUser (user);
+  //       if (gameLobbyWithUser->_users.empty ())
+  //         {
+  //           gameLobbies.erase (gameLobbyWithUser);
+  //         }
+  //     }
+  // }
+
+  // void
+  // removeUser (std::list<std::shared_ptr<User>>::iterator user)
+  // {
+  //   if (user->get ()->accountName && not isRegistered (user->get ()->accountName.value ()))
+  //     {
+  //       removeUserFromLobby (*user);
+  //     }
+  //   user->get ()->communicationChannels.clear ();
+  //   user->get ()->ignoreLogin = false;
+  //   user->get ()->ignoreCreateAccount = false;
+  //   user->get ()->msgQueueClient.clear ();
+  //   if (user->get ()->connectionToGame) user->get ()->connectionToGame->close ("Connection lost");
+  //   users.erase (user);
+  // }
+
   awaitable<void>
   writeToClient (std::weak_ptr<SSLWebsocket> &connection)
   {
@@ -159,16 +227,16 @@ struct User
   {
     sendMessageToUser (msg);
   }
-
-  boost::optional<std::string> accountName{}; // has value if user is logged in
+  // TODO make a simple struct out of this and put the complicated things into the matchmaking machine
+  std::string accountName{};
   std::set<std::string> communicationChannels{};
-  bool ignoreLogin{};
-  bool ignoreCreateAccount{};
+  // TODO bool ignoreLogin{};  bool ignoreCreateAccount{}; could be handled in the state machine
   std::deque<std::string> msgQueueClient{};
   std::shared_ptr<CoroTimer> timerClient{};
   std::shared_ptr<Websocket> connectionToGame{};
   std::deque<std::string> msgQueueGame{};
   std::shared_ptr<CoroTimer> timerGame{};
+  // TODO rethink the usage of all the smart pointers ;)
 };
 
 #endif /* F85705C8_6F01_4F50_98CA_5636F5F5E1C1 */

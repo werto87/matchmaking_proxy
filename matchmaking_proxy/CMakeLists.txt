@@ -1,6 +1,7 @@
 target_sources(${TARGET_NAME_LIB} PRIVATE 
     util.hxx
-    serialization.hxx
+    userMatchmakingSerialization.hxx
+    matchmakingGameSerialization.hxx
 )
 
 add_subdirectory(database)

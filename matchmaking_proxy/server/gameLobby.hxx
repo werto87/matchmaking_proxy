@@ -1,7 +1,7 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include "../serialization.hxx"
+#include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
 #include "user.hxx"
 #include <algorithm>
@@ -61,14 +61,14 @@ struct GameLobby
   accountNames () const
   {
     auto result = std::vector<std::string>{};
-    ranges::transform (_users, ranges::back_inserter (result), [] (auto const &user) { return user->accountName.value_or ("Error User is not Logged  in but still in GameLobby"); });
+    ranges::transform (_users, ranges::back_inserter (result), [] (auto const &user) { return user->accountName; });
     return result;
   }
 
   bool
   isGameLobbyAdmin (std::string const &accountName) const
   {
-    return lobbyAdminType == LobbyType::FirstUserInLobbyUsers && _users.front ()->accountName.value () == accountName;
+    return lobbyAdminType == LobbyType::FirstUserInLobbyUsers && _users.front ()->accountName == accountName;
   }
 
   size_t
@@ -82,14 +82,14 @@ struct GameLobby
   {
     if (_maxUserCount > _users.size ())
       {
-        if (ranges::none_of (_users, [accountName = user->accountName.value ()] (std::shared_ptr<User> const &user) { return user->accountName == accountName; }))
+        if (ranges::none_of (_users, [accountName = user->accountName] (std::shared_ptr<User> const &user) { return user->accountName == accountName; }))
           {
             _users.push_back (user);
             return {};
           }
         else
           {
-            return "User allready in lobby with user name: " + user->accountName.value ();
+            return "User allready in lobby with user name: " + user->accountName;
           }
       }
     else
@@ -137,14 +137,14 @@ struct GameLobby
   bool
   removeUser (std::shared_ptr<User> const &user)
   {
-    _users.erase (std::remove_if (_users.begin (), _users.end (), [accountName = user->accountName.value ()] (auto const &_user) { return accountName == _user->accountName.value (); }), _users.end ());
+    _users.erase (std::remove_if (_users.begin (), _users.end (), [accountName = user->accountName] (auto const &_user) { return accountName == _user->accountName; }), _users.end ());
     if (lobbyAdminType == LobbyType::FirstUserInLobbyUsers)
       {
-        auto usersInGameLobby = shared_class::UsersInGameLobby{};
+        auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
         usersInGameLobby.maxUserSize = maxUserCount ();
         usersInGameLobby.name = name.value ();
         usersInGameLobby.durakGameOption = gameOption;
-        ranges::transform (accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+        ranges::transform (accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
         sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
       }
     return _users.empty ();
@@ -159,7 +159,7 @@ struct GameLobby
   void
   relogUser (std::shared_ptr<User> &user)
   {
-    if (auto oldLogin = ranges::find_if (_users, [accountName = user->accountName.value ()] (auto const &_user) { return accountName == _user->accountName.value (); }); oldLogin != _users.end ())
+    if (auto oldLogin = ranges::find_if (_users, [accountName = user->accountName] (auto const &_user) { return accountName == _user->accountName; }); oldLogin != _users.end ())
       {
         *oldLogin = user;
       }
@@ -208,7 +208,7 @@ struct GameLobby
   {
     if (waitingForAnswerToStartGame)
       {
-        sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::GameStartCanceled{}));
+        sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
         readyUsers.clear ();
         _timer->cancel ();
         waitingForAnswerToStartGame = false;

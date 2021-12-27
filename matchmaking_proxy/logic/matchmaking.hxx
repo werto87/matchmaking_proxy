@@ -2,11 +2,12 @@
 #define D9077A7B_F0F8_4687_B460_C6D43C94F8AF
 #include "../database/database.hxx"
 #include "../pw_hash/passwordHash.hxx"
-#include "../serialization.hxx"
 #include "../server/gameLobby.hxx"
 #include "../server/user.hxx"
+#include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
 #include "matchmaking_proxy/logic/client.hxx"
+#include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "rating.hxx"
 #include <algorithm>
 #include <boost/algorithm/algorithm.hpp>
@@ -78,6 +79,22 @@ namespace sml = boost::sml;
 struct NotLoggedin
 {
 };
+struct PasswordHashed
+{
+  std::string hashedPassword{};
+};
+
+struct PasswordMatches
+{
+  std::string accountName{};
+};
+struct WaitingForPasswordHashed
+{
+};
+
+struct WaitingForPasswordUnHashed
+{
+};
 
 struct ProxyToGame
 {
@@ -99,15 +116,6 @@ typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waita
 
 auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
 
-std::set<std::string> inline getApiTypes ()
-{
-  auto result = std::set<std::string>{};
-  boost::hana::for_each (shared_class::sharedClasses, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
-  return result;
-}
-
-auto const apiTypes = getApiTypes ();
-
 bool inline isInRatingrange (size_t userRating, size_t lobbyAverageRating)
 {
   auto const difference = userRating > lobbyAverageRating ? userRating - lobbyAverageRating : lobbyAverageRating - userRating;
@@ -115,14 +123,6 @@ bool inline isInRatingrange (size_t userRating, size_t lobbyAverageRating)
 }
 
 bool inline checkRating (size_t userRating, std::vector<std::string> const &accountNames) { return isInRatingrange (userRating, averageRating (accountNames)); }
-
-std::set<std::string> inline getBlockedApiFromClientToGame ()
-{
-  auto result = std::set<std::string>{};
-  boost::hana::for_each (shared_class::blacklistClientToServer, [&] (const auto &x) { result.insert (confu_json::type_name<typename std::decay<decltype (x)>::type> ()); });
-  return result;
-}
-auto const blockedApiFromClientToGame = getBlockedApiFromClientToGame ();
 
 bool inline matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameLobby::LobbyType const &lobbyType)
 {
@@ -152,35 +152,26 @@ struct Matchmaking
 {
   Matchmaking (boost::asio::io_context &io_context_, std::shared_ptr<User> user_, std::list<std::shared_ptr<User>> &users_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_) : io_context{ io_context_ }, user{ user_ }, users{ users_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ } {}
 
-  void
-  removeUserFromLobbyAndGame ()
+  bool
+  isRegistered (std::string const &accountName)
   {
-    auto const findLobby = [userAccountName = user->accountName] (GameLobby const &gameLobby) {
-      auto const &accountNamesToCheck = gameLobby.accountNames ();
-      return ranges::find_if (accountNamesToCheck, [userAccountName] (std::string const &accountNameToCheck) { return userAccountName == accountNameToCheck; }) != accountNamesToCheck.end ();
-    };
-    auto gameLobbyWithUser = ranges::find_if (gameLobbies, findLobby);
-    while (gameLobbyWithUser != gameLobbies.end ())
-      {
-        gameLobbyWithUser->removeUser (user);
-        if (gameLobbyWithUser->_users.empty ())
-          {
-            gameLobbies.erase (gameLobbyWithUser);
-          }
-        gameLobbyWithUser = ranges::find_if (gameLobbies, findLobby);
-      }
+    soci::session sql (soci::sqlite3, databaseName);
+    return confu_soci::findStruct<database::Account> (sql, "accountName", accountName).has_value ();
   }
 
   void
   logoutAccount ()
   {
-    removeUserFromLobbyAndGame ();
+    if (isRegistered (user->accountName))
+      {
+        // TODO find a way to remove user from gamelobby
+        // removeUserFromLobby ();
+      }
+    // TODO we do not need this optional account name because we know if user is logged in based on state machine state
     user->accountName = {};
     user->msgQueueClient.clear ();
     user->communicationChannels.clear ();
-    user->ignoreLogin = false;
-    user->ignoreCreateAccount = false;
-    user->sendMessageToUser (objectToStringWithObjectName (shared_class::LogoutAccountSuccess{}));
+    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LogoutAccountSuccess{}));
   }
 
   boost::asio::awaitable<std::string>
@@ -193,12 +184,12 @@ struct Matchmaking
     ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
     ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
     co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-    auto startGame = shared_class::StartGame{};
-    ranges::transform (gameLobby._users, ranges::back_inserter (startGame.players), [] (std::shared_ptr<User> user_) { return user_->accountName.value (); });
+    auto startGame = user_matchmaking::StartGame{};
+    ranges::transform (gameLobby._users, ranges::back_inserter (startGame.players), [] (std::shared_ptr<User> user_) { return user_->accountName; });
     startGame.gameOption = gameLobby.gameOption;
     co_await ws.async_write (buffer (objectToStringWithObjectName (startGame)));
     flat_buffer buffer;
-    co_await ws.async_read (buffer, use_awaitable);
+    co_await ws.async_read (buffer);
     auto msg = buffers_to_string (buffer.data ());
     co_return msg;
   }
@@ -247,178 +238,145 @@ struct Matchmaking
       }
   }
 
-  bool
-  allowedToSendToGameFromClient (std::string const &typeToSearch)
+  void
+  passwordHashed (PasswordHashed const &passwordHash)
   {
-    return not blockedApiFromClientToGame.contains (typeToSearch);
+    // if (true) // depends on state
+    //   {
+    if (auto account = database::createAccount (user->accountName, passwordHash.hashedPassword))
+      {
+        user->accountName = account->accountName;
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ user->accountName }));
+      }
+    else
+      {
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ user->accountName, "account already created" }));
+      }
+    // }
+    // else
+    //   {
+    //     user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ user->accountName, "Canceled by User Request" }));
+    //   }
   }
 
   boost::asio::awaitable<void>
   createAccountAndLogin (auto &&createAccountObject, auto &sm, auto &&deps, auto &&subs)
   {
-    if (user->accountName)
-      {
-        logoutAccount ();
-      }
     soci::session sql (soci::sqlite3, databaseName);
     if (confu_soci::findStruct<database::Account> (sql, "accountName", createAccountObject.accountName))
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "account already created" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountObject.accountName, "account already created" }));
         co_return;
       }
     else
       {
         auto hashedPw = co_await async_hash (pool, io_context, createAccountObject.password, boost::asio::use_awaitable);
-        if (user->ignoreCreateAccount)
+        sm.process_event (PasswordHashed{ hashedPw }, deps, subs);
+      }
+  }
+
+  void
+  informUserAboutCancelCreateAccount ()
+  {
+    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountCancel{}));
+  }
+  void
+  informUserAboutCancelLogin ()
+  {
+    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountCancel{}));
+  }
+
+  void
+  passwordMatches (PasswordMatches const &passwordMatchesEv)
+  {
+    user->accountName = passwordMatchesEv.accountName;
+    if (auto gameLobbyWithUser = ranges::find_if (gameLobbies,
+                                                  [accountName = user->accountName] (auto const &gameLobby) {
+                                                    auto const &accountNames = gameLobby.accountNames ();
+                                                    return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                  });
+        gameLobbyWithUser != gameLobbies.end ())
+      {
+        if (gameLobbyWithUser->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "Canceled by User Request" }));
-            co_return;
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantToRelog{ user->accountName, "Create Game Lobby" }));
           }
         else
           {
-            if (auto account = database::createAccount (createAccountObject.accountName, hashedPw))
+            gameLobbyWithUser->removeUser (user);
+            if (gameLobbyWithUser->accountCount () == 0)
               {
-                user->accountName = account->accountName;
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ createAccountObject.accountName }));
-                sm.process_event (shared_class::LoginAccountSuccess{}, deps, subs);
-                co_return;
+                gameLobbies.erase (gameLobbyWithUser);
               }
-            else
-              {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateAccountError{ createAccountObject.accountName, "account already created" }));
-                co_return;
-              }
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ user->accountName }));
           }
+      }
+    else
+      {
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ user->accountName }));
       }
   }
 
   boost::asio::awaitable<void>
   loginAccount (auto &&loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
   {
-    if (user->accountName)
-      {
-        logoutAccount ();
-      }
     soci::session sql (soci::sqlite3, databaseName);
     if (auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName))
       {
         if (std::find_if (users.begin (), users.end (), [accountName = account->accountName] (auto const &u) { return accountName == u->accountName; }) != users.end ())
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
             co_return;
           }
         else
           {
             if (co_await async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable))
               {
-                if (user->ignoreLogin)
-                  {
-                    user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Canceled by User Request" }));
-                    co_return;
-                  }
-                else
-                  {
-                    user->accountName = account->accountName;
-                    if (auto gameLobbyWithUser = ranges::find_if (gameLobbies,
-                                                                  [accountName = user->accountName] (auto const &gameLobby) {
-                                                                    auto const &accountNames = gameLobby.accountNames ();
-                                                                    return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                                                  });
-                        gameLobbyWithUser != gameLobbies.end ())
-                      {
-                        if (gameLobbyWithUser->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
-                          {
-                            user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantToRelog{ loginAccountObject.accountName, "Create Game Lobby" }));
-                          }
-                        else
-                          {
-                            gameLobbyWithUser->removeUser (user);
-                            if (gameLobbyWithUser->accountCount () == 0)
-                              {
-                                gameLobbies.erase (gameLobbyWithUser);
-                              }
-                            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ loginAccountObject.accountName }));
-                            sm.process_event (shared_class::LoginAccountSuccess{}, deps, subs);
-                          }
-                        co_return;
-                      }
-                    else
-                      {
-                        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountSuccess{ loginAccountObject.accountName }));
-                        sm.process_event (shared_class::LoginAccountSuccess{}, deps, subs);
-                        co_return;
-                      }
-                  }
+                sm.process_event (PasswordMatches{ account->accountName }, deps, subs);
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
                 co_return;
               }
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAccountError{ loginAccountObject.accountName, "Incorrect username or password" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect username or password" }));
         co_return;
       }
   }
 
   void
-  broadCastMessage (shared_class::BroadCastMessage const &broadCastMessageObject)
+  broadCastMessage (user_matchmaking::BroadCastMessage const &broadCastMessageObject)
   {
-    if (user->accountName)
+    for (auto &user_ : users | ranges::views::filter ([channel = broadCastMessageObject.channel, accountName = user->accountName] (auto const &user_) { return user_->communicationChannels.find (channel) != user_->communicationChannels.end (); }))
       {
-        for (auto &user_ : users | ranges::views::filter ([channel = broadCastMessageObject.channel, accountName = user->accountName] (auto const &user_) { return user_->communicationChannels.find (channel) != user_->communicationChannels.end (); }))
-          {
-            soci::session sql (soci::sqlite3, databaseName);
-            auto message = shared_class::Message{ user_->accountName.value (), broadCastMessageObject.channel, broadCastMessageObject.message };
-            user_->sendMessageToUser (objectToStringWithObjectName (std::move (message)));
-          }
-        return;
-      }
-    else
-      {
-        user->msgQueueClient.push_back (objectToStringWithObjectName (shared_class::BroadCastMessageError{ broadCastMessageObject.channel, "account not logged in" }));
-        return;
+        soci::session sql (soci::sqlite3, databaseName);
+        auto message = user_matchmaking::Message{ user_->accountName, broadCastMessageObject.channel, broadCastMessageObject.message };
+        user_->sendMessageToUser (objectToStringWithObjectName (std::move (message)));
       }
   }
 
   void
-  joinChannel (shared_class::JoinChannel const &joinChannelObject)
+  joinChannel (user_matchmaking::JoinChannel const &joinChannelObject)
   {
-    if (user->accountName)
-      {
-        user->communicationChannels.insert (joinChannelObject.channel);
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinChannelSuccess{ joinChannelObject.channel }));
-        return;
-      }
-    else
-      {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinChannelError{ joinChannelObject.channel, { "user not logged in" } }));
-        return;
-      }
+    user->communicationChannels.insert (joinChannelObject.channel);
+    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinChannelSuccess{ joinChannelObject.channel }));
   }
 
   void
-  leaveChannel (shared_class::LeaveChannel const &leaveChannelObject)
+  leaveChannel (user_matchmaking::LeaveChannel const &leaveChannelObject)
   {
-    if (user->accountName)
+    if (user->communicationChannels.erase (leaveChannelObject.channel))
       {
-        if (user->communicationChannels.erase (leaveChannelObject.channel))
-          {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelSuccess{ leaveChannelObject.channel }));
-            return;
-          }
-        else
-          {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelError{ leaveChannelObject.channel, { "channel not found" } }));
-            return;
-          }
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveChannelSuccess{ leaveChannelObject.channel }));
+        return;
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveChannelError{ leaveChannelObject.channel, { "user not logged in" } }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveChannelError{ leaveChannelObject.channel, { "channel not found" } }));
         return;
       }
   }
@@ -426,13 +384,13 @@ struct Matchmaking
   void
   askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby)
   {
-    gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::AskIfUserWantsToJoinGame{}));
+    gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}));
     gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies = gameLobbies] () {
       auto notReadyUsers = std::vector<std::shared_ptr<User>>{};
-      ranges::copy_if (gameLobby->_users, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::shared_ptr<User> const &user_) mutable { return ranges::find_if (usersWhichAccepted, [user_] (std::shared_ptr<User> const &userWhoAccepted) { return user_->accountName.value () == userWhoAccepted->accountName.value (); }) == usersWhichAccepted.end (); });
+      ranges::copy_if (gameLobby->_users, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::shared_ptr<User> const &user_) mutable { return ranges::find_if (usersWhichAccepted, [user_] (std::shared_ptr<User> const &userWhoAccepted) { return user_->accountName == userWhoAccepted->accountName; }) == usersWhichAccepted.end (); });
       for (auto const &notReadyUser : notReadyUsers)
         {
-          notReadyUser->sendMessageToUser (objectToStringWithObjectName (shared_class::AskIfUserWantsToJoinGameTimeOut{}));
+          notReadyUser->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}));
           if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
             {
               gameLobby->removeUser (notReadyUser);
@@ -445,7 +403,7 @@ struct Matchmaking
       else
         {
           gameLobby->readyUsers.clear ();
-          gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::GameStartCanceled{}));
+          gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
         }
     });
   }
@@ -462,17 +420,17 @@ struct Matchmaking
       {
         if (gameLobbyWithUser->getWaitingForAnswerToStartGame ())
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
           }
         else
           {
-            if (gameLobbyWithUser->isGameLobbyAdmin (user->accountName.value ()))
+            if (gameLobbyWithUser->isGameLobbyAdmin (user->accountName))
               {
                 if (gameLobbyWithUser->accountNames ().size () >= 2)
                   {
                     if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
                       {
-                        user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ gameOptionError.value () }));
+                        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ gameOptionError.value () }));
                       }
                     else
                       {
@@ -481,23 +439,23 @@ struct Matchmaking
                   }
                 else
                   {
-                    user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "You need atleast two user to create a game" }));
+                    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "You need atleast two user to create a game" }));
                   }
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
               }
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameError{ "Could not find a game lobby for the user" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "Could not find a game lobby for the user" }));
       }
   }
 
   void
-  createGameLobby (shared_class::CreateGameLobby const &createGameLobbyObject)
+  createGameLobby (user_matchmaking::CreateGameLobby const &createGameLobbyObject)
   {
     if (ranges::find_if (gameLobbies, [gameLobbyName = createGameLobbyObject.name, lobbyPassword = createGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName; }) == gameLobbies.end ())
       {
@@ -508,7 +466,7 @@ struct Matchmaking
                                                       });
             gameLobbyWithUser != gameLobbies.end ())
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameLobbyError{ { "account has already a game lobby with the name: " + gameLobbyWithUser->name.value_or ("Quick Game Lobby") } }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameLobbyError{ { "account has already a game lobby with the name: " + gameLobbyWithUser->name.value_or ("Quick Game Lobby") } }));
             return;
           }
         else
@@ -521,12 +479,12 @@ struct Matchmaking
             else
               {
                 auto result = std::vector<std::string>{};
-                auto usersInGameLobby = shared_class::UsersInGameLobby{};
+                auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
                 usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
                 usersInGameLobby.name = newGameLobby.name.value ();
                 usersInGameLobby.durakGameOption = newGameLobby.gameOption;
-                ranges::transform (newGameLobby.accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbySuccess{}));
+                ranges::transform (newGameLobby.accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
                 user->sendMessageToUser (objectToStringWithObjectName (usersInGameLobby));
                 return;
               }
@@ -534,44 +492,44 @@ struct Matchmaking
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::CreateGameLobbyError{ { "lobby already exists with name: " + createGameLobbyObject.name } }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateGameLobbyError{ { "lobby already exists with name: " + createGameLobbyObject.name } }));
         return;
       }
   }
 
   void
-  joinGameLobby (shared_class::JoinGameLobby const &joinGameLobbyObject)
+  joinGameLobby (user_matchmaking::JoinGameLobby const &joinGameLobbyObject)
   {
     if (auto gameLobby = ranges::find_if (gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != gameLobbies.end ())
       {
         if (auto error = gameLobby->tryToAddUser (user))
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ joinGameLobbyObject.name, error.value () }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ joinGameLobbyObject.name, error.value () }));
             return;
           }
         else
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbySuccess{}));
-            auto usersInGameLobby = shared_class::UsersInGameLobby{};
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
+            auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
             usersInGameLobby.maxUserSize = gameLobby->maxUserCount ();
             usersInGameLobby.name = gameLobby->name.value ();
             usersInGameLobby.durakGameOption = gameLobby->gameOption;
-            ranges::transform (gameLobby->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+            ranges::transform (gameLobby->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
             gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
             return;
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ joinGameLobbyObject.name, "wrong password name combination or lobby does not exists" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ joinGameLobbyObject.name, "wrong password name combination or lobby does not exists" }));
         return;
       }
   }
 
   void
-  setMaxUserSizeInCreateGameLobby (shared_class::SetMaxUserSizeInCreateGameLobby const &setMaxUserSizeInCreateGameLobbyObject)
+  setMaxUserSizeInCreateGameLobby (user_matchmaking::SetMaxUserSizeInCreateGameLobby const &setMaxUserSizeInCreateGameLobbyObject)
   {
-    auto accountNameToSearch = user->accountName.value ();
+    auto accountNameToSearch = user->accountName;
     if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
                                                      [accountName = user->accountName] (auto const &gameLobby) {
                                                        auto const &accountNames = gameLobby.accountNames ();
@@ -581,33 +539,33 @@ struct Matchmaking
       {
         if (gameLobbyWithAccount->getWaitingForAnswerToStartGame ())
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "It is not allowed to change lobby while ask to start a game is running" }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "It is not allowed to change lobby while ask to start a game is running" }));
           }
         else
           {
-            if (gameLobbyWithAccount->isGameLobbyAdmin (user->accountName.value ()))
+            if (gameLobbyWithAccount->isGameLobbyAdmin (user->accountName))
               {
                 if (auto errorMessage = gameLobbyWithAccount->setMaxUserCount (setMaxUserSizeInCreateGameLobbyObject.maxUserSize))
                   {
-                    user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ errorMessage.value () }));
+                    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ errorMessage.value () }));
                     return;
                   }
                 else
                   {
-                    gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (shared_class::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
+                    gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
                     return;
                   }
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "you need to be admin in a game lobby to change the user size" }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "you need to be admin in a game lobby to change the user size" }));
                 return;
               }
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::SetMaxUserSizeInCreateGameLobbyError{ "could not find a game lobby for account" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::SetMaxUserSizeInCreateGameLobbyError{ "could not find a game lobby for account" }));
         return;
       }
   }
@@ -615,7 +573,7 @@ struct Matchmaking
   void
   setGameOption (shared_class::GameOption const &gameOption)
   {
-    auto accountNameToSearch = user->accountName.value ();
+    auto accountNameToSearch = user->accountName;
     if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
                                                      [accountName = user->accountName] (auto const &gameLobby) {
                                                        auto const &accountNames = gameLobby.accountNames ();
@@ -625,11 +583,11 @@ struct Matchmaking
       {
         if (gameLobbyWithAccount->getWaitingForAnswerToStartGame ())
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "It is not allowed to change game option while ask to start a game is running" }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "It is not allowed to change game option while ask to start a game is running" }));
           }
         else
           {
-            if (gameLobbyWithAccount->isGameLobbyAdmin (user->accountName.value ()))
+            if (gameLobbyWithAccount->isGameLobbyAdmin (user->accountName))
               {
                 gameLobbyWithAccount->gameOption = gameOption;
                 gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (gameOption));
@@ -637,14 +595,14 @@ struct Matchmaking
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "you need to be admin in the create game lobby to change game option" }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "you need to be admin in the create game lobby to change game option" }));
                 return;
               }
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameOptionError{ "could not find a game lobby for account" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ "could not find a game lobby for account" }));
         return;
       }
   }
@@ -666,24 +624,24 @@ struct Matchmaking
               {
                 gameLobbies.erase (gameLobbyWithAccount);
               }
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbySuccess{}));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
             return;
           }
         else
           {
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" }));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" }));
             return;
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" }));
         return;
       }
   }
 
   void
-  relogTo (shared_class::RelogTo const &relogToObject)
+  relogTo (user_matchmaking::RelogTo const &relogToObject)
   {
     if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
                                                      [accountName = user->accountName] (auto const &gameLobby) {
@@ -695,12 +653,12 @@ struct Matchmaking
         if (relogToObject.wantsToRelog)
           {
             gameLobbyWithAccount->relogUser (user);
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::RelogToCreateGameLobbySuccess{}));
-            auto usersInGameLobby = shared_class::UsersInGameLobby{};
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::RelogToCreateGameLobbySuccess{}));
+            auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
             usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
             usersInGameLobby.name = gameLobbyWithAccount->name.value ();
             usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-            ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+            ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
             user->sendMessageToUser (objectToStringWithObjectName (usersInGameLobby));
             return;
           }
@@ -713,11 +671,11 @@ struct Matchmaking
               }
             else
               {
-                auto usersInGameLobby = shared_class::UsersInGameLobby{};
+                auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
                 usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
                 usersInGameLobby.name = gameLobbyWithAccount->name.value ();
                 usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-                ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return shared_class::UserInGameLobby{ accountName }; });
+                ranges::transform (gameLobbyWithAccount->accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
                 gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
                 return;
               }
@@ -725,28 +683,10 @@ struct Matchmaking
       }
     else if (relogToObject.wantsToRelog)
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::RelogToError{ "trying to reconnect into game lobby but game lobby does not exist anymore" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::RelogToError{ "trying to reconnect into game lobby but game lobby does not exist anymore" }));
         return;
       }
     return;
-  }
-
-  void
-  loginAccountCancel ()
-  {
-    if (not user->accountName)
-      {
-        user->ignoreLogin = true;
-      }
-  }
-
-  void
-  createAccountCancel ()
-  {
-    if (not user->accountName)
-      {
-        user->ignoreCreateAccount = true;
-      }
   }
 
   void
@@ -759,15 +699,15 @@ struct Matchmaking
                          })
         == gameLobbies.end ())
       {
-        if (auto gameLobbyToAddUser = ranges::find_if (gameLobbies, [lobbyType, accountName = user->accountName.value ()] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType); }); gameLobbyToAddUser != gameLobbies.end ())
+        if (auto gameLobbyToAddUser = ranges::find_if (gameLobbies, [lobbyType, accountName = user->accountName] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType); }); gameLobbyToAddUser != gameLobbies.end ())
           {
             if (auto error = gameLobbyToAddUser->tryToAddUser (user))
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ user->accountName.value (), error.value () }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ user->accountName, error.value () }));
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueSuccess{}));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueSuccess{}));
                 if (gameLobbyToAddUser->_users.size () == gameLobbyToAddUser->maxUserCount ())
                   {
                     askUsersToJoinGame (gameLobbyToAddUser);
@@ -780,20 +720,20 @@ struct Matchmaking
             gameLobby.lobbyAdminType = lobbyType;
             if (auto error = gameLobby.tryToAddUser (user))
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinGameLobbyError{ user->accountName.value (), error.value () }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ user->accountName, error.value () }));
               }
             gameLobbies.emplace_back (gameLobby);
-            user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueSuccess{}));
+            user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueSuccess{}));
           }
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::JoinMatchMakingQueueError{ "User is allready in gamelobby" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueError{ "User is allready in gamelobby" }));
       }
   }
 
   boost::asio::awaitable<void>
-  wantsToJoinGame (shared_class::WantsToJoinGame const &wantsToJoinGameEv)
+  wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv)
   {
     if (auto gameLobby = ranges::find_if (gameLobbies,
                                           [accountName = user->accountName] (auto const &gameLobby) {
@@ -804,7 +744,7 @@ struct Matchmaking
       {
         if (wantsToJoinGameEv.answer)
           {
-            if (ranges::find_if (gameLobby->readyUsers, [accountName = user->accountName.value ()] (std::shared_ptr<User> _user) { return _user->accountName == accountName; }) == gameLobby->readyUsers.end ())
+            if (ranges::find_if (gameLobby->readyUsers, [accountName = user->accountName] (std::shared_ptr<User> _user) { return _user->accountName == accountName; }) == gameLobby->readyUsers.end ())
               {
                 gameLobby->readyUsers.push_back (user);
                 if (gameLobby->readyUsers.size () == gameLobby->_users.size ())
@@ -815,7 +755,7 @@ struct Matchmaking
               }
             else
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "You already accepted to join the game" }));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantsToJoinGameError{ "You already accepted to join the game" }));
               }
           }
         else
@@ -823,7 +763,7 @@ struct Matchmaking
             gameLobby->cancelTimer ();
             if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
               {
-                user->sendMessageToUser (objectToStringWithObjectName (shared_class::GameStartCanceledRemovedFromQueue{}));
+                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
                 gameLobby->removeUser (user);
                 if (gameLobby->_users.empty ())
                   {
@@ -834,7 +774,7 @@ struct Matchmaking
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::WantsToJoinGameError{ "No game to join" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::WantsToJoinGameError{ "No game to join" }));
       }
   }
 
@@ -848,7 +788,7 @@ struct Matchmaking
                                           });
         gameLobby != gameLobbies.end ())
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveQuickGameQueueSuccess{}));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
         gameLobby->removeUser (user);
         gameLobby->cancelTimer ();
         if (gameLobby->_users.empty ())
@@ -858,7 +798,7 @@ struct Matchmaking
       }
     else
       {
-        user->sendMessageToUser (objectToStringWithObjectName (shared_class::LeaveQuickGameQueueError{ "User is not in queue" }));
+        user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueError{ "User is not in queue" }));
       }
   }
 
@@ -866,7 +806,7 @@ struct Matchmaking
   loginAsGuest ()
   {
     user->accountName = to_string (boost::uuids::random_generator () ());
-    user->sendMessageToUser (objectToStringWithObjectName (shared_class::LoginAsGuestSuccess{ user->accountName.value () }));
+    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ user->accountName }));
   }
   auto
   operator() ()
@@ -874,34 +814,38 @@ struct Matchmaking
     using namespace sml;
     auto doCreateAccountAndLogin = [this] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (io_context, createAccountAndLogin (event, sm, deps, subs), boost::asio::detached); };
     auto doLoginAccount = [this] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (io_context, loginAccount (event, sm, deps, subs), boost::asio::detached); };
-    auto doWantsToJoinGame = [this] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (io_context, wantsToJoinGame (event, sm, deps, subs), boost::asio::detached); };
-    using namespace shared_class;
     // clang-format off
     return make_transition_table(
-      // NotLoggedIn-------------------------------------------------------------------------------------------------------
-      * state<NotLoggedin>  + event<CreateAccount>                    / doCreateAccountAndLogin
-      , state<NotLoggedin>  + event<LoginAccount>                     / doLoginAccount
-      , state<NotLoggedin>  + event<LoginAccountSuccess>                                                                =state<Loggedin>
-      , state<NotLoggedin>  + event<LoginAsGuest>                     / (&Matchmaking::loginAsGuest)                    =state<Loggedin>
-      , state<NotLoggedin>  + event<CreateAccountCancel>              / (&Matchmaking::createAccountCancel)
-      , state<NotLoggedin>  + event<LoginAccountCancel>               / (&Matchmaking::loginAccountCancel) 
-      // LoggedIn-------------------------------------------------------------------------------------------------------
-      , state<Loggedin>     + event<JoinChannel>                      / (&Matchmaking::joinChannel)         
-      , state<Loggedin>     + event<BroadCastMessage>                 / (&Matchmaking::broadCastMessage)         
-      , state<Loggedin>     + event<LeaveChannel>                     / (&Matchmaking::leaveChannel)         
-      , state<Loggedin>     + event<LogoutAccount>                    / (&Matchmaking::logoutAccount)                   =state<NotLoggedin>          
-      , state<Loggedin>     + event<CreateGameLobby>                  / (&Matchmaking::createGameLobby)          
-      , state<Loggedin>     + event<JoinGameLobby>                    / (&Matchmaking::joinGameLobby)          
-      , state<Loggedin>     + event<SetMaxUserSizeInCreateGameLobby>  / (&Matchmaking::setMaxUserSizeInCreateGameLobby)          
-      , state<Loggedin>     + event<GameOption>                       / (&Matchmaking::setGameOption)         
-      , state<Loggedin>     + event<LeaveGameLobby>                   / (&Matchmaking::leaveGameLobby)         
-      , state<Loggedin>     + event<RelogTo>                          / (&Matchmaking::relogTo)          
-      , state<Loggedin>     + event<CreateGame>                       / (&Matchmaking::createGame)         
-      , state<Loggedin>     + event<WantsToJoinGame>                  / (&Matchmaking::wantsToJoinGame)          
-      , state<Loggedin>     + event<LeaveQuickGameQueue>              / (&Matchmaking::leaveMatchMakingQueue)          
-      , state<Loggedin>     + event<JoinMatchMakingQueue>             / (&Matchmaking::joinMatchMakingQueue)         
-      // ProxyToGame-------------------------------------------------------------------------------------------------------  
-      // , state<ProxyToGame>  +event<LeaveGame>                       / //Todo Handle message to game do not forget to add a guard so  the user does not call messages which are only allowed to send from matchmaking to game for example: the user should not be allowed to send StartGame{} to game via matchmaking maybe use a guard with a black list
+      // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+      * state<NotLoggedin>                + event<user_matchmaking::CreateAccount>                    / doCreateAccountAndLogin                           = state<WaitingForPasswordHashed>
+      , state<NotLoggedin>                + event<user_matchmaking::LoginAccount>                     / doLoginAccount                                    = state<WaitingForPasswordUnHashed>
+      , state<NotLoggedin>                + event<user_matchmaking::LoginAsGuest>                     / (&Matchmaking::loginAsGuest)                      = state<Loggedin>
+      , state<NotLoggedin>                + event<PasswordHashed>                                     / (&Matchmaking::informUserAboutCancelCreateAccount)
+      , state<NotLoggedin>                + event<PasswordMatches>                                    / (&Matchmaking::informUserAboutCancelLogin)        
+      // WaitingForCreateAccount------------------------------------------------------------------------------------------------------------------------------------------------------
+      , state<WaitingForPasswordHashed>   + event<PasswordHashed>                                     / (&Matchmaking::passwordHashed)                    = state<Loggedin>
+      , state<WaitingForPasswordHashed>   + event<user_matchmaking::CreateAccountCancel>                                                                  = state<NotLoggedin>
+      // WaitingForLogin--------------------------------------------------------------------------------------------------------------------------------------------------------------
+      , state<WaitingForPasswordUnHashed> + event<PasswordMatches>                                    / (&Matchmaking::passwordMatches)                   = state<Loggedin>
+      , state<WaitingForPasswordUnHashed> + event<user_matchmaking::LoginAccountCancel>                                                                   = state<NotLoggedin>
+      // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      , state<Loggedin>                   + event<user_matchmaking::JoinChannel>                      / (&Matchmaking::joinChannel)         
+      , state<Loggedin>                   + event<user_matchmaking::BroadCastMessage>                 / (&Matchmaking::broadCastMessage)         
+      , state<Loggedin>                   + event<user_matchmaking::LeaveChannel>                     / (&Matchmaking::leaveChannel)         
+      , state<Loggedin>                   + event<user_matchmaking::LogoutAccount>                    / (&Matchmaking::logoutAccount)                     = state<NotLoggedin>          
+      , state<Loggedin>                   + event<user_matchmaking::CreateGameLobby>                  / (&Matchmaking::createGameLobby)          
+      , state<Loggedin>                   + event<user_matchmaking::JoinGameLobby>                    / (&Matchmaking::joinGameLobby)          
+      , state<Loggedin>                   + event<user_matchmaking::SetMaxUserSizeInCreateGameLobby>  / (&Matchmaking::setMaxUserSizeInCreateGameLobby)          
+      , state<Loggedin>                   + event<shared_class::GameOption>                           / (&Matchmaking::setGameOption)         
+      , state<Loggedin>                   + event<user_matchmaking::LeaveGameLobby>                   / (&Matchmaking::leaveGameLobby)         
+      , state<Loggedin>                   + event<user_matchmaking::RelogTo>                          / (&Matchmaking::relogTo)          
+      , state<Loggedin>                   + event<user_matchmaking::CreateGame>                       / (&Matchmaking::createGame)         
+      , state<Loggedin>                   + event<user_matchmaking::WantsToJoinGame>                  / (&Matchmaking::wantsToJoinGame)          
+      , state<Loggedin>                   + event<user_matchmaking::LeaveQuickGameQueue>              / (&Matchmaking::leaveMatchMakingQueue)          
+      , state<Loggedin>                   + event<user_matchmaking::JoinMatchMakingQueue>             / (&Matchmaking::joinMatchMakingQueue)         
+      , state<Loggedin>                   + event<matchmaking_game::StartGameSuccess>                                                                     = state<ProxyToGame>          
+      // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+      , state<ProxyToGame>                +event<matchmaking_game::LeaveGameSuccess>                                                                      = state<Loggedin>     
     );
     // clang-format on
   }

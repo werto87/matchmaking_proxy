@@ -805,7 +805,7 @@ struct Matchmaking
   void
   loginAsGuest ()
   {
-    user->accountName = to_string (boost::uuids::random_generator () ());
+    user->accountName = boost::uuids::to_string (boost::uuids::random_generator () ());
     user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ user->accountName }));
   }
   auto

@@ -230,7 +230,6 @@ struct User
   // TODO make a simple struct out of this and put the complicated things into the matchmaking machine
   std::string accountName{};
   std::set<std::string> communicationChannels{};
-  // TODO bool ignoreLogin{};  bool ignoreCreateAccount{}; could be handled in the state machine
   std::deque<std::string> msgQueueClient{};
   std::shared_ptr<CoroTimer> timerClient{};
   std::shared_ptr<Websocket> connectionToGame{};

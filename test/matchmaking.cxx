@@ -2,6 +2,7 @@
 #include "../matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "test/util.hxx"
+#include <boost/asio/detached.hpp>
 #include <catch2/catch.hpp>
 #include <chrono>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
@@ -35,7 +36,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   {
     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
     loginMachine.process_event (LoginAccount{ "oldAcc", "abc" });
-    REQUIRE (loginMachine.is (state<WaitingForPasswordUnHashed>));
+    REQUIRE (loginMachine.is (state<WaitingForPasswordCheck>));
     ioContext.run ();
     REQUIRE (loginMachine.is (state<Loggedin>));
   }
@@ -194,3 +195,35 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
   ioContext.stop ();
   ioContext.reset ();
 }
+
+// Test for play
+// TEST_CASE ("remove login machine while coroutine is running", "[matchmaking]")
+// {
+//   database::createEmptyDatabase ();
+//   database::createTables ();
+//   typedef sml::sm<Matchmaking> MatchmakingMachine;
+//   using namespace sml;
+//   using namespace boost::asio;
+//   auto ioContext = io_context ();
+//   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
+//   boost::asio::thread_pool pool_{};
+//   std::list<GameLobby> gameLobbies_{};
+//   auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+//   auto loginMachine = std::make_unique<MatchmakingMachine> (matchmaking);
+//   SECTION ("LoginAccount", "[matchmaking]")
+//   {
+//     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
+//     loginMachine->process_event (LoginAccount{ "oldAcc", "abc" });
+//     auto timer = std::make_shared<CoroTimer> (CoroTimer{ ioContext });
+//     timer->expires_after (std::chrono::seconds{ 5 });
+//     co_spawn (ioContext, timer->async_wait (), [&loginMachine] (auto) {
+//       // DO NOT FORGET TO SLOW DOWN THE ASNYC_HASH FUNCTION SO THIS FINISHES FIRST
+//       loginMachine.reset ();
+//       std::cout << "reset called!" << std::endl;
+//     });
+//     std::cout << "run called!" << std::endl;
+//     ioContext.run ();
+//   }
+//   ioContext.stop ();
+//   ioContext.reset ();
+// }

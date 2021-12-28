@@ -1,7 +1,7 @@
 [requires]
 range-v3/0.12.0@werto87/stable
 certify/0.0.1@werto87/stable
-boost/1.77.0
+boost/1.78.0
 confu_soci/0.2.0@werto87/stable
 libsodium/1.0.18
 confu_json/0.0.8@werto87/stable

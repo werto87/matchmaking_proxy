@@ -2,5 +2,6 @@
     client.hxx
     rating.hxx
     matchmaking.hxx
+    myWebsocket.hxx
  )
 

@@ -20,6 +20,8 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/experimental/as_tuple.hpp>
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
@@ -73,7 +75,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
 namespace sml = boost::sml;
 
 struct NotLoggedin
@@ -92,7 +93,7 @@ struct WaitingForPasswordHashed
 {
 };
 
-struct WaitingForPasswordUnHashed
+struct WaitingForPasswordCheck
 {
 };
 
@@ -112,7 +113,10 @@ struct SendMessageToGame
   std::string msg{};
 };
 
+// TODO this leaks using namespace and typedef
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
+constexpr auto use_nothrow_awaitable = boost::asio::experimental::as_tuple (boost::asio::use_awaitable);
+using namespace boost::asio::experimental::awaitable_operators;
 
 auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
 
@@ -150,7 +154,12 @@ bool inline matchingLobby (std::string const &accountName, GameLobby const &game
 
 struct Matchmaking
 {
-  Matchmaking (boost::asio::io_context &io_context_, std::shared_ptr<User> user_, std::list<std::shared_ptr<User>> &users_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_) : io_context{ io_context_ }, user{ user_ }, users{ users_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ } {}
+  Matchmaking (boost::asio::io_context &io_context_, std::shared_ptr<User> user_, std::list<std::shared_ptr<User>> &users_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_) : io_context{ io_context_ }, user{ user_ }, users{ users_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ }, timerClient{ std::make_shared<CoroTimer> (CoroTimer{ io_context_ }) } { timerClient->expires_after (std::chrono::system_clock::time_point::max () - std::chrono::system_clock::now ()); }
+  ~Matchmaking ()
+  {
+    //
+    timerClient->cancel ();
+  }
 
   bool
   isRegistered (std::string const &accountName)
@@ -168,7 +177,8 @@ struct Matchmaking
         // removeUserFromLobby ();
       }
     // TODO we do not need this optional account name because we know if user is logged in based on state machine state
-    user->accountName = {};
+    //  TODO maybe just make user= {} ???
+    user->accountName.clear ();
     user->msgQueueClient.clear ();
     user->communicationChannels.clear ();
     user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LogoutAccountSuccess{}));
@@ -211,7 +221,7 @@ struct Matchmaking
                   {
                     user_->connectionToGame = std::make_shared<Websocket> (io_context);
                     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-                    co_await user_->connectionToGame->next_layer ().async_connect (gameEndpoint, boost::asio::use_awaitable);
+                    co_await user_->connectionToGame->next_layer ().async_connect (gameEndpoint);
                     user_->connectionToGame->next_layer ().expires_never ();
                     user_->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
                     user_->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
@@ -241,8 +251,6 @@ struct Matchmaking
   void
   passwordHashed (PasswordHashed const &passwordHash)
   {
-    // if (true) // depends on state
-    //   {
     if (auto account = database::createAccount (user->accountName, passwordHash.hashedPassword))
       {
         user->accountName = account->accountName;
@@ -252,11 +260,28 @@ struct Matchmaking
       {
         user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ user->accountName, "account already created" }));
       }
-    // }
-    // else
-    //   {
-    //     user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ user->accountName, "Canceled by User Request" }));
-    //   }
+  }
+
+  boost::asio::awaitable<void>
+  abortCoroutineObjectIsDead ()
+  {
+    try
+      {
+        co_await timerClient->async_wait ();
+      }
+    catch (boost::system::system_error &e)
+      {
+        using namespace boost::system::errc;
+        if (operation_canceled == e.code ())
+          {
+            co_return;
+          }
+        else
+          {
+            std::cout << "error in timer boost::system::errc: " << e.code () << std::endl;
+            abort ();
+          }
+      }
   }
 
   boost::asio::awaitable<void>
@@ -270,8 +295,11 @@ struct Matchmaking
       }
     else
       {
-        auto hashedPw = co_await async_hash (pool, io_context, createAccountObject.password, boost::asio::use_awaitable);
-        sm.process_event (PasswordHashed{ hashedPw }, deps, subs);
+        std::variant<std::string, std::monostate> hashedPw = co_await(async_hash (pool, io_context, createAccountObject.password, use_awaitable) || abortCoroutineObjectIsDead ());
+        if (std::holds_alternative<std::string> (hashedPw))
+          {
+            sm.process_event (PasswordHashed{ std::get<std::string> (hashedPw) }, deps, subs);
+          }
       }
   }
 
@@ -330,14 +358,18 @@ struct Matchmaking
           }
         else
           {
-            if (co_await async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable))
+            auto passwordMatches = co_await(async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, use_awaitable) || abortCoroutineObjectIsDead ());
+            if (std::holds_alternative<bool> (passwordMatches))
               {
-                sm.process_event (PasswordMatches{ account->accountName }, deps, subs);
-              }
-            else
-              {
-                user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
-                co_return;
+                if (std::get<bool> (passwordMatches))
+                  {
+                    sm.process_event (PasswordMatches{ account->accountName }, deps, subs);
+                  }
+                else
+                  {
+                    user->sendMessageToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
+                    co_return;
+                  }
               }
           }
       }
@@ -818,7 +850,7 @@ struct Matchmaking
     return make_transition_table(
       // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
       * state<NotLoggedin>                + event<user_matchmaking::CreateAccount>                    / doCreateAccountAndLogin                           = state<WaitingForPasswordHashed>
-      , state<NotLoggedin>                + event<user_matchmaking::LoginAccount>                     / doLoginAccount                                    = state<WaitingForPasswordUnHashed>
+      , state<NotLoggedin>                + event<user_matchmaking::LoginAccount>                     / doLoginAccount                                    = state<WaitingForPasswordCheck>
       , state<NotLoggedin>                + event<user_matchmaking::LoginAsGuest>                     / (&Matchmaking::loginAsGuest)                      = state<Loggedin>
       , state<NotLoggedin>                + event<PasswordHashed>                                     / (&Matchmaking::informUserAboutCancelCreateAccount)
       , state<NotLoggedin>                + event<PasswordMatches>                                    / (&Matchmaking::informUserAboutCancelLogin)        
@@ -826,8 +858,8 @@ struct Matchmaking
       , state<WaitingForPasswordHashed>   + event<PasswordHashed>                                     / (&Matchmaking::passwordHashed)                    = state<Loggedin>
       , state<WaitingForPasswordHashed>   + event<user_matchmaking::CreateAccountCancel>                                                                  = state<NotLoggedin>
       // WaitingForLogin--------------------------------------------------------------------------------------------------------------------------------------------------------------
-      , state<WaitingForPasswordUnHashed> + event<PasswordMatches>                                    / (&Matchmaking::passwordMatches)                   = state<Loggedin>
-      , state<WaitingForPasswordUnHashed> + event<user_matchmaking::LoginAccountCancel>                                                                   = state<NotLoggedin>
+      , state<WaitingForPasswordCheck>    + event<PasswordMatches>                                    / (&Matchmaking::passwordMatches)                   = state<Loggedin>
+      , state<WaitingForPasswordCheck>    + event<user_matchmaking::LoginAccountCancel>                                                                   = state<NotLoggedin>
       // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
       , state<Loggedin>                   + event<user_matchmaking::JoinChannel>                      / (&Matchmaking::joinChannel)         
       , state<Loggedin>                   + event<user_matchmaking::BroadCastMessage>                 / (&Matchmaking::broadCastMessage)         
@@ -856,6 +888,7 @@ private:
   std::list<std::shared_ptr<User>> &users;
   boost::asio::thread_pool &pool;
   std::list<GameLobby> &gameLobbies;
+  std::shared_ptr<CoroTimer> timerClient;
 };
 
 #endif /* D9077A7B_F0F8_4687_B460_C6D43C94F8AF */

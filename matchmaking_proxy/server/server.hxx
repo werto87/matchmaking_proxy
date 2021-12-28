@@ -119,6 +119,8 @@ public:
                 co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
                 co_await connection->async_accept (use_awaitable);
                 // TODO instead of detached we can try to remove the state machine for matchmaking
+                // TODO CARE!!!! if we remove the matchmaking state machine while its in a coroutine its possible to get a dangeling reference to sm. search for "sm.process_event (PasswordHashed{ hashedPw }, deps, subs);"
+                
                 // TODO read from client
                 // co_spawn (
                 //     executor, [connection, this, &user] () mutable { return readFromClient (user, *connection); }, detached);

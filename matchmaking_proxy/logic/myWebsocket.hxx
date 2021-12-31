@@ -54,11 +54,14 @@ public:
         for (;;)
           {
             auto oneMsg = co_await async_read_one_message ();
+            std::cout << "read: "
+                      << "'" << oneMsg << "'" << std::endl;
             onRead (std::move (oneMsg));
           }
       }
     catch (boost::system::system_error &e)
       {
+        std::cout << "read Exception: " << e.what () << std::endl;
         webSocket.reset ();
         if (timer) timer->cancel ();
         throw e;
@@ -97,11 +100,14 @@ public:
                 auto tmpMsg = std::move (msgQueue.front ());
                 msgQueue.pop_front ();
                 co_await connection.lock ()->async_write (boost::asio::buffer (tmpMsg), boost::asio::use_awaitable);
+                std::cout << "write: "
+                          << "'" << tmpMsg << "'" << std::endl;
               }
           }
       }
     catch (std::exception &e)
       {
+        std::cout << "write Exception: " << e.what () << std::endl;
         webSocket.reset ();
         if (timer) timer->cancel ();
         throw e;

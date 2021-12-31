@@ -47,7 +47,7 @@ struct MatchmakingStateMachine
   }
 
   Matchmaking data;
-  sml::sm<Matchmaking> matchmakingStateMachine{ data }; // using unique pointer to late init this member. late init this member because we need to change something on data after construction and for some reason this does not update so we need to throw away the old object and set the new one but the copy assigment of sml::sm<Matchmaking> does not work
+  sml::sm<Matchmaking> matchmakingStateMachine{ data };
 };
 
 #endif /* FC9C2A0E_0B1D_4FE6_B776_3235987CF58C */

@@ -3,5 +3,6 @@
     rating.hxx
     matchmaking.hxx
     myWebsocket.hxx
+    matchmakingStateMachine.hxx
  )
 

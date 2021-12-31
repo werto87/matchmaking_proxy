@@ -5,6 +5,11 @@
 #include "../util.hxx"
 #include "user.hxx"
 #include <algorithm>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/system_timer.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <chrono>
 #include <cstddef>
 #include <iterator>
@@ -23,7 +28,7 @@ struct GameLobby
 {
 
   GameLobby () = default;
-  GameLobby (std::string name, std::string password) : name{ std::move (name) }, password (std::move (password)) {}
+  GameLobby (std::string name, std::string password, std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby_) : name{ std::move (name) }, password (std::move (password)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
   ~GameLobby ()
   {
     if (_timer) _timer->cancel ();
@@ -45,9 +50,9 @@ struct GameLobby
       }
     else
       {
-        if (userMaxCount < _users.size ())
+        if (userMaxCount < accountNames.size ())
           {
-            return "userMaxCount < _users.size ()";
+            return "userMaxCount < accountNames.size ()";
           }
         else
           {
@@ -57,18 +62,10 @@ struct GameLobby
     return {};
   }
 
-  std::vector<std::string>
-  accountNames () const
-  {
-    auto result = std::vector<std::string>{};
-    ranges::transform (_users, ranges::back_inserter (result), [] (auto const &user) { return user->accountName; });
-    return result;
-  }
-
   bool
   isGameLobbyAdmin (std::string const &accountName) const
   {
-    return lobbyAdminType == LobbyType::FirstUserInLobbyUsers && _users.front ()->accountName == accountName;
+    return lobbyAdminType == LobbyType::FirstUserInLobbyUsers && accountNames.front () == accountName;
   }
 
   size_t
@@ -78,18 +75,18 @@ struct GameLobby
   }
 
   std::optional<std::string>
-  tryToAddUser (std::shared_ptr<User> const &user)
+  tryToAddUser (User const &user)
   {
-    if (_maxUserCount > _users.size ())
+    if (_maxUserCount > accountNames.size ())
       {
-        if (ranges::none_of (_users, [accountName = user->accountName] (std::shared_ptr<User> const &user) { return user->accountName == accountName; }))
+        if (ranges::none_of (accountNames, [&accountName = user.accountName] (std::string const &accountInGameLobby) { return accountInGameLobby == accountName; }))
           {
-            _users.push_back (user);
+            accountNames.push_back (user.accountName);
             return {};
           }
         else
           {
-            return "User allready in lobby with user name: " + user->accountName;
+            return "User allready in lobby with user name: " + user.accountName;
           }
       }
     else
@@ -103,9 +100,9 @@ struct GameLobby
   {
     if (isGameLobbyAdmin (userWhoTriesToRemove) && userWhoTriesToRemove != userToRemoveName)
       {
-        if (auto userToRemoveFromLobby = ranges::find_if (_users, [&userToRemoveName] (auto const &user) { return userToRemoveName == user->accountName; }); userToRemoveFromLobby != _users.end ())
+        if (auto userToRemoveFromLobby = ranges::find_if (accountNames, [&userToRemoveName] (auto const &accountName) { return userToRemoveName == accountName; }); userToRemoveFromLobby != accountNames.end ())
           {
-            _users.erase (userToRemoveFromLobby);
+            accountNames.erase (userToRemoveFromLobby);
             return true;
           }
       }
@@ -115,9 +112,9 @@ struct GameLobby
   bool
   tryToRemoveAdminAndSetNewAdmin ()
   {
-    if (not _users.empty ())
+    if (not accountNames.empty ())
       {
-        _users.erase (_users.begin ());
+        accountNames.erase (accountNames.begin ());
         return true;
       }
     else
@@ -126,47 +123,26 @@ struct GameLobby
       }
   }
 
-  void
-  sendToAllAccountsInGameLobby (std::string const &message)
-  {
-    // TODO do not push messages in a queue with offline user
-    // if user is offline but in lobby user message queue gets filled but the messages get never send because of relogUser() overrides user with another user before the messages gets send. This is fine but we still push messages in a queue and override it later
-    ranges::for_each (_users, [&message] (auto &user) { user->sendMessageToUser (message); });
-  }
-
   bool
-  removeUser (std::shared_ptr<User> const &user)
+  removeUser (std::string const &accountNameToRemove)
   {
-    _users.erase (std::remove_if (_users.begin (), _users.end (), [accountName = user->accountName] (auto const &_user) { return accountName == _user->accountName; }), _users.end ());
+    accountNames.erase (std::remove_if (accountNames.begin (), accountNames.end (), [&accountNameToRemove] (auto const &accountNameInGameLobby) { return accountNameToRemove == accountNameInGameLobby; }), accountNames.end ());
     if (lobbyAdminType == LobbyType::FirstUserInLobbyUsers)
       {
         auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
         usersInGameLobby.maxUserSize = maxUserCount ();
         usersInGameLobby.name = name.value ();
         usersInGameLobby.durakGameOption = gameOption;
-        ranges::transform (accountNames (), ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
-        sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
+        ranges::transform (accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+        sendToUsersInGameLobby (accountNames, objectToStringWithObjectName (usersInGameLobby));
       }
-    return _users.empty ();
+    return accountNames.empty ();
   }
 
   size_t
   accountCount ()
   {
-    return _users.size ();
-  }
-
-  void
-  relogUser (std::shared_ptr<User> &user)
-  {
-    if (auto oldLogin = ranges::find_if (_users, [accountName = user->accountName] (auto const &_user) { return accountName == _user->accountName; }); oldLogin != _users.end ())
-      {
-        *oldLogin = user;
-      }
-    else
-      {
-        throw std::logic_error{ "can not relog user beacuse he is not logged in the create game lobby" };
-      }
+    return accountNames.size ();
   }
 
   boost::asio::awaitable<void>
@@ -208,7 +184,7 @@ struct GameLobby
   {
     if (waitingForAnswerToStartGame)
       {
-        sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
+        sendToUsersInGameLobby (accountNames, objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
         readyUsers.clear ();
         _timer->cancel ();
         waitingForAnswerToStartGame = false;
@@ -221,9 +197,9 @@ struct GameLobby
     return waitingForAnswerToStartGame;
   }
 
-  std::vector<std::shared_ptr<User>> _users{};
+  std::vector<std::string> accountNames{};
   shared_class::GameOption gameOption{};
-  std::vector<std::shared_ptr<User>> readyUsers{};
+  std::vector<std::string> readyUsers{};
   LobbyType lobbyAdminType = LobbyType::FirstUserInLobbyUsers;
   std::optional<std::string> name{};
   std::string password{};
@@ -232,6 +208,7 @@ private:
   std::shared_ptr<boost::asio::system_timer> _timer;
   bool waitingForAnswerToStartGame = false;
   size_t _maxUserCount{ 2 };
+  std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby{};
 };
 
 #endif /* DBE82937_D6AB_4777_A3C8_A62B68300AA3 */

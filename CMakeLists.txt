@@ -35,7 +35,6 @@ ${PROJECT_OPTIONS}
   CONAN_PKG::libsodium
   CONAN_PKG::certify
   CONAN_PKG::pipes
-  CONAN_PKG::corrade
   CONAN_PKG::sml
 )
 target_compile_definitions(${TARGET_NAME_LIB} INTERFACE "$<$<CONFIG:DEBUG>:DEBUG>")

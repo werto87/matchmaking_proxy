@@ -4,6 +4,8 @@
 #include "../database/database.hxx"
 #include "../logic/client.hxx"
 #include "gameLobby.hxx"
+#include "matchmaking_proxy/logic/matchmakingStateMachine.hxx"
+#include "matchmaking_proxy/logic/myWebsocket.hxx"
 #include "user.hxx"
 #include <algorithm>
 #include <boost/algorithm/algorithm.hpp>
@@ -20,7 +22,7 @@
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/certify/extensions.hpp>
-#include <boost/certify/https_verification.hpp>
+#include <boost/certify/https_verification.hpp> //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
@@ -109,23 +111,17 @@ public:
           {
             try
               {
+
                 auto socket = co_await acceptor.async_accept ();
                 auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ std::move (socket), ctx });
-                users.emplace_back (std::make_shared<User> (User{}));
-                // TODO make user a member of state machine to fight the problems with circular dependencies
-                std::list<std::shared_ptr<User>>::iterator user = std::next (users.end (), -1);
                 connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
                 connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
                 co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
                 co_await connection->async_accept (use_awaitable);
-                // TODO instead of detached we can try to remove the state machine for matchmaking
-                // TODO CARE!!!! if we remove the matchmaking state machine while its in a coroutine its possible to get a dangeling reference to sm. search for "sm.process_event (PasswordHashed{ hashedPw }, deps, subs);"
-                
-                // TODO read from client
-                // co_spawn (
-                //     executor, [connection, this, &user] () mutable { return readFromClient (user, *connection); }, detached);
-                co_spawn (
-                    executor, [connectionWeakPointer = std::weak_ptr<SSLWebsocket>{ connection }, &user] () mutable { return user->get ()->writeToClient (connectionWeakPointer); }, detached);
+                auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection });
+                matchmakings.emplace_back (Matchmaking{ _io_context, users, _pool, gameLobbies, [myWebsocket] (std::string message) { myWebsocket->sendMessage (message); } });
+                std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
+                matchmaking->init (myWebsocket, executor, matchmaking, matchmakings);
               }
             catch (std::exception &e)
               {
@@ -141,9 +137,8 @@ public:
 
   boost::asio::io_context &_io_context;
   boost::asio::thread_pool &_pool;
-  //   TODO instead of users we can hold the matchmaking statemachine which is the new user and has the connection and the logic
-  //  we could move the connections into the state machine and so we have a simpler user!!!!
   std::list<std::shared_ptr<User>> users{};
+  std::list<MatchmakingStateMachine> matchmakings{};
   std::list<GameLobby> gameLobbies{};
 };
 

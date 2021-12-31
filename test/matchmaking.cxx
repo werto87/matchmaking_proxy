@@ -16,14 +16,17 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-  typedef sml::sm<Matchmaking> MatchmakingMachine;
   using namespace sml;
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+  // auto matchmaking = std::make_shared<Matchmaking> (Matchmaking{ ioContext, users_, pool_, gameLobbies_, [] (std::string) {} });
+  typedef sml::sm<Matchmaking> MatchmakingMachine;
+  // MatchmakingMachine loginMachine{ *matchmaking.get () };
+  // matchmaking.reset ();
+  auto matchmaking = Matchmaking{ ioContext, users_, pool_, gameLobbies_, [] (std::string) {} };
   MatchmakingMachine loginMachine{ matchmaking };
   SECTION ("CreateAccount", "[matchmaking]")
   {
@@ -61,7 +64,7 @@ TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+  auto matchmaking = Matchmaking{ ioContext, users_, pool_, gameLobbies_, [] (std::string) {} };
   MatchmakingMachine loginMachine{ matchmaking };
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
@@ -93,7 +96,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+  auto matchmaking = Matchmaking{ ioContext, users_, pool_, gameLobbies_, [] (std::string) {} };
   MatchmakingMachine loginMachine{ matchmaking };
   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
   ioContext.run ();
@@ -180,7 +183,7 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+  auto matchmaking = Matchmaking{ ioContext, users_, pool_, gameLobbies_, [] (std::string) {} };
   MatchmakingMachine loginMachine{ matchmaking };
   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
   ioContext.run ();
@@ -208,7 +211,7 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
 //   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
 //   boost::asio::thread_pool pool_{};
 //   std::list<GameLobby> gameLobbies_{};
-//   auto matchmaking = Matchmaking{ ioContext, users_.front (), users_, pool_, gameLobbies_ };
+//   auto matchmaking = Matchmaking{ ioContext,  users_, pool_, gameLobbies_ };
 //   auto loginMachine = std::make_unique<MatchmakingMachine> (matchmaking);
 //   SECTION ("LoginAccount", "[matchmaking]")
 //   {

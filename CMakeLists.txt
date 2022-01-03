@@ -4,6 +4,7 @@ project(project VERSION 1.0.0
   LANGUAGES CXX
   ) 
 cmake_policy(SET CMP0015 NEW)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 include(cmake/Cache.cmake)
 set(PROJECT_WARNINGS project_warning)
 add_library(${PROJECT_WARNINGS} INTERFACE)
@@ -21,11 +22,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TARGET_NAME_LIB project_lib)
 add_library(${TARGET_NAME_LIB} INTERFACE)
 add_subdirectory(matchmaking_proxy) 
-target_include_directories(${TARGET_NAME_LIB} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(${TARGET_NAME_LIB} INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  )
 target_link_libraries(${TARGET_NAME_LIB} INTERFACE
 ${PROJECT_WARNINGS}
 ${PROJECT_OPTIONS}
@@ -37,17 +33,16 @@ ${PROJECT_OPTIONS}
   CONAN_PKG::pipes
   CONAN_PKG::sml
 )
-target_compile_definitions(${TARGET_NAME_LIB} INTERFACE "$<$<CONFIG:DEBUG>:DEBUG>")
-target_compile_definitions(${TARGET_NAME_LIB} INTERFACE _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
-# target_compile_definitions(${TARGET_NAME_LIB} INTERFACE BOOST_ASIO_ENABLE_HANDLER_TRACKING)
-
-
-
+target_compile_definitions(${TARGET_NAME_LIB} INTERFACE 
+$<$<CONFIG:DEBUG>:DEBUG>
+_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+# BOOST_ASIO_ENABLE_HANDLER_TRACKING
+)
 # create executable
 OPTION(BUILD_TESTS "enable tests" OFF)
 IF(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test) 
 ENDIF(BUILD_TESTS)
-set(TARGET_NAME project)
+
              

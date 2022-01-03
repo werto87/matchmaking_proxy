@@ -1,15 +1,11 @@
 #include "matchmaking_proxy/logic/matchmaking.hxx"
-#include "../matchmaking_proxy/userMatchmakingSerialization.hxx"
-#include "matchmaking_proxy/database/database.hxx"
-#include "test/util.hxx"
+#include "../matchmaking_proxy/userMatchmakingSerialization.hxx" // for Cre...
+#include "matchmaking_proxy/database/database.hxx"               // for cre...
+#include "matchmaking_proxy/server/gameLobby.hxx"                // for Gam...
+#include "matchmaking_proxy/server/user.hxx"                     // for User
 #include <boost/asio/detached.hpp>
-#include <catch2/catch.hpp>
-#include <chrono>
-#include <confu_soci/convenienceFunctionForSoci.hxx>
-#include <cstddef>
-#include <iterator>
-#include <memory>
-
+#include <catch2/catch.hpp> // for Ass...
+#include <memory>           // for sha...
 using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")

@@ -1,5 +1,31 @@
 #include "rating.hxx"
+#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
+#include "matchmaking_proxy/database/database.hxx"   // for Account
+#include <algorithm>                                 // for copy
+#include <boost/core/addressof.hpp>                  // for addressof
+#include <boost/function/function_base.hpp>          // for has_empty_target
+#include <boost/iterator/iterator_facade.hpp>        // for operator!=
+#include <boost/move/utility_core.hpp>               // for move, forward
+#include <boost/numeric/conversion/cast.hpp>         // for numeric_cast
+#include <boost/optional/optional.hpp>               // for optional
+#include <boost/type_index/type_index_facade.hpp>    // for operator==
+#include <confu_soci/convenienceFunctionForSoci.hxx> // for findStruct
+#include <iosfwd>                                    // for ostream
+#include <iostream>                                  // for operator<<, cout
+#include <math.h>                                    // for rintl, lrintl
+#include <pipes/for_each.hpp>                        // for for_each_pipeline
+#include <pipes/impl/pipes_assembly.hpp>             // for generic_pipeline
+#include <pipes/operator.hpp>                        // for operator>>=
+#include <pipes/push_back.hpp>                       // for push_back_pipeline
+#include <pipes/transform.hpp>                       // for transform_pipe
+#include <range/v3/algorithm/find_if.hpp>            // for find_if, find_i...
+#include <range/v3/functional/identity.hpp>          // for identity
+#include <range/v3/numeric/accumulate.hpp>           // for accumulate, acc...
+#include <soci/session.h>                            // for session
+#include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
+#include <stdlib.h>                                  // for abort
 // In the losing team the user with the most rating loses the most points
+
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
@@ -9,6 +35,7 @@ ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings
 size_t
 averageRating (std::vector<std::string> const &accountNames)
 {
+
   soci::session sql (soci::sqlite3, databaseName);
   auto sumOfRatingInTheLobby = ranges::accumulate (accountNames, size_t{}, [&] (auto x, std::string const &accountToCheck) {
     if (auto userInDatabase = confu_soci::findStruct<database::Account> (sql, "accountName", accountToCheck))

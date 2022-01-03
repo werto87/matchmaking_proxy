@@ -3,79 +3,40 @@
 #include "../database/database.hxx"
 #include "../pw_hash/passwordHash.hxx"
 #include "../server/gameLobby.hxx"
-#include "../server/user.hxx"
+#include "../server/user.hxx" // for User
 #include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
+#include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/logic/myWebsocket.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
-#include "rating.hxx"
 #include <algorithm>
-#include <boost/algorithm/algorithm.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/asio.hpp>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/as_tuple.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
-#include <boost/asio/this_coro.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/date_time/posix_time/posix_time_duration.hpp>
-#include <boost/fusion/include/pair.hpp>
-#include <boost/fusion/include/sequence.hpp>
-#include <boost/fusion/sequence.hpp>
-#include <boost/fusion/support/pair.hpp>
-#include <boost/numeric/conversion/cast.hpp>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
-#include <boost/serialization/optional.hpp>
-#include <boost/serialization/vector.hpp>
 #include <boost/sml.hpp>
-#include <boost/system/detail/error_code.hpp>
-#include <boost/type_index.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <cassert>
-#include <cmath>
-#include <confu_json/confu_json.hxx>
-#include <confu_json/to_json.hxx>
+#include <chrono>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
-#include <crypt.h>
 #include <cstddef>
-#include <cstdlib>
-#include <exception>
-#include <fmt/core.h>
+#include <functional>
 #include <iostream>
-#include <iterator>
+#include <list> // for list
 #include <memory>
-#include <numeric>
-#include <optional>
-#include <pipes/filter.hpp>
-#include <pipes/pipes.hpp>
-#include <pipes/push_back.hpp>
-#include <pipes/transform.hpp>
-#include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/all.hpp>
-#include <range/v3/iterator/insert_iterators.hpp>
-#include <range/v3/numeric/accumulate.hpp>
-#include <range/v3/range.hpp>
-#include <range/v3/range_fwd.hpp>
-#include <range/v3/view/filter.hpp>
-#include <set>
-#include <sodium.h>
-#include <sstream>
-#include <stdexcept>
+#include <range/v3/functional/identity.hpp>
+#include <range/v3/range/dangling.hpp>
+#include <soci/session.h>
+#include <soci/sqlite3/soci-sqlite3.h>
 #include <string>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <variant>
+#include <type_traits> // for move
+#include <variant>     // for get
 #include <vector>
+
+namespace boost
+{
+namespace asio
+{
+class thread_pool;
+}
+}
 
 namespace sml = boost::sml;
 
@@ -130,8 +91,6 @@ struct ReciveMessage
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 constexpr auto use_nothrow_awaitable = boost::asio::experimental::as_tuple (boost::asio::use_awaitable);
-
-auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
 
 bool isInRatingrange (size_t userRating, size_t lobbyAverageRating);
 

@@ -1,26 +1,20 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include "../userMatchmakingSerialization.hxx"
-#include "../util.hxx"
-#include "user.hxx"
-#include <algorithm>
+#include "test/userDefinedGameOption.hxx" // for GameOption
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/system_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
-#include <chrono>
-#include <cstddef>
-#include <iterator>
-#include <list>
-#include <memory>
-#include <optional>
-#include <range/v3/algorithm.hpp>
-#include <range/v3/iterator/insert_iterators.hpp>
-#include <range/v3/range.hpp>
-#include <stdexcept>
-#include <string>
+#include <cstddef>    // for size_t
+#include <functional> // for function
+#include <iosfwd>     // for string
+#include <memory>     // for shared_ptr
+#include <optional>   // for optional
+#include <vector>     // for vector
+
+struct User;
 
 struct GameLobby
 {

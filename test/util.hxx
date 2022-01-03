@@ -1,9 +1,8 @@
 #ifndef F913C042_CAFF_4558_AE02_952AE3C4F17A
 #define F913C042_CAFF_4558_AE02_952AE3C4F17A
 
-#include <array>
-#include <iostream>
-#include <vector>
+#include <iostream> // for operator<<, ostream
+#include <vector>   // for allocator
 
 template <typename T, template <typename ELEM, typename ALLOC = std::allocator<ELEM>> class Container>
 std::ostream &

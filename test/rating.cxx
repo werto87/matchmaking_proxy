@@ -1,13 +1,7 @@
 #include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/server/user.hxx"
-#include "test/util.hxx"
-#include <catch2/catch.hpp>
-#include <chrono>
-#include <confu_soci/convenienceFunctionForSoci.hxx>
-#include <cstddef>
-#include <iterator>
+#include "matchmaking_proxy/database/database.hxx" // for Account
+#include <catch2/catch.hpp>                        // for AssertionHandler
+#include <type_traits>                             // for add_const<>::type
 
 TEST_CASE ("updateRatingWinLose", "[rating]")
 {

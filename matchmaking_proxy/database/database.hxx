@@ -2,7 +2,6 @@
 #define B86FE02F_B7D0_4435_9031_A334C305B294
 
 #include "confu_soci/convenienceFunctionForSoci.hxx"
-#include "constant.hxx"
 #include <boost/optional.hpp>
 #include <filesystem>
 

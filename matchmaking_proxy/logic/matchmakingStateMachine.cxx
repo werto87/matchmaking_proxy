@@ -1,4 +1,14 @@
 #include "matchmakingStateMachine.hxx"
+#include "matchmaking_proxy/userMatchmakingSerialization.hxx" // for userMa...
+#include <confu_json/to_object.hxx>                           // for to_object
+#include <confu_json/util.hxx>                                // for type_name
+#include <functional>                                         // for __base
+#include <iostream>                                           // for string
+#include <sstream>                                            // for basic_...
+#include <string>                                             // for operat...
+#include <utility>                                            // for pair
+#include <vector>                                             // for vector
+template <class T> class MyWebsocket;
 
 void
 MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket, boost::asio::io_context &executor, std::list<MatchmakingStateMachine>::iterator matchmaking, std::list<MatchmakingStateMachine> &matchmakings)

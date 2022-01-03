@@ -1,4 +1,14 @@
 #include "database.hxx"
+#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
+#include <confu_soci/convenienceFunctionForSoci.hxx> // for createTableForS...
+#include <filesystem>                                // for create_directory
+#include <iostream>                                  // for endl, basic_ost...
+#include <soci/error.h>                              // for soci_error
+#include <soci/session.h>                            // for session
+#include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
+#include <sqlite3.h>                                 // for sqlite3_close
+#include <stdio.h>                                   // for fprintf, stderr
+#include <vector>                                    // for vector
 
 namespace database
 {

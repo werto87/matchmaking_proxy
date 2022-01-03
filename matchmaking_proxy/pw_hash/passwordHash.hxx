@@ -1,7 +1,6 @@
 #ifndef AD3B06C2_4AC7_438D_8907_4643053A4E7E
 #define AD3B06C2_4AC7_438D_8907_4643053A4E7E
 #include "constant.hxx"
-#include "passwordHash.hxx"
 #include <algorithm>
 #include <array>
 #include <boost/asio.hpp>

@@ -26,7 +26,6 @@ template <class T> class MyWebsocket
 {
 public:
   MyWebsocket (std::shared_ptr<T> webSocket_) : webSocket{ webSocket_ } {}
-  ~MyWebsocket () {}
   boost::asio::awaitable<std::string>
   async_read_one_message ()
   {

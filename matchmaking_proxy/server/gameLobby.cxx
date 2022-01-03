@@ -1,4 +1,22 @@
 #include "gameLobby.hxx"
+#include "matchmaking_proxy/server/user.hxx"                  // for User
+#include "matchmaking_proxy/userMatchmakingSerialization.hxx" // for UsersI...
+#include "matchmaking_proxy/util.hxx"                         // for object...
+#include <algorithm>                                          // for remove_if
+#include <chrono>                                             // for seconds
+#include <experimental/coroutine>                             // for suspen...
+#include <iostream>                                           // for string
+#include <new>                                                // for operat...
+#include <range/v3/algorithm/find_if.hpp>                     // for find_if
+#include <range/v3/algorithm/none_of.hpp>                     // for none_of
+#include <range/v3/algorithm/transform.hpp>                   // for transform
+#include <range/v3/functional/identity.hpp>                   // for identity
+#include <range/v3/iterator/insert_iterators.hpp>             // for back_i...
+#include <ratio>                                              // for ratio
+#include <stdlib.h>                                           // for abort
+#include <string>                                             // for operat...
+#include <type_traits>                                        // for move
+#include <utility>                                            // for pair
 
 GameLobby::GameLobby (std::string name, std::string password, std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby_) : name{ std::move (name) }, password (std::move (password)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
 

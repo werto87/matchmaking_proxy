@@ -1,4 +1,11 @@
 #include "matchmaking.hxx"
+#include "matchmaking_proxy/logic/rating.hxx"
+#include <range/v3/algorithm/copy_if.hpp>
+#include <range/v3/algorithm/transform.hpp>
+#include <range/v3/iterator/insert_iterators.hpp>
+
+auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
+
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating)
 {

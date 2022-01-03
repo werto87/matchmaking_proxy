@@ -1,9 +1,33 @@
 #include "server.hxx"
+#ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
+#include <experimental/coroutine>
+#endif
+#include "matchmaking_proxy/logic/matchmaking.hxx"
+#include "matchmaking_proxy/logic/myWebsocket.hxx"
+#include "server.hxx"
+#include <algorithm> // for max
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp> //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS
+#include <deque>
+#include <exception>
+#include <experimental/coroutine>
+#include <functional>
+#include <iostream>
+#include <iterator> // for next
+#include <openssl/ssl3.h>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility> // for pair
+
+using namespace boost::beast;
+using namespace boost::asio;
+using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
+using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
+
 Server::Server (boost::asio::io_context &io_context, boost::asio::thread_pool &pool) : _io_context{ io_context }, _pool{ pool } {}
 
-awaitable<void>
+boost::asio::awaitable<void>
 Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
 {
   try

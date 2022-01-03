@@ -1,9 +1,8 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.22)
 project(project VERSION 1.0.0
   DESCRIPTION project
   LANGUAGES CXX
   ) 
-cmake_policy(SET CMP0015 NEW)
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 include(cmake/Cache.cmake)
 set(PROJECT_WARNINGS project_warning)

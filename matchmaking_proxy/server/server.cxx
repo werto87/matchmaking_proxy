@@ -3,7 +3,7 @@
 #include <experimental/coroutine>
 #endif
 #include "matchmaking_proxy/logic/matchmaking.hxx"
-#include "matchmaking_proxy/logic/myWebsocket.hxx"
+#include "myWebsocket.hxx"
 #include "server.hxx"
 #include <algorithm> // for max
 #include <boost/certify/extensions.hpp>

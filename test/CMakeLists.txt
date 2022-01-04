@@ -1,11 +1,8 @@
 set(TEST_TARGET_NAME _test)
 add_executable(${TEST_TARGET_NAME} 
 main.cxx
-constant.hxx
-util.hxx
 util.cxx
 rating.cxx
-userDefinedGameOption.hxx
 matchmaking.cxx
 useAsLib.cxx
 )

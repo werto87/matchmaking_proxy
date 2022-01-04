@@ -3,11 +3,11 @@
 #include "../database/database.hxx"
 #include "../pw_hash/passwordHash.hxx"
 #include "../server/gameLobby.hxx"
+#include "../server/myWebsocket.hxx"
 #include "../server/user.hxx" // for User
 #include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
-#include "matchmaking_proxy/logic/myWebsocket.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include <algorithm>
 #include <boost/asio/experimental/as_tuple.hpp>

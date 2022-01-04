@@ -1,5 +1,5 @@
 #include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/server/server.hxx" //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS BECAUSE OF "#include <boost/certify/https_verification.hpp>"
+#include "matchmaking_proxy/server/server.hxx"
 #include <boost/bind/bind.hpp>
 #include <catch2/catch.hpp>
 #include <exception>

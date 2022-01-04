@@ -11,19 +11,18 @@
 #include <list> // for list
 #include <memory>
 #include <type_traits> // for move
-namespace boost
-{
-namespace asio
+
+namespace boost::asio
 {
 class io_context;
 }
-}
+
 template <class T> class MyWebsocket;
 
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
 struct MatchmakingStateMachine
 {
-  MatchmakingStateMachine (Matchmaking data_) : data{ std::move (data_) } {}
+  MatchmakingStateMachine (Matchmaking data_);
 
   void init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket, boost::asio::io_context &executor, std::list<MatchmakingStateMachine>::iterator matchmaking, std::list<MatchmakingStateMachine> &matchmakings);
 

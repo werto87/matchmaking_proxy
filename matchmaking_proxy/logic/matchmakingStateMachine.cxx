@@ -10,6 +10,8 @@
 #include <vector>                                             // for vector
 template <class T> class MyWebsocket;
 
+MatchmakingStateMachine::MatchmakingStateMachine (Matchmaking data_) : data{ std::move (data_) } {}
+
 void
 MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket, boost::asio::io_context &executor, std::list<MatchmakingStateMachine>::iterator matchmaking, std::list<MatchmakingStateMachine> &matchmakings)
 {

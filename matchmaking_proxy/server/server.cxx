@@ -77,7 +77,7 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection->async_accept (use_awaitable);
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection });
-              matchmakings.emplace_back (Matchmaking{ _io_context, users, _pool, gameLobbies, [myWebsocket] (std::string message) { myWebsocket->sendMessage (message); } });
+              matchmakings.emplace_back (Matchmaking{ _io_context, _pool, gameLobbies, [myWebsocket] (std::string message) { myWebsocket->sendMessage (message); } });
               std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
               matchmaking->init (myWebsocket, _io_context, matchmaking, matchmakings);
             }

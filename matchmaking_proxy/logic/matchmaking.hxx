@@ -101,7 +101,7 @@ bool matchingLobby (std::string const &accountName, GameLobby const &gameLobby, 
 struct Matchmaking
 {
   using Self = Matchmaking;
-  Matchmaking (boost::asio::io_context &io_context_, std::list<std::shared_ptr<User>> &users_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_, std::function<void (std::string msgToSend)> sendMsg_) : sendMsgToUser{ sendMsg_ }, io_context{ io_context_ }, users{ users_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ }, cancelCoroutineTimer{ std::make_shared<CoroTimer> (CoroTimer{ io_context_ }) } { cancelCoroutineTimer->expires_after (std::chrono::system_clock::time_point::max () - std::chrono::system_clock::now ()); }
+  Matchmaking (boost::asio::io_context &io_context_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_, std::function<void (std::string msgToSend)> sendMsg_) : sendMsgToUser{ sendMsg_ }, io_context{ io_context_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ }, cancelCoroutineTimer{ std::make_shared<CoroTimer> (CoroTimer{ io_context_ }) } { cancelCoroutineTimer->expires_after (std::chrono::system_clock::time_point::max () - std::chrono::system_clock::now ()); }
 
 public:
   auto
@@ -219,29 +219,30 @@ private:
     soci::session sql (soci::sqlite3, databaseName);
     if (auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName))
       {
-        if (std::find_if (users.begin (), users.end (), [accountName = account->accountName] (auto const &u) { return accountName == u->accountName; }) != users.end ())
-          {
-            sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
-            co_return;
-          }
-        else
-          {
-            using namespace boost::asio::experimental::awaitable_operators;
-            auto passwordMatches = co_await(async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
-            if (std::holds_alternative<bool> (passwordMatches))
-              {
-                if (std::get<bool> (passwordMatches))
-                  {
-                    user.accountName = loginAccountObject.accountName;
-                    sm.process_event (PasswordMatches{}, deps, subs);
-                  }
-                else
-                  {
-                    sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
-                    co_return;
-                  }
-              }
-          }
+        // TODO fix send to users
+        // if (std::find_if (users.begin (), users.end (), [accountName = account->accountName] (auto const &u) { return accountName == u->accountName; }) != users.end ())
+        //   {
+        //     sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
+        //     co_return;
+        //   }
+        // else
+        //   {
+        //     using namespace boost::asio::experimental::awaitable_operators;
+        //     auto passwordMatches = co_await(async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
+        //     if (std::holds_alternative<bool> (passwordMatches))
+        //       {
+        //         if (std::get<bool> (passwordMatches))
+        //           {
+        //             user.accountName = loginAccountObject.accountName;
+        //             sm.process_event (PasswordMatches{}, deps, subs);
+        //           }
+        //         else
+        //           {
+        //             sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
+        //             co_return;
+        //           }
+        //       }
+        //   }
       }
     else
       {
@@ -288,7 +289,6 @@ private:
 
   boost::asio::io_context &io_context;
   User user{};
-  std::list<std::shared_ptr<User>> &users;
   boost::asio::thread_pool &pool;
   std::list<GameLobby> &gameLobbies;
   std::shared_ptr<CoroTimer> cancelCoroutineTimer;

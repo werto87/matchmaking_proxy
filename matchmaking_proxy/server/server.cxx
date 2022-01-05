@@ -83,7 +83,6 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               matchmakingCallbacks.sendMsgToUsers = [&matchmakings = matchmakings] (std::string const &message, std::vector<std::string> const &accountsToSendMessageTo) {
                 for (auto const &accountToSendMessageTo : accountsToSendMessageTo)
                   {
-                    // TODO find a way to get username of the statemachine care matchmakingStateMachine.data.user maybe has not the correct value because of sml strange things
                     for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
                       {
                         std::cout << "AccountName: '" << matchmaking.data.user.accountName << "'" << std::endl;

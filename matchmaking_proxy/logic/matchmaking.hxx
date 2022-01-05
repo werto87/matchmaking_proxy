@@ -7,6 +7,7 @@
 #include "../server/user.hxx" // for User
 #include "../userMatchmakingSerialization.hxx"
 #include "../util.hxx"
+#include "matchmakingCallbacks.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include <algorithm>
@@ -29,7 +30,6 @@
 #include <type_traits> // for move
 #include <variant>     // for get
 #include <vector>
-
 namespace boost
 {
 namespace asio
@@ -85,6 +85,9 @@ struct SendMessageToUser
 struct ReciveMessage
 {
 };
+struct NotLoggedinEv
+{
+};
 
 // TODO this leaks using namespace and typedef
 
@@ -101,7 +104,7 @@ bool matchingLobby (std::string const &accountName, GameLobby const &gameLobby, 
 struct Matchmaking
 {
   using Self = Matchmaking;
-  Matchmaking (boost::asio::io_context &io_context_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_, std::function<void (std::string msgToSend)> sendMsg_) : sendMsgToUser{ sendMsg_ }, io_context{ io_context_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ }, cancelCoroutineTimer{ std::make_shared<CoroTimer> (CoroTimer{ io_context_ }) } { cancelCoroutineTimer->expires_after (std::chrono::system_clock::time_point::max () - std::chrono::system_clock::now ()); }
+  Matchmaking (boost::asio::io_context &io_context_, boost::asio::thread_pool &pool_, std::list<GameLobby> &gameLobbies_, MatchmakingCallbacks matchmakingCallbacks_) : matchmakingCallbacks{ matchmakingCallbacks_ }, io_context{ io_context_ }, pool{ pool_ }, gameLobbies{ gameLobbies_ }, cancelCoroutineTimer{ std::make_shared<CoroTimer> (CoroTimer{ io_context_ }) } { cancelCoroutineTimer->expires_after (std::chrono::system_clock::time_point::max () - std::chrono::system_clock::now ()); }
 
 public:
   auto
@@ -115,58 +118,75 @@ public:
     // clang-format off
   return make_transition_table(
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-* state<NotLoggedin>                          + event<u_m::CreateAccount>                                             / doCreateAccountAndLogin                   = state<WaitingForPasswordHashed>
-, state<NotLoggedin>                          + event<u_m::LoginAccount>                                              / doLoginAccount                            = state<WaitingForPasswordCheck>
-, state<NotLoggedin>                          + event<u_m::LoginAsGuest>                                              / (&Self::loginAsGuest)                     = state<Loggedin>
+* state<NotLoggedin>                          + event<u_m::CreateAccount>                 [ accountInDatabase ]                   / (&Self::informUserCreateAccountError)
+, state<NotLoggedin>                          + event<u_m::CreateAccount>                 [ not accountInDatabase ]               / doCreateAccountAndLogin                   = state<WaitingForPasswordHashed>
+, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ not isRegistered ]                    / (&Self::informUserAccountNotRegistered)
+, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ isLoggedin ]                          / (&Self::informUserAlreadyLoggedin)
+, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ not isLoggedin and isRegistered ]     / doLoginAccount                            = state<WaitingForPasswordCheck>
+, state<NotLoggedin>                          + event<u_m::LoginAsGuest>                                                          / (&Self::loginAsGuest)                     = state<Loggedin>
 // WaitingForCreateAccount------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ not accountInDatabase ]  / (&Self::createAccount)                    = state<Loggedin>
-, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]      / (&Self::informUserCreateAccountError)     = state<NotLoggedin>
-, state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                       / (&Self::cancelCreateAccount)              = state<NotLoggedin>
+, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ not accountInDatabase ]              / (&Self::createAccount)                          = state<Loggedin>
+, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / (&Self::informUserCreateAccountError)           = state<NotLoggedin>
+, state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / (&Self::cancelCreateAccount)                    = state<NotLoggedin>
 // WaitingForLogin--------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ userInGameLobby ]        / (&Self::informUserWantsToRelogToGameLobby)= state<WaitingForUserWantsToRelogGameLobby>
-, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ not userInGameLobby ]                                                = state<Loggedin>
-, state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                        / (&Self::cancelLoginAccount)               = state<NotLoggedin>
+, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ userInGameLobby ]                    / (&Self::informUserWantsToRelogToGameLobby)      = state<WaitingForUserWantsToRelogGameLobby>
+, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ not userInGameLobby ]                                                                  = state<Loggedin>
+, state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                                    / (&Self::cancelLoginAccount)                     = state<NotLoggedin>
+, state<WaitingForPasswordCheck>              + event<NotLoggedinEv>                                                                                                                = state<NotLoggedin>
+
 // WaitingForPasswordCheck---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]           / (&Self::relogToGameLobby)                 = state<Loggedin>
-, state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ not wantsToRelog ]       / (&Self::removeUserFromGameLobby)          = state<Loggedin>
+, state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / (&Self::relogToGameLobby)                       = state<Loggedin>
+, state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ not wantsToRelog ]                   / (&Self::removeUserFromGameLobby)                = state<Loggedin>
 // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<Loggedin>                             + on_entry<_>                                                           / (&Self::informUserLoginAccountSuccess)
-, state<Loggedin>                             + event<u_m::JoinChannel>                                               / (&Self::joinChannel)         
-, state<Loggedin>                             + event<u_m::BroadCastMessage>                                          / (&Self::broadCastMessage)         
-, state<Loggedin>                             + event<u_m::LeaveChannel>                                              / (&Self::leaveChannel)         
-, state<Loggedin>                             + event<u_m::LogoutAccount>                                             / (&Self::logoutAccount)                    = state<NotLoggedin>          
-, state<Loggedin>                             + event<u_m::CreateGameLobby>                                           / (&Self::createGameLobby)          
-, state<Loggedin>                             + event<u_m::JoinGameLobby>                                             / (&Self::joinGameLobby)          
-, state<Loggedin>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                           / (&Self::setMaxUserSizeInCreateGameLobby)          
-, state<Loggedin>                             + event<shared_class::GameOption>                                       / (&Self::setGameOption)         
-, state<Loggedin>                             + event<u_m::LeaveGameLobby>                                            / (&Self::leaveGameLobby)         
-, state<Loggedin>                             + event<u_m::CreateGame>                                                / (&Self::createGame)         
-, state<Loggedin>                             + event<u_m::WantsToJoinGame>                                           / (&Self::wantsToJoinGame)          
-, state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                       / (&Self::leaveMatchMakingQueue)          
-, state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                      / (&Self::joinMatchMakingQueue)         
-, state<Loggedin>                             + event<m_g::StartGameSuccess>                                                                                      = state<ProxyToGame>          
+, state<Loggedin>                             + on_entry<_>                                                                       / (&Self::informUserLoginAccountSuccess)
+, state<Loggedin>                             + event<u_m::JoinChannel>                                                           / (&Self::joinChannel)         
+, state<Loggedin>                             + event<u_m::BroadCastMessage>                                                      / (&Self::broadCastMessage)         
+, state<Loggedin>                             + event<u_m::LeaveChannel>                                                          / (&Self::leaveChannel)         
+, state<Loggedin>                             + event<u_m::LogoutAccount>                                                         / (&Self::logoutAccount)                          = state<NotLoggedin>          
+, state<Loggedin>                             + event<u_m::CreateGameLobby>                                                       / (&Self::createGameLobby)          
+, state<Loggedin>                             + event<u_m::JoinGameLobby>                                                         / (&Self::joinGameLobby)          
+, state<Loggedin>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / (&Self::setMaxUserSizeInCreateGameLobby)          
+, state<Loggedin>                             + event<shared_class::GameOption>                                                   / (&Self::setGameOption)         
+, state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / (&Self::leaveGameLobbyErrorUserNotFoundInLobby)         
+, state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ userInGameLobby 
+                                                                                             and not gameLobbyControlledByUsers ] / (&Self::leaveGameLobbyErrorNotControllerByUsers)         
+, state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ userInGameLobby 
+                                                                                             and gameLobbyControlledByUsers ]     / (&Self::leaveGameLobby)         
+, state<Loggedin>                             + event<u_m::CreateGame>                                                            / (&Self::createGame)         
+, state<Loggedin>                             + event<u_m::WantsToJoinGame>                                                       / (&Self::wantsToJoinGame)          
+, state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                                   / (&Self::leaveMatchMakingQueue)          
+, state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / (&Self::joinMatchMakingQueue)         
+, state<Loggedin>                             + event<m_g::StartGameSuccess>                                                                                                        = state<ProxyToGame>          
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-, state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                                                       = state<Loggedin>     
+, state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                                                                         = state<Loggedin>     
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-,*state<ReciveMessage>                        +event<SendMessageToUser>                                               / (&Self::sendToUser)
+,*state<ReciveMessage>                        +event<SendMessageToUser>                                                           / (&Self::sendToUser)
   );
     // clang-format on
   }
 
-  std::function<void (std::string msgToSend)> sendMsgToUser{};
+  MatchmakingCallbacks matchmakingCallbacks{};
+  User user{};
 
 private:
   void sendToUser (SendMessageToUser const &sendMessageToUser);
 
-  bool isRegistered (std::string const &accountName);
+  std::function<bool (user_matchmaking::LoginAccount const &loginAccount)> isRegistered = [] (user_matchmaking::LoginAccount const &loginAccount) -> bool {
+    soci::session sql (soci::sqlite3, databaseName);
+    return confu_soci::findStruct<database::Account> (sql, "accountName", loginAccount.accountName).has_value ();
+  };
+
+  void sendToAllAccountsInUsersCreateGameLobby (std::string const &message);
 
   void logoutAccount ();
+
+  std::function<bool (user_matchmaking::LoginAccount const &loginAccount, Matchmaking &matchmaking)> isLoggedin = [] (user_matchmaking::LoginAccount const &loginAccount, Matchmaking &matchmaking) -> bool { return matchmaking.matchmakingCallbacks.isLoggedin (loginAccount.accountName); };
 
   boost::asio::awaitable<std::string> sendStartGameToServer (GameLobby const &gameLobby);
 
   boost::asio::awaitable<void> startGame (GameLobby const &gameLobby);
 
-  bool createAccount (PasswordHashed const &passwordHash);
+  void createAccount (PasswordHashed const &passwordHash);
 
   std::function<bool (Matchmaking &matchmaking)> accountInDatabase = [] (Matchmaking &matchmaking) -> bool {
     soci::session sql (soci::sqlite3, databaseName);
@@ -182,21 +202,12 @@ private:
   boost::asio::awaitable<void>
   createAccountAndLogin (user_matchmaking::CreateAccount const &createAccountObject, auto &sm, auto &&deps, auto &&subs)
   {
-    soci::session sql (soci::sqlite3, databaseName);
-    if (confu_soci::findStruct<database::Account> (sql, "accountName", createAccountObject.accountName))
+    using namespace boost::asio::experimental::awaitable_operators;
+    std::variant<std::string, std::monostate> hashedPw = co_await(async_hash (pool, io_context, createAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
+    if (std::holds_alternative<std::string> (hashedPw))
       {
-        sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountObject.accountName, "account already created" }));
-        co_return;
-      }
-    else
-      {
-        using namespace boost::asio::experimental::awaitable_operators;
-        std::variant<std::string, std::monostate> hashedPw = co_await(async_hash (pool, io_context, createAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
-        if (std::holds_alternative<std::string> (hashedPw))
-          {
-            user.accountName = createAccountObject.accountName;
-            sm.process_event (PasswordHashed{ std::get<std::string> (hashedPw) }, deps, subs);
-          }
+        user.accountName = createAccountObject.accountName;
+        sm.process_event (PasswordHashed{ std::get<std::string> (hashedPw) }, deps, subs);
       }
   }
 
@@ -210,6 +221,13 @@ private:
                             })
            != matchmaking.gameLobbies.end ();
   };
+  std::function<bool (Matchmaking &matchmaking)> gameLobbyControlledByUsers = [] (Matchmaking &matchmaking) -> bool {
+    auto gameLobby = ranges::find_if (matchmaking.gameLobbies, [accountName = matchmaking.user.accountName] (auto const &gameLobby) {
+      auto const &accountNames = gameLobby.accountNames;
+      return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+    });
+    return gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
+  };
 
   std::function<bool (user_matchmaking::RelogTo const &relogTo)> wantsToRelog = [] (user_matchmaking::RelogTo const &relogTo) -> bool { return relogTo.wantsToRelog; };
 
@@ -217,37 +235,22 @@ private:
   loginAccount (auto &&loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
   {
     soci::session sql (soci::sqlite3, databaseName);
-    if (auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName))
+    auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName);
+    using namespace boost::asio::experimental::awaitable_operators;
+    auto passwordMatches = co_await(async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
+    if (std::holds_alternative<bool> (passwordMatches))
       {
-        // TODO fix send to users
-        // if (std::find_if (users.begin (), users.end (), [accountName = account->accountName] (auto const &u) { return accountName == u->accountName; }) != users.end ())
-        //   {
-        //     sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Account already logged in" }));
-        //     co_return;
-        //   }
-        // else
-        //   {
-        //     using namespace boost::asio::experimental::awaitable_operators;
-        //     auto passwordMatches = co_await(async_check_hashed_pw (pool, io_context, account->password, loginAccountObject.password, boost::asio::use_awaitable) || abortCoroutine ());
-        //     if (std::holds_alternative<bool> (passwordMatches))
-        //       {
-        //         if (std::get<bool> (passwordMatches))
-        //           {
-        //             user.accountName = loginAccountObject.accountName;
-        //             sm.process_event (PasswordMatches{}, deps, subs);
-        //           }
-        //         else
-        //           {
-        //             sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
-        //             co_return;
-        //           }
-        //       }
-        //   }
-      }
-    else
-      {
-        sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect username or password" }));
-        co_return;
+        if (std::get<bool> (passwordMatches))
+          {
+            user.accountName = loginAccountObject.accountName;
+            sm.process_event (PasswordMatches{}, deps, subs);
+          }
+        else
+          {
+            matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccountObject.accountName, "Incorrect Username or Password" }));
+            sm.process_event (NotLoggedinEv{}, deps, subs);
+            co_return;
+          }
       }
   }
 
@@ -287,8 +290,17 @@ private:
 
   void loginAsGuest ();
 
+  void createAccountAndInformUser (PasswordHashed const &passwordHash);
+
+  void informUserAlreadyLoggedin ();
+
+  void informUserAccountNotRegistered ();
+
+  void leaveGameLobbyErrorUserNotFoundInLobby ();
+
+  void leaveGameLobbyErrorNotControllerByUsers ();
+
   boost::asio::io_context &io_context;
-  User user{};
   boost::asio::thread_pool &pool;
   std::list<GameLobby> &gameLobbies;
   std::shared_ptr<CoroTimer> cancelCoroutineTimer;

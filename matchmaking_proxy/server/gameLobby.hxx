@@ -20,7 +20,7 @@ struct GameLobby
 {
 
   GameLobby () = default;
-  GameLobby (std::string name, std::string password, std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby_);
+  GameLobby (std::string name, std::string password, std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby_);
   ~GameLobby ();
 
   enum struct LobbyType
@@ -64,7 +64,7 @@ private:
   std::shared_ptr<boost::asio::system_timer> _timer;
   bool waitingForAnswerToStartGame = false;
   size_t _maxUserCount{ 2 };
-  std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby{};
+  std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby{};
 };
 
 #endif /* DBE82937_D6AB_4777_A3C8_A62B68300AA3 */

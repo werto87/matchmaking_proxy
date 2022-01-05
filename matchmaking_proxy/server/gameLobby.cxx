@@ -18,7 +18,7 @@
 #include <type_traits>                                        // for move
 #include <utility>                                            // for pair
 
-GameLobby::GameLobby (std::string name, std::string password, std::function<void (std::vector<std::string> const &accountNames, std::string msg)> sendToUsersInGameLobby_) : name{ std::move (name) }, password (std::move (password)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
+GameLobby::GameLobby (std::string name, std::string password, std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby_) : name{ std::move (name) }, password (std::move (password)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
 
 GameLobby::~GameLobby ()
 {
@@ -118,7 +118,7 @@ GameLobby::removeUser (std::string const &accountNameToRemove)
       usersInGameLobby.name = name.value ();
       usersInGameLobby.durakGameOption = gameOption;
       ranges::transform (accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
-      sendToUsersInGameLobby (accountNames, objectToStringWithObjectName (usersInGameLobby));
+      sendToUsersInGameLobby (objectToStringWithObjectName (usersInGameLobby), accountNames);
     }
   return accountNames.empty ();
 }
@@ -170,7 +170,7 @@ GameLobby::cancelTimer ()
 {
   if (waitingForAnswerToStartGame)
     {
-      sendToUsersInGameLobby (accountNames, objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
+      sendToUsersInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames);
       readyUsers.clear ();
       _timer->cancel ();
       waitingForAnswerToStartGame = false;

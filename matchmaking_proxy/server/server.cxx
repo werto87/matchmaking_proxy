@@ -1,4 +1,5 @@
 #include "server.hxx"
+#include <range/v3/algorithm/find_if.hpp>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
 #endif
@@ -15,11 +16,11 @@
 #include <iostream>
 #include <iterator> // for next
 #include <openssl/ssl3.h>
+#include <range/v3/view.hpp>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility> // for pair
-
 using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
@@ -77,7 +78,28 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection->async_accept (use_awaitable);
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection });
-              matchmakings.emplace_back (Matchmaking{ _io_context, _pool, gameLobbies, [myWebsocket] (std::string message) { myWebsocket->sendMessage (message); } });
+              auto matchmakingCallbacks = MatchmakingCallbacks{};
+              matchmakingCallbacks.sendMsgToUser = [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); };
+              matchmakingCallbacks.sendMsgToUsers = [&matchmakings = matchmakings] (std::string const &message, std::vector<std::string> const &accountsToSendMessageTo) {
+                for (auto const &accountToSendMessageTo : accountsToSendMessageTo)
+                  {
+                    // TODO find a way to get username of the statemachine care matchmakingStateMachine.data.user maybe has not the correct value because of sml strange things
+                    for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
+                      {
+                        std::cout << "AccountName: '" << matchmaking.data.user.accountName << "'" << std::endl;
+                        matchmaking.matchmakingStateMachine.process_event (SendMessageToUser{ message });
+                      }
+                  }
+              };
+              matchmakingCallbacks.isLoggedin = [&matchmakings = matchmakings] (std::string const &accountName) {
+                return ranges::find_if (matchmakings,
+                                        [&accountName] (MatchmakingStateMachine const &matchmakingStateMachine) {
+                                          //
+                                          return matchmakingStateMachine.data.user.accountName == accountName;
+                                        })
+                       != matchmakings.end ();
+              };
+              matchmakings.emplace_back (Matchmaking{ _io_context, _pool, gameLobbies, matchmakingCallbacks });
               std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
               matchmaking->init (myWebsocket, _io_context, matchmaking, matchmakings);
             }

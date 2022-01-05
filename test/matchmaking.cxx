@@ -19,7 +19,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
   typedef sml::sm<Matchmaking> MatchmakingMachine;
-  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, [] (std::string) {} };
+  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
   MatchmakingMachine loginMachine{ matchmaking };
   SECTION ("CreateAccount", "[matchmaking]")
   {
@@ -57,7 +57,7 @@ TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, [] (std::string) {} };
+  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
   MatchmakingMachine loginMachine{ matchmaking };
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
@@ -89,7 +89,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, [] (std::string) {} };
+  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
   MatchmakingMachine loginMachine{ matchmaking };
   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
   ioContext.run ();
@@ -176,7 +176,7 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
   boost::asio::thread_pool pool_{};
   std::list<GameLobby> gameLobbies_{};
-  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, [] (std::string) {} };
+  auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
   MatchmakingMachine loginMachine{ matchmaking };
   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
   ioContext.run ();

@@ -132,7 +132,6 @@ template <class T>
 inline void
 MyWebsocket<T>::sendMessage (std::string message)
 {
-  msgQueue.size ();
   msgQueue.push_back (std::move (message));
   if (timer) timer->cancel ();
 }

@@ -2,6 +2,7 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include <boost/asio/awaitable.hpp>
+#include <boost/asio/detached.hpp>
 #include <memory>
 #include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find.hpp>
@@ -55,19 +56,11 @@ Matchmaking::sendToUser (SendMessageToUser const &sendMessageToUser)
   matchmakingCallbacks.sendMsgToUser (sendMessageToUser.msg);
 }
 
-boost::asio::awaitable<void>
-Matchmaking::connectToGame ()
+void
+Matchmaking::sendToGame (user_matchmaking::SendMessageToGame const &sendMessageToGame)
 {
-  auto ws = std::make_shared<Websocket> (Websocket{ io_context });
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-  co_await ws->next_layer ().async_connect (gameEndpoint);
-  ws->next_layer ().expires_never ();
-  ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-  ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-  co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-  matchmakingGame = std::move (ws);
-  co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks] (std::string const &readResult) { matchmakingCallbacks.sendMsgToUser (readResult); }), boost::asio::detached);
-  co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
+  std::cout << "msg to server: " << sendMessageToGame.msg << std::endl;
+  matchmakingGame.sendMessage (std::move (sendMessageToGame.msg));
 }
 
 void
@@ -477,12 +470,13 @@ Matchmaking::startGame (GameLobby const &gameLobby)
   try
     {
       auto startServerAnswer = co_await sendStartGameToServer (gameLobby);
+      std::cout << "msg from server when creating game: " << startServerAnswer << std::endl;
       std::vector<std::string> splitMesssage{};
       boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
       if (splitMesssage.size () == 2)
         {
           auto const &typeToSearch = splitMesssage.at (0);
-          if (typeToSearch == "GameStarted")
+          if (typeToSearch == "StartGameSuccess")
             {
               matchmakingCallbacks.connectToGame (gameLobby.accountNames);
             }
@@ -590,6 +584,12 @@ Matchmaking::joinMatchMakingQueue (GameLobby::LobbyType const &lobbyType)
     {
       matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueError{ "User is allready in gamelobby" }));
     }
+}
+
+void
+Matchmaking::wantsToJoinAGameWrapper (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv)
+{
+  co_spawn (io_context, wantsToJoinGame (wantsToJoinGameEv), boost::asio::detached);
 }
 
 boost::asio::awaitable<void>

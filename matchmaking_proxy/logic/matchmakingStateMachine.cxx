@@ -35,11 +35,22 @@ MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebs
                     typeFound = true;
                     boost::json::error_code ec{};
                     matchmaking->matchmakingStateMachine.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsStringStream, ec)));
-                    if (ec) std::cout << "ec.message () " << ec.message () << std::endl;
+                    if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
                     return;
                   }
               });
               if (not typeFound) std::cout << "could not find a match for typeToSearch '" << typeToSearch << "'" << std::endl;
+            }
+          else if (splitMesssage.size () == 3 && splitMesssage.at (0) == "SendMessageToGame")
+            {
+              boost::json::error_code ec{};
+              auto objectAsString = std::string{ confu_json::read_json (splitMesssage.at (1) + "|" + splitMesssage.at (2), ec).as_object ().at ("msg").as_string () };
+              if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+              matchmaking->matchmakingStateMachine.process_event (user_matchmaking::SendMessageToGame{ objectAsString });
+            }
+          else
+            {
+              std::cout << "Message not handled: " << msg << std::endl;
             }
         }) || myWebsocket->writeLoop ();
       },

@@ -101,6 +101,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LoginAsGuest, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LoginAsGuestSuccess, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), RatingChanged, (size_t, oldRating) (size_t, newRating))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledMessageError, (std::string, msg) (std::string, error))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SendMessageToGame, (std::string, msg))
 
 // clang-format off
 namespace user_matchmaking{
@@ -140,7 +141,6 @@ SetMaxUserSizeInCreateGameLobby,
 SetMaxUserSizeInCreateGameLobbyError,
 MaxUserSizeInCreateGameLobby,
 LeaveGame,
-LeaveGame,
 LeaveGameSuccess,
 LeaveGameError,
 LeaveGameLobby,
@@ -170,7 +170,8 @@ LeaveQuickGameQueueError,
 LoginAsGuest,
 LoginAsGuestSuccess,
 RatingChanged,
-UnhandledMessageError
+UnhandledMessageError,
+SendMessageToGame
   >  const  userMatchmaking{};
 }
 // clang-format on

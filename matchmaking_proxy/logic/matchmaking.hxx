@@ -74,10 +74,6 @@ struct ConnectedWithGame
 {
 };
 
-struct SendMessageToGame
-{
-  std::string msg{};
-};
 struct SendMessageToUser
 {
   std::string msg{};
@@ -90,6 +86,13 @@ struct NotLoggedinEv
 };
 
 struct ConnectToGame
+{
+};
+
+struct ConnectToGameSuccess
+{
+};
+struct ConnectToGameError
 {
 };
 
@@ -117,6 +120,7 @@ public:
     using namespace sml;
     auto doCreateAccountAndLogin = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (sml::aux::get<Matchmaking &> (deps).io_context, sml::aux::get<Matchmaking &> (deps).createAccountAndLogin (event, sm, deps, subs), boost::asio::detached); };
     auto doLoginAccount = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (sml::aux::get<Matchmaking &> (deps).io_context, sml::aux::get<Matchmaking &> (deps).loginAccount (event, sm, deps, subs), boost::asio::detached); };
+    auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (sml::aux::get<Matchmaking &> (deps).io_context, sml::aux::get<Matchmaking &> (deps).connectToGame (event, sm, deps, subs), boost::asio::detached); };
     namespace u_m = user_matchmaking;
     namespace m_g = matchmaking_game;
     // clang-format off
@@ -157,13 +161,15 @@ public:
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ userInGameLobby 
                                                                                              and gameLobbyControlledByUsers ]     / (&Self::leaveGameLobby)         
 , state<Loggedin>                             + event<u_m::CreateGame>                                                            / (&Self::createGame)         
-, state<Loggedin>                             + event<u_m::WantsToJoinGame>                                                       / (&Self::wantsToJoinGame)          
+, state<Loggedin>                             + event<u_m::WantsToJoinGame>                                                       / (&Self::wantsToJoinAGameWrapper)          
 , state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                                   / (&Self::leaveMatchMakingQueue)          
 , state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / (&Self::joinMatchMakingQueue)         
 , state<Loggedin>                             + event<m_g::StartGameSuccess>                                                                                                        = state<ProxyToGame>          
-, state<Loggedin>                             + event<ConnectToGame>                                                              / (&Self::connectToGame)
+, state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
+, state<Loggedin>                             + event<ConnectToGameSuccess>                                                                                                         =state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                                                                         = state<Loggedin>     
+, state<ProxyToGame>                          +event<u_m::SendMessageToGame>                                                          / (&Self::sendToGame)
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<ReciveMessage>                        +event<SendMessageToUser>                                                           / (&Self::sendToUser)
   );
@@ -180,8 +186,6 @@ private:
     soci::session sql (soci::sqlite3, databaseName);
     return confu_soci::findStruct<database::Account> (sql, "accountName", loginAccount.accountName).has_value ();
   };
-
-  boost::asio::awaitable<void> connectToGame ();
 
   void sendToAllAccountsInUsersCreateGameLobby (std::string const &message);
 
@@ -306,6 +310,35 @@ private:
   void leaveGameLobbyErrorUserNotFoundInLobby ();
 
   void leaveGameLobbyErrorNotControllerByUsers ();
+
+  boost::asio::awaitable<void>
+  connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
+  {
+    {
+      auto ws = std::make_shared<Websocket> (Websocket{ io_context });
+      auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+      try
+        {
+          co_await ws->next_layer ().async_connect (gameEndpoint);
+          ws->next_layer ().expires_never ();
+          ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+          ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+          co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+          sm.process_event (ConnectToGameSuccess{}, deps, subs);
+          matchmakingGame = std::move (ws);
+          co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks] (std::string const &readResult) { matchmakingCallbacks.sendMsgToUser (readResult); }), boost::asio::detached);
+          co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
+        }
+      catch (std::exception &e)
+        {
+          sm.process_event (ConnectToGameError{}, deps, subs);
+        }
+    }
+  }
+
+  void wantsToJoinAGameWrapper (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv);
+
+  void sendToGame (user_matchmaking::SendMessageToGame const &sendMessageToGame);
 
   boost::asio::io_context &io_context;
   boost::asio::thread_pool &pool;

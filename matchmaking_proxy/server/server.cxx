@@ -85,7 +85,6 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
                   {
                     for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
                       {
-                        std::cout << "AccountName: '" << matchmaking.data.user.accountName << "'" << std::endl;
                         matchmaking.matchmakingStateMachine.process_event (SendMessageToUser{ message });
                       }
                   }

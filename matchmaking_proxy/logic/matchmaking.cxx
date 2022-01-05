@@ -213,8 +213,7 @@ Matchmaking::setGameOption (shared_class::GameOption const &gameOption)
           if (gameLobbyWithAccount->isGameLobbyAdmin (user.accountName))
             {
               gameLobbyWithAccount->gameOption = gameOption;
-              // TODO do something so we can send to all accounts in game lobby
-              // gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (gameOption));
+              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameOption));
               return;
             }
           else
@@ -257,8 +256,7 @@ Matchmaking::setMaxUserSizeInCreateGameLobby (user_matchmaking::SetMaxUserSizeIn
                 }
               else
                 {
-                  // TODO do something so we can send to all accounts in game lobby
-                  // gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
+                  sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::MaxUserSizeInCreateGameLobby{ setMaxUserSizeInCreateGameLobbyObject.maxUserSize }));
                   return;
                 }
             }
@@ -369,7 +367,7 @@ void
 Matchmaking::askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby)
 {
   sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}));
-  gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies = gameLobbies, &matchmakingCallbacks = matchmakingCallbacks] () {
+  gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, this] () {
     auto notReadyUsers = std::vector<std::string>{};
     ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
     matchmakingCallbacks.sendMsgToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers);
@@ -387,8 +385,7 @@ Matchmaking::askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby)
     else
       {
         gameLobby->readyUsers.clear ();
-        // TODO do something so we can send to all accounts in game lobby
-        // gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
+        sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}));
       }
   });
 }
@@ -543,8 +540,7 @@ Matchmaking::removeUserFromGameLobby ()
           usersInGameLobby.name = gameLobbyWithAccount->name.value ();
           usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
           ranges::transform (gameLobbyWithAccount->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
-          // TODO do something so we can send to all accounts in game lobby
-          // gameLobbyWithAccount->sendToAllAccountsInGameLobby (objectToStringWithObjectName (usersInGameLobby));
+          sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby));
         }
     }
   else

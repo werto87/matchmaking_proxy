@@ -19,7 +19,7 @@ MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebs
       executor,
       [myWebsocket, matchmaking] () mutable {
         using namespace boost::asio::experimental::awaitable_operators;
-        return myWebsocket->readLoop ([matchmaking] (std::string msg) {
+        return myWebsocket->readLoop ([matchmaking] (std::string const &msg) {
           std::vector<std::string> splitMesssage{};
           boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
           if (splitMesssage.size () == 2)

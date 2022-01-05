@@ -1,6 +1,8 @@
 #include "matchmaking.hxx"
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
+#include <boost/asio/awaitable.hpp>
+#include <memory>
 #include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>
@@ -50,7 +52,22 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
 void
 Matchmaking::sendToUser (SendMessageToUser const &sendMessageToUser)
 {
-  matchmakingCallbacks.sendMsgToUser (std::move (sendMessageToUser.msg));
+  matchmakingCallbacks.sendMsgToUser (sendMessageToUser.msg);
+}
+
+boost::asio::awaitable<void>
+Matchmaking::connectToGame ()
+{
+  auto ws = std::make_shared<Websocket> (Websocket{ io_context });
+  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+  co_await ws->next_layer ().async_connect (gameEndpoint);
+  ws->next_layer ().expires_never ();
+  ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+  ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+  co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+  matchmakingGame = std::move (ws);
+  co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks] (std::string const &readResult) { matchmakingCallbacks.sendMsgToUser (readResult); }), boost::asio::detached);
+  co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
 }
 
 void
@@ -351,15 +368,13 @@ Matchmaking::createGame ()
 void
 Matchmaking::askUsersToJoinGame (std::list<GameLobby>::iterator &gameLobby)
 {
-  // TODO do something so we can send to all accounts in game lobby
-  // gameLobby->sendToAllAccountsInGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}));
-  gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies = gameLobbies] () {
+  sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}));
+  gameLobby->startTimerToAcceptTheInvite (io_context, [gameLobby, &gameLobbies = gameLobbies, &matchmakingCallbacks = matchmakingCallbacks] () {
     auto notReadyUsers = std::vector<std::string>{};
     ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
+    matchmakingCallbacks.sendMsgToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers);
     for (auto const &notReadyUser : notReadyUsers)
       {
-        // TODO send a msg to not ready users
-        // notReadymatchmakingCallbacks.sendMsgToUser  (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}));
         if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
           {
             gameLobby->removeUser (notReadyUser);
@@ -472,31 +487,11 @@ Matchmaking::startGame (GameLobby const &gameLobby)
           auto const &typeToSearch = splitMesssage.at (0);
           if (typeToSearch == "GameStarted")
             {
-              // TODO send to the user state machines start game so they connect like here
-              // for (auto &user_ : gameLobby._users)
-              //   {
-
-              //     user_->connectionToGame = std::make_shared<Websocket> (io_context);
-              //     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-              //     co_await user_->connectionToGame->next_layer ().async_connect (gameEndpoint);
-              //     user_->connectionToGame->next_layer ().expires_never ();
-              //     user_->connectionToGame->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-              //     user_->connectionToGame->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-              //     co_await user_->connectionToGame->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-              //     co_spawn (
-              //         io_context, [user_] { return user_->readFromGame (); }, boost::asio::detached);
-              //     co_spawn (
-              //         io_context, [user_] { return user_->writeToGame (); }, boost::asio::detached);
-              //     user_->sendMessageToUser (startServerAnswer);
-              //   }
+              matchmakingCallbacks.connectToGame (gameLobby.accountNames);
             }
           else if (typeToSearch == "StartGameError")
             {
-              // TODO send to the user state machines StartGameError
-              // for (auto &user_ : gameLobby._users)
-              //   {
-              //     user_->sendMessageToUser (startServerAnswer);
-              //   }
+              sendToAllAccountsInUsersCreateGameLobby (startServerAnswer);
             }
         }
     }

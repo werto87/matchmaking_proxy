@@ -89,6 +89,10 @@ struct NotLoggedinEv
 {
 };
 
+struct ConnectToGame
+{
+};
+
 // TODO this leaks using namespace and typedef
 
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
@@ -157,6 +161,7 @@ public:
 , state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                                   / (&Self::leaveMatchMakingQueue)          
 , state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / (&Self::joinMatchMakingQueue)         
 , state<Loggedin>                             + event<m_g::StartGameSuccess>                                                                                                        = state<ProxyToGame>          
+, state<Loggedin>                             + event<ConnectToGame>                                                              / (&Self::connectToGame)
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                                                                         = state<Loggedin>     
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
@@ -175,6 +180,8 @@ private:
     soci::session sql (soci::sqlite3, databaseName);
     return confu_soci::findStruct<database::Account> (sql, "accountName", loginAccount.accountName).has_value ();
   };
+
+  boost::asio::awaitable<void> connectToGame ();
 
   void sendToAllAccountsInUsersCreateGameLobby (std::string const &message);
 
@@ -304,7 +311,7 @@ private:
   boost::asio::thread_pool &pool;
   std::list<GameLobby> &gameLobbies;
   std::shared_ptr<CoroTimer> cancelCoroutineTimer;
-  MyWebsocket<Websocket> matchmakingGame{ std::make_shared<Websocket> (io_context) };
+  MyWebsocket<Websocket> matchmakingGame{ {} };
 };
 
 #endif /* D9077A7B_F0F8_4687_B460_C6D43C94F8AF */

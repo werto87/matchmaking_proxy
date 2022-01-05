@@ -28,7 +28,7 @@ public:
   MyWebsocket (std::shared_ptr<T> webSocket_) : webSocket{ webSocket_ } {}
   boost::asio::awaitable<std::string> async_read_one_message ();
 
-  boost::asio::awaitable<void> readLoop (std::function<void (std::string readResult)> onRead);
+  boost::asio::awaitable<void> readLoop (std::function<void (std::string const &readResult)> onRead);
 
   boost::asio::awaitable<void> writeLoop ();
 
@@ -62,7 +62,7 @@ MyWebsocket<T>::async_read_one_message ()
 
 template <class T>
 inline boost::asio::awaitable<void>
-MyWebsocket<T>::readLoop (std::function<void (std::string readResult)> onRead)
+MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> onRead)
 {
   try
     {

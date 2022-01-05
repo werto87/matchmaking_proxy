@@ -90,6 +90,15 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
                       }
                   }
               };
+              matchmakingCallbacks.connectToGame = [&matchmakings = matchmakings] (std::vector<std::string> const &accountsToConnect) {
+                for (auto const &accountToSendMessageTo : accountsToConnect)
+                  {
+                    for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
+                      {
+                        matchmaking.matchmakingStateMachine.process_event (ConnectToGame{});
+                      }
+                  }
+              };
               matchmakingCallbacks.isLoggedin = [&matchmakings = matchmakings] (std::string const &accountName) {
                 return ranges::find_if (matchmakings,
                                         [&accountName] (MatchmakingStateMachine const &matchmakingStateMachine) {

@@ -73,6 +73,12 @@ Matchmaking::sendToAllAccountsInUsersCreateGameLobby (std::string const &message
 }
 
 void
+Matchmaking::leaveGame ()
+{
+  matchmakingGame.close ();
+}
+
+void
 Matchmaking::logoutAccount ()
 {
   // if (isRegistered (user.accountName))

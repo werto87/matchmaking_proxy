@@ -33,6 +33,7 @@ public:
   boost::asio::awaitable<void> writeLoop ();
 
   void sendMessage (std::string message);
+  void close ();
 
 private:
   std::shared_ptr<T> webSocket{};
@@ -135,4 +136,11 @@ MyWebsocket<T>::sendMessage (std::string message)
   msgQueue.push_back (std::move (message));
   if (timer) timer->cancel ();
 }
+template <class T>
+inline void
+MyWebsocket<T>::close ()
+{
+  webSocket->close ("User left game");
+}
+
 #endif /* FDE41782_20C3_436A_B415_E198F593F0AE */

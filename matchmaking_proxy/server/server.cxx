@@ -98,14 +98,7 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
                       }
                   }
               };
-              matchmakingCallbacks.isLoggedin = [&matchmakings = matchmakings] (std::string const &accountName) {
-                return ranges::find_if (matchmakings,
-                                        [&accountName] (MatchmakingStateMachine const &matchmakingStateMachine) {
-                                          //
-                                          return matchmakingStateMachine.data.user.accountName == accountName;
-                                        })
-                       != matchmakings.end ();
-              };
+              matchmakingCallbacks.isLoggedin = [&matchmakings = matchmakings] (std::string const &accountName) { return ranges::find_if (matchmakings, [&accountName] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName == accountName; }) != matchmakings.end (); };
               matchmakings.emplace_back (Matchmaking{ _io_context, _pool, gameLobbies, matchmakingCallbacks });
               std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
               matchmaking->init (myWebsocket, _io_context, matchmaking, matchmakings);

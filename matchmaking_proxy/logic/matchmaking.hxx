@@ -168,8 +168,8 @@ public:
 , state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                                                                         =state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-, state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                                                                         = state<Loggedin>     
-, state<ProxyToGame>                          +event<u_m::SendMessageToGame>                                                          / (&Self::sendToGame)
+, state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                       / (&Self::leaveGame)                              = state<Loggedin>     
+, state<ProxyToGame>                          +event<u_m::SendMessageToGame>                                                      / (&Self::sendToGame)
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<ReciveMessage>                        +event<SendMessageToUser>                                                           / (&Self::sendToUser)
   );
@@ -188,6 +188,8 @@ private:
   };
 
   void sendToAllAccountsInUsersCreateGameLobby (std::string const &message);
+
+  void leaveGame ();
 
   void logoutAccount ();
 
@@ -314,26 +316,31 @@ private:
   boost::asio::awaitable<void>
   connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
   {
-    {
-      auto ws = std::make_shared<Websocket> (Websocket{ io_context });
-      auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-      try
-        {
-          co_await ws->next_layer ().async_connect (gameEndpoint);
-          ws->next_layer ().expires_never ();
-          ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-          ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-          co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-          sm.process_event (ConnectToGameSuccess{}, deps, subs);
-          matchmakingGame = std::move (ws);
-          co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks] (std::string const &readResult) { matchmakingCallbacks.sendMsgToUser (readResult); }), boost::asio::detached);
-          co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
-        }
-      catch (std::exception &e)
-        {
-          sm.process_event (ConnectToGameError{}, deps, subs);
-        }
-    }
+    auto ws = std::make_shared<Websocket> (Websocket{ io_context });
+    auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+    try
+      {
+        co_await ws->next_layer ().async_connect (gameEndpoint);
+        ws->next_layer ().expires_never ();
+        ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+        ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+        co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+        sm.process_event (ConnectToGameSuccess{}, deps, subs);
+        matchmakingGame = std::move (ws);
+        co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks, &sm, &deps, &subs] (std::string const &readResult) {
+          if (readResult == "LeaveGameSuccess|{}")
+            {
+              sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+            }
+          matchmakingCallbacks.sendMsgToUser (readResult);
+        }),
+                  boost::asio::detached);
+        co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
+      }
+    catch (std::exception &e)
+      {
+        sm.process_event (ConnectToGameError{}, deps, subs);
+      }
   }
 
   void wantsToJoinAGameWrapper (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv);

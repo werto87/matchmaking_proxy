@@ -39,6 +39,7 @@ MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebs
                     return;
                   }
               });
+              // This should be also send to user???
               if (not typeFound) std::cout << "could not find a match for typeToSearch '" << typeToSearch << "'" << std::endl;
             }
           else if (splitMesssage.size () == 3 && splitMesssage.at (0) == "SendMessageToGame")

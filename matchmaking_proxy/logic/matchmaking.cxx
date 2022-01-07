@@ -81,11 +81,19 @@ Matchmaking::leaveGame ()
 void
 Matchmaking::logoutAccount ()
 {
-  // if (isRegistered (user.accountName))
-  //   {
-  // TODO find a way to remove user from gamelobby
-  // removeUserFromLobby ();
-  // }
+  if (auto gameLobbyWithAccount = ranges::find_if (gameLobbies,
+                                                   [accountName = user.accountName] (auto const &gameLobby) {
+                                                     auto const &accountNames = gameLobby.accountNames;
+                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                   });
+      gameLobbyWithAccount != gameLobbies.end ())
+    {
+      gameLobbyWithAccount->removeUser (user.accountName);
+      if (gameLobbyWithAccount->accountNames.empty ())
+        {
+          gameLobbies.erase (gameLobbyWithAccount);
+        }
+    }
   user = {};
   matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LogoutAccountSuccess{}));
 }

@@ -55,5 +55,5 @@ MatchmakingStateMachine::init (std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebs
             }
         }) || myWebsocket->writeLoop ();
       },
-      [matchmaking, &matachmakings = matchmakings] (auto, auto) { matachmakings.erase (matchmaking); });
+      [matchmaking, &matchmakings = matchmakings] (auto, auto) { matchmakings.erase (matchmaking); });
 }

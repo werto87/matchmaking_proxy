@@ -105,7 +105,6 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SendMessageToGame, (std::string,
 
 // clang-format off
 namespace user_matchmaking{
-    // TODO-TEMPLATE add new type to handle in server and client here
 static boost::hana::tuple<
 JoinChannel,
 JoinChannelSuccess,

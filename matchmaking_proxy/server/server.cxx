@@ -89,6 +89,12 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
                       }
                   }
               };
+              matchmakingCallbacks.sendMsgToChannel = [&matchmakings = matchmakings] (std::string const &message, std::string const &channelName) {
+                for (auto &matchmaking : matchmakings | ranges::views::filter ([&channelName] (MatchmakingStateMachine const &matchmakingStateMachine) { return ranges::find_if (matchmakingStateMachine.data.user.communicationChannels, [&channelName] (std::string const &userChannel) { return userChannel == channelName; }) != matchmakingStateMachine.data.user.communicationChannels.end (); }))
+                  {
+                    matchmaking.matchmakingStateMachine.process_event (SendMessageToUser{ message });
+                  }
+              };
               matchmakingCallbacks.connectToGame = [&matchmakings = matchmakings] (std::vector<std::string> const &accountsToConnect) {
                 for (auto const &accountToSendMessageTo : accountsToConnect)
                   {

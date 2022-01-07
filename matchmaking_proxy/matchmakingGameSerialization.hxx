@@ -47,7 +47,6 @@ BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), GameOver, (bool, ratedGame) (std
 
 // clang-format off
 namespace matchmaking_game{
-    // TODO-TEMPLATE add new type to handle in server and client here
 static boost::hana::tuple<
   UnhandledMessageError,
   StartGame,

@@ -17,6 +17,7 @@
 #include <chrono>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <cstddef>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <list> // for list
@@ -84,6 +85,9 @@ struct ReciveMessage
 struct NotLoggedinEv
 {
 };
+struct LoggedinEv
+{
+};
 
 struct ConnectToGame
 {
@@ -146,7 +150,7 @@ public:
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / (&Self::relogToGameLobby)                       = state<Loggedin>
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ not wantsToRelog ]                   / (&Self::removeUserFromGameLobby)                = state<Loggedin>
 // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<Loggedin>                             + on_entry<_>                                                                       / (&Self::informUserLoginAccountSuccess)
+, state<Loggedin>                             + on_entry<_>                                [ isLoggedin ]                         / (&Self::informUserLoginAccountSuccess)
 , state<Loggedin>                             + event<u_m::JoinChannel>                                                           / (&Self::joinChannel)         
 , state<Loggedin>                             + event<u_m::BroadCastMessage>                                                      / (&Self::broadCastMessage)         
 , state<Loggedin>                             + event<u_m::LeaveChannel>                                                          / (&Self::leaveChannel)         
@@ -168,6 +172,9 @@ public:
 , state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                                                                         =state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+, state<ProxyToGame>                          + on_entry<_>                                                                       / (&Self::informUserProxyStarted)
+, state<ProxyToGame>                          + sml::on_exit<_>                                                                   / (&Self::informUserProxyStopped)
+, state<ProxyToGame>                          +event<LoggedinEv>                                                                                                                    = state<Loggedin>     
 , state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                       / (&Self::leaveGame)                              = state<Loggedin>     
 , state<ProxyToGame>                          +event<u_m::SendMessageToGame>                                                      / (&Self::sendToGame)
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
@@ -327,15 +334,16 @@ private:
         co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
         sm.process_event (ConnectToGameSuccess{}, deps, subs);
         matchmakingGame = std::move (ws);
+        using namespace boost::asio::experimental::awaitable_operators;
         co_spawn (io_context, matchmakingGame.readLoop ([&matchmakingCallbacks = matchmakingCallbacks, &sm, &deps, &subs] (std::string const &readResult) {
           if (readResult == "LeaveGameSuccess|{}")
             {
               sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
             }
           matchmakingCallbacks.sendMsgToUser (readResult);
-        }),
-                  boost::asio::detached);
-        co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
+        }) || matchmakingGame.writeLoop (),
+                  [&sm, &deps, &subs] (auto, auto) { sm.process_event (LoggedinEv{}, deps, subs); });
+        // co_spawn (io_context, matchmakingGame.writeLoop (), boost::asio::detached);
       }
     catch (std::exception &e)
       {
@@ -346,6 +354,9 @@ private:
   void wantsToJoinAGameWrapper (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv);
 
   void sendToGame (user_matchmaking::SendMessageToGame const &sendMessageToGame);
+
+  void informUserProxyStarted ();
+  void informUserProxyStopped ();
 
   boost::asio::io_context &io_context;
   boost::asio::thread_pool &pool;

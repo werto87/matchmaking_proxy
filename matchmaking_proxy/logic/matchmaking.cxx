@@ -59,7 +59,6 @@ Matchmaking::sendToUser (SendMessageToUser const &sendMessageToUser)
 void
 Matchmaking::sendToGame (user_matchmaking::SendMessageToGame const &sendMessageToGame)
 {
-  std::cout << "msg to server: " << sendMessageToGame.msg << std::endl;
   matchmakingGame.sendMessage (std::move (sendMessageToGame.msg));
 }
 
@@ -428,6 +427,18 @@ void
 Matchmaking::informUserLoginAccountSuccess ()
 {
   matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ user.accountName }));
+}
+
+void
+Matchmaking::informUserProxyStarted ()
+{
+  matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStarted{}));
+}
+
+void
+Matchmaking::informUserProxyStopped ()
+{
+  matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStopped{}));
 }
 
 void

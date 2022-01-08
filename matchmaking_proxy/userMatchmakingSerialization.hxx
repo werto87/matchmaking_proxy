@@ -102,6 +102,8 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LoginAsGuestSuccess, (std::strin
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), RatingChanged, (size_t, oldRating) (size_t, newRating))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledMessageError, (std::string, msg) (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SendMessageToGame, (std::string, msg))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStarted, )
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStopped, )
 
 // clang-format off
 namespace user_matchmaking{

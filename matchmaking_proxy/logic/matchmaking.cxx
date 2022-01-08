@@ -1,5 +1,6 @@
 #include "matchmaking.hxx"
 #include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/detached.hpp>
@@ -480,6 +481,7 @@ Matchmaking::cancelLoginAccount ()
 void
 Matchmaking::createAccount (PasswordHashed const &passwordHash)
 {
+  matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ user.accountName }));
   database::createAccount (user.accountName, passwordHash.hashedPassword);
 }
 
@@ -563,16 +565,12 @@ Matchmaking::removeUserFromGameLobby ()
 }
 
 void
-Matchmaking::joinMatchMakingQueue (GameLobby::LobbyType const &lobbyType)
+Matchmaking::joinMatchMakingQueue (user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueueEv)
 {
-  if (ranges::find_if (gameLobbies,
-                       [accountName = user.accountName] (auto const &gameLobby) {
-                         auto const &accountNames = gameLobby.accountNames;
-                         return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                       })
-      == gameLobbies.end ())
+  auto lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked;
+  if (ranges::find_if (gameLobbies, [accountName = user.accountName] (auto const &gameLobby) { return ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == gameLobbies.end ())
     {
-      if (auto gameLobbyToAddUser = ranges::find_if (gameLobbies, [lobbyType, accountName = user.accountName] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType); }); gameLobbyToAddUser != gameLobbies.end ())
+      if (auto gameLobbyToAddUser = ranges::find_if (gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = user.accountName] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType); }); gameLobbyToAddUser != gameLobbies.end ())
         {
           if (auto error = gameLobbyToAddUser->tryToAddUser (user))
             {
@@ -660,12 +658,7 @@ Matchmaking::wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJo
 void
 Matchmaking::leaveMatchMakingQueue ()
 {
-  if (auto userGameLobby = ranges::find_if (gameLobbies,
-                                            [accountName = user.accountName] (auto const &gameLobby) {
-                                              auto const &accountNames = gameLobby.accountNames;
-                                              return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                            });
-      userGameLobby != gameLobbies.end ())
+  if (auto userGameLobby = ranges::find_if (gameLobbies, [accountName = user.accountName] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != gameLobbies.end ())
     {
       matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
       userGameLobby->removeUser (user.accountName);
@@ -685,6 +678,7 @@ void
 Matchmaking::loginAsGuest ()
 {
   user.accountName = boost::uuids::to_string (boost::uuids::random_generator () ());
+  matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ user.accountName }));
 }
 
 void

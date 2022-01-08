@@ -141,7 +141,7 @@ public:
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / (&Self::cancelCreateAccount)                    = state<NotLoggedin>
 // WaitingForLogin--------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ userInGameLobby ]                    / (&Self::informUserWantsToRelogToGameLobby)      = state<WaitingForUserWantsToRelogGameLobby>
-, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ not userInGameLobby ]                                                                  = state<Loggedin>
+, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ not userInGameLobby ]                / (&Self::informUserLoginAccountSuccess)          = state<Loggedin>
 , state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                                    / (&Self::cancelLoginAccount)                     = state<NotLoggedin>
 , state<WaitingForPasswordCheck>              + event<NotLoggedinEv>                                                                                                                = state<NotLoggedin>
 // WaitingForPasswordCheck---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -297,7 +297,7 @@ private:
 
   void removeUserFromGameLobby ();
 
-  void joinMatchMakingQueue (GameLobby::LobbyType const &lobbyType);
+  void joinMatchMakingQueue (user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueueEv);
 
   boost::asio::awaitable<void> wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv);
 

@@ -133,8 +133,7 @@ public:
 * state<NotLoggedin>                          + event<u_m::CreateAccount>                 [ accountInDatabase ]                   / (&Self::informUserCreateAccountError)
 , state<NotLoggedin>                          + event<u_m::CreateAccount>                 [ not accountInDatabase ]               / doCreateAccountAndLogin                   = state<WaitingForPasswordHashed>
 , state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ not isRegistered ]                    / (&Self::informUserAccountNotRegistered)
-, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ isLoggedin ]                          / (&Self::informUserAlreadyLoggedin)
-, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ not isLoggedin and isRegistered ]     / doLoginAccount                            = state<WaitingForPasswordCheck>
+, state<NotLoggedin>                          + event<u_m::LoginAccount>                  [ isRegistered ]                        / doLoginAccount                            = state<WaitingForPasswordCheck>
 , state<NotLoggedin>                          + event<u_m::LoginAsGuest>                                                          / (&Self::loginAsGuest)                     = state<Loggedin>
 // WaitingForCreateAccount------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ not accountInDatabase ]              / (&Self::createAccount)                          = state<Loggedin>
@@ -145,12 +144,10 @@ public:
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ not userInGameLobby ]                                                                  = state<Loggedin>
 , state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                                    / (&Self::cancelLoginAccount)                     = state<NotLoggedin>
 , state<WaitingForPasswordCheck>              + event<NotLoggedinEv>                                                                                                                = state<NotLoggedin>
-
 // WaitingForPasswordCheck---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / (&Self::relogToGameLobby)                       = state<Loggedin>
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ not wantsToRelog ]                   / (&Self::removeUserFromGameLobby)                = state<Loggedin>
 // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<Loggedin>                             + on_entry<_>                                [ isLoggedin ]                         / (&Self::informUserLoginAccountSuccess)
 , state<Loggedin>                             + event<u_m::JoinChannel>                                                           / (&Self::joinChannel)         
 , state<Loggedin>                             + event<u_m::BroadCastMessage>                                                      / (&Self::broadCastMessage)         
 , state<Loggedin>                             + event<u_m::LeaveChannel>                                                          / (&Self::leaveChannel)         
@@ -200,8 +197,6 @@ private:
 
   void logoutAccount ();
 
-  std::function<bool (user_matchmaking::LoginAccount const &loginAccount, Matchmaking &matchmaking)> isLoggedin = [] (user_matchmaking::LoginAccount const &loginAccount, Matchmaking &matchmaking) -> bool { return matchmaking.matchmakingCallbacks.isLoggedin (loginAccount.accountName); };
-
   boost::asio::awaitable<std::string> sendStartGameToServer (GameLobby const &gameLobby);
 
   boost::asio::awaitable<void> startGame (GameLobby const &gameLobby);
@@ -242,11 +237,11 @@ private:
            != matchmaking.gameLobbies.end ();
   };
   std::function<bool (Matchmaking &matchmaking)> gameLobbyControlledByUsers = [] (Matchmaking &matchmaking) -> bool {
-    auto gameLobby = ranges::find_if (matchmaking.gameLobbies, [accountName = matchmaking.user.accountName] (auto const &gameLobby) {
+    auto userGameLobby = ranges::find_if (matchmaking.gameLobbies, [accountName = matchmaking.user.accountName] (auto const &gameLobby) {
       auto const &accountNames = gameLobby.accountNames;
       return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
     });
-    return gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
+    return userGameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
   };
 
   std::function<bool (user_matchmaking::RelogTo const &relogTo)> wantsToRelog = [] (user_matchmaking::RelogTo const &relogTo) -> bool { return relogTo.wantsToRelog; };

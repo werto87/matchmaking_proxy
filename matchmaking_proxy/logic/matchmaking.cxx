@@ -65,9 +65,9 @@ Matchmaking::sendToGame (user_matchmaking::SendMessageToGame const &sendMessageT
 void
 Matchmaking::sendToAllAccountsInUsersCreateGameLobby (std::string const &message)
 {
-  if (auto gameLobby = ranges::find_if (gameLobbies, [&accountName = user.accountName] (GameLobby const &gameLobby) { return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); gameLobby != gameLobbies.end ())
+  if (auto userGameLobby = ranges::find_if (gameLobbies, [&accountName = user.accountName] (GameLobby const &gameLobby) { return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); userGameLobby != gameLobbies.end ())
     {
-      matchmakingCallbacks.sendMsgToUsers (message, gameLobby->accountNames);
+      matchmakingCallbacks.sendMsgToUsers (message, userGameLobby->accountNames);
     }
 }
 
@@ -614,22 +614,22 @@ Matchmaking::wantsToJoinAGameWrapper (user_matchmaking::WantsToJoinGame const &w
 boost::asio::awaitable<void>
 Matchmaking::wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv)
 {
-  if (auto gameLobby = ranges::find_if (gameLobbies,
-                                        [accountName = user.accountName] (auto const &gameLobby) {
-                                          auto const &accountNames = gameLobby.accountNames;
-                                          return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                        });
-      gameLobby != gameLobbies.end ())
+  if (auto userGameLobby = ranges::find_if (gameLobbies,
+                                            [accountName = user.accountName] (auto const &gameLobby) {
+                                              auto const &accountNames = gameLobby.accountNames;
+                                              return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                            });
+      userGameLobby != gameLobbies.end ())
     {
       if (wantsToJoinGameEv.answer)
         {
-          if (ranges::find_if (gameLobby->readyUsers, [accountName = user.accountName] (std::string const &readyUserAccountName) { return readyUserAccountName == accountName; }) == gameLobby->readyUsers.end ())
+          if (ranges::find_if (userGameLobby->readyUsers, [accountName = user.accountName] (std::string const &readyUserAccountName) { return readyUserAccountName == accountName; }) == userGameLobby->readyUsers.end ())
             {
-              gameLobby->readyUsers.push_back (user.accountName);
-              if (gameLobby->readyUsers.size () == gameLobby->accountNames.size ())
+              userGameLobby->readyUsers.push_back (user.accountName);
+              if (userGameLobby->readyUsers.size () == userGameLobby->accountNames.size ())
                 {
-                  co_await startGame (*gameLobby);
-                  gameLobbies.erase (gameLobby);
+                  co_await startGame (*userGameLobby);
+                  gameLobbies.erase (userGameLobby);
                 }
             }
           else
@@ -639,14 +639,14 @@ Matchmaking::wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJo
         }
       else
         {
-          gameLobby->cancelTimer ();
-          if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
+          userGameLobby->cancelTimer ();
+          if (userGameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
             {
               matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
-              gameLobby->removeUser (user.accountName);
-              if (gameLobby->accountNames.empty ())
+              userGameLobby->removeUser (user.accountName);
+              if (userGameLobby->accountNames.empty ())
                 {
-                  gameLobbies.erase (gameLobby);
+                  gameLobbies.erase (userGameLobby);
                 }
             }
         }
@@ -660,19 +660,19 @@ Matchmaking::wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJo
 void
 Matchmaking::leaveMatchMakingQueue ()
 {
-  if (auto gameLobby = ranges::find_if (gameLobbies,
-                                        [accountName = user.accountName] (auto const &gameLobby) {
-                                          auto const &accountNames = gameLobby.accountNames;
-                                          return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                        });
-      gameLobby != gameLobbies.end ())
+  if (auto userGameLobby = ranges::find_if (gameLobbies,
+                                            [accountName = user.accountName] (auto const &gameLobby) {
+                                              auto const &accountNames = gameLobby.accountNames;
+                                              return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                            });
+      userGameLobby != gameLobbies.end ())
     {
       matchmakingCallbacks.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
-      gameLobby->removeUser (user.accountName);
-      gameLobby->cancelTimer ();
-      if (gameLobby->accountNames.empty ())
+      userGameLobby->removeUser (user.accountName);
+      userGameLobby->cancelTimer ();
+      if (userGameLobby->accountNames.empty ())
         {
-          gameLobbies.erase (gameLobby);
+          gameLobbies.erase (userGameLobby);
         }
     }
   else

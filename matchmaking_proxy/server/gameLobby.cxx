@@ -4,21 +4,23 @@
 #include "matchmaking_proxy/util.hxx"                         // for object...
 #include <algorithm>                                          // for remove_if
 #include <chrono>                                             // for seconds
-#include <experimental/coroutine>                             // for suspen...
-#include <iostream>                                           // for string
-#include <new>                                                // for operat...
-#include <range/v3/algorithm/find_if.hpp>                     // for find_if
-#include <range/v3/algorithm/none_of.hpp>                     // for none_of
-#include <range/v3/algorithm/transform.hpp>                   // for transform
-#include <range/v3/functional/identity.hpp>                   // for identity
-#include <range/v3/iterator/insert_iterators.hpp>             // for back_i...
-#include <ratio>                                              // for ratio
-#include <stdlib.h>                                           // for abort
-#include <string>                                             // for operat...
-#include <type_traits>                                        // for move
-#include <utility>                                            // for pair
+#ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
+#include <experimental/coroutine>
+#endif
+#include <iostream>                               // for string
+#include <new>                                    // for operat...
+#include <range/v3/algorithm/find_if.hpp>         // for find_if
+#include <range/v3/algorithm/none_of.hpp>         // for none_of
+#include <range/v3/algorithm/transform.hpp>       // for transform
+#include <range/v3/functional/identity.hpp>       // for identity
+#include <range/v3/iterator/insert_iterators.hpp> // for back_i...
+#include <ratio>                                  // for ratio
+#include <stdlib.h>                               // for abort
+#include <string>                                 // for operat...
+#include <type_traits>                            // for move
+#include <utility>                                // for pair
 
-GameLobby::GameLobby (std::string name, std::string password, std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby_) : name{ std::move (name) }, password (std::move (password)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
+GameLobby::GameLobby (std::string name_, std::string password_, std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby_) : name{ std::move (name_) }, password (std::move (password_)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
 
 GameLobby::~GameLobby ()
 {
@@ -162,7 +164,7 @@ GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std
   _timer = std::make_shared<boost::asio::system_timer> (io_context);
   _timer->expires_after (TIME_TO_ACCEPT_THE_INVITE);
   co_spawn (
-      _timer->get_executor (), [=] () { return runTimer (_timer, gameInviteOver); }, boost::asio::detached);
+      _timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, boost::asio::detached);
 }
 
 void

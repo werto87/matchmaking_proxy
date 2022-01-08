@@ -29,7 +29,7 @@
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
-  auto const sum = ranges::accumulate (userRatings, boost::numeric_cast<long double> (0), [] (size_t sum, size_t value) { return sum + value; });
+  auto const sum = ranges::accumulate (userRatings, boost::numeric_cast<long double> (0), [] (size_t sum_, size_t value) { return sum_ + value; });
   return boost::numeric_cast<size_t> (std::rintl ((userRating / sum) * ratingChange));
 }
 size_t
@@ -70,7 +70,7 @@ ratingChange (size_t userRating, size_t otherUserRating, long double score, size
 size_t
 averageRating (std::vector<size_t> const &ratings)
 {
-  auto accountsRatingSum = 0;
+  auto accountsRatingSum = size_t{ 0 };
   ratings >>= pipes::for_each ([&accountsRatingSum] (auto rating) { accountsRatingSum += rating; });
   return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (accountsRatingSum) / ratings.size ()));
 }

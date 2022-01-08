@@ -11,7 +11,6 @@
 #include <boost/certify/https_verification.hpp> //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS
 #include <deque>
 #include <exception>
-#include <experimental/coroutine>
 #include <functional>
 #include <iostream>
 #include <iterator> // for next

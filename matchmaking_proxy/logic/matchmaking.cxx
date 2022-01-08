@@ -444,13 +444,7 @@ Matchmaking::informUserProxyStopped ()
 void
 Matchmaking::broadCastMessage (user_matchmaking::BroadCastMessage const &broadCastMessageObject)
 {
-  // TODO send to all users which are in the channel
-  // for (auto &user_ : users | ranges::views::filter ([channel = broadCastMessageObject.channel, accountName = user.accountName] (auto const &user_) { return user_->communicationChannels.find (channel) != user_->communicationChannels.end (); }))
-  //   {
-  //     soci::session sql (soci::sqlite3, databaseName);
-  //     auto message = user_matchmaking::Message{ user_->accountName, broadCastMessageObject.channel, broadCastMessageObject.message };
-  //     user_->sendMessageToUser (objectToStringWithObjectName (std::move (message)));
-  //   }
+  matchmakingCallbacks.sendMsgToChannel (objectToStringWithObjectName (user_matchmaking::Message{ user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message }), broadCastMessageObject.channel);
 }
 
 boost::asio::awaitable<void>

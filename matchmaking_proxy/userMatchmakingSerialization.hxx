@@ -104,7 +104,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledMessageError, (std::str
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SendMessageToGame, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStarted, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStopped, )
-
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ConnectGameError, (std::string, error))
 // clang-format off
 namespace user_matchmaking{
 static boost::hana::tuple<
@@ -172,7 +172,8 @@ LoginAsGuest,
 LoginAsGuestSuccess,
 RatingChanged,
 UnhandledMessageError,
-SendMessageToGame
+SendMessageToGame,
+ConnectGameError
   >  const  userMatchmaking{};
 }
 // clang-format on

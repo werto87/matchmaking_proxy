@@ -1,5 +1,7 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/server/server.hxx"
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <boost/bind/bind.hpp>
 #include <catch2/catch.hpp>
 #include <exception>

@@ -6,6 +6,7 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/pw_hash/passwordHash.hxx"
+#include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
@@ -65,6 +66,7 @@
 #include <sstream>
 #include <string> // for operat...
 #include <string>
+#include <type_traits>
 #include <utility> // for pair
 #include <variant>
 #include <vector> // for vector
@@ -72,13 +74,21 @@ typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waita
 using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
+// work around to print type for debuging
+template <typename> struct Debug;
+// Debug<SomeType> d;
+
+struct MatchmakingData;
+
+void sendToAllAccountsInUsersCreateGameLobby (std::string const &message, MatchmakingData &matchmakingData);
+
 struct NotLoggedin
 {
 };
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
 
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, (std::string, accountName))
+BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, )
 struct WaitingForPasswordHashed
 {
 };
@@ -108,9 +118,11 @@ struct ReciveMessage
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
+BOOST_FUSION_DEFINE_STRUCT ((), SendMessageToGame, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGame, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameError, )
+
 struct User
 {
   std::string accountName{};
@@ -197,19 +209,19 @@ process_event (Matchmaking &matchmaking, Event const &event)
 }
 
 boost::asio::awaitable<void>
-doHashPassword (user_matchmaking::CreateAccount const &createAccountObject, auto &sm, auto &&deps, auto &&subs)
+doHashPassword (user_matchmaking::CreateAccount createAccountObject, auto &sm, auto &&deps, auto &&subs)
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   using namespace boost::asio::experimental::awaitable_operators;
   std::variant<std::string, std::optional<boost::system::system_error>> hashedPw = co_await(async_hash (matchmakingData.pool, matchmakingData.ioContext, createAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
   if (std::holds_alternative<std::string> (hashedPw))
     {
-      sm.process_event (PasswordHashed{ std::get<std::string> (hashedPw), createAccountObject.accountName }, deps, subs);
+      sm.process_event (PasswordHashed{ createAccountObject.accountName, std::get<std::string> (hashedPw) }, deps, subs);
     }
 }
 
 boost::asio::awaitable<void>
-doCheckPassword (auto &&loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
+doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   soci::session sql (soci::sqlite3, databaseName);
@@ -308,10 +320,29 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
 }
 
 auto const sendToUser = [] (SendMessageToUser const &sendMessageToUser, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (sendMessageToUser.msg); };
-
-auto const sendToGame = [] (user_matchmaking::SendMessageToGame const &sendMessageToGame, MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.sendMessage (std::move (sendMessageToGame.msg)); };
-
+auto const sendToGame = [] (SendMessageToGame const &msgToGame, MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.sendMessage (msgToGame.msg); };
 auto const leaveGame = [] (MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.close (); };
+
+auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
+  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())
+    {
+      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
+      userGameLobby->removeUser (matchmakingData.user.accountName);
+      userGameLobby->cancelTimer ();
+      if (userGameLobby->accountNames.empty ())
+        {
+          matchmakingData.gameLobbies.erase (userGameLobby);
+        }
+      else
+        {
+          sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), matchmakingData);
+        }
+    }
+  else
+    {
+      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueError{ "User is not in queue" }));
+    }
+};
 
 auto const logoutAccount = [] (MatchmakingData &matchmakingData) {
   if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
@@ -323,6 +354,22 @@ auto const logoutAccount = [] (MatchmakingData &matchmakingData) {
     {
       gameLobbyWithAccount->removeUser (matchmakingData.user.accountName);
       if (gameLobbyWithAccount->accountNames.empty ())
+        {
+          if (gameLobbyWithAccount->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
+            {
+              auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
+              usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
+              usersInGameLobby.name = gameLobbyWithAccount->name.value ();
+              usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
+              ranges::transform (gameLobbyWithAccount->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
+            }
+          else
+            {
+              leaveMatchMakingQueue (matchmakingData);
+            }
+        }
+      else
         {
           matchmakingData.gameLobbies.erase (gameLobbyWithAccount);
         }
@@ -340,8 +387,6 @@ auto const joinChannel = [] (user_matchmaking::JoinChannel const &joinChannelObj
   matchmakingData.user.communicationChannels.insert (joinChannelObject.channel);
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinChannelSuccess{ joinChannelObject.channel }));
 };
-
-void sendToAllAccountsInUsersCreateGameLobby (std::string const &message, MatchmakingData &matchmakingData);
 
 auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLobbyObject, MatchmakingData &matchmakingData) {
   if (auto gameLobby = ranges::find_if (matchmakingData.gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != matchmakingData.gameLobbies.end ())
@@ -496,8 +541,7 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
         }
       else
         {
-          // TODO game lobby should not send data. this should be handled by caller
-          auto &newGameLobby = matchmakingData.gameLobbies.emplace_back (GameLobby{ createGameLobbyObject.name, createGameLobbyObject.password, /*matchmakingData.sendMsgToUsers*/ {} });
+          auto &newGameLobby = matchmakingData.gameLobbies.emplace_back (GameLobby{ createGameLobbyObject.name, createGameLobbyObject.password });
           if (newGameLobby.tryToAddUser (matchmakingData.user))
             {
               throw std::logic_error{ "user can not join lobby which he created" };
@@ -678,6 +722,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, Mat
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName);
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
               if (userGameLobby->accountNames.empty ())
                 {
                   matchmakingData.gameLobbies.erase (userGameLobby);
@@ -759,23 +804,6 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
 
 auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), boost::asio::detached); };
 
-auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
-  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())
-    {
-      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
-      userGameLobby->removeUser (matchmakingData.user.accountName);
-      userGameLobby->cancelTimer ();
-      if (userGameLobby->accountNames.empty ())
-        {
-          matchmakingData.gameLobbies.erase (userGameLobby);
-        }
-    }
-  else
-    {
-      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueError{ "User is not in queue" }));
-    }
-};
-
 auto const loginAsGuest = [] (MatchmakingData &matchmakingData) {
   matchmakingData.user.accountName = boost::uuids::to_string (boost::uuids::random_generator () ());
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ matchmakingData.user.accountName }));
@@ -797,7 +825,7 @@ auto const userInGameLobby = [] (MatchmakingData &matchmakingData) -> bool {
          != matchmakingData.gameLobbies.end ();
 };
 
-auto const alreadyLoggedin = [] (PasswordMatches const &passwordMatches, MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = passwordMatches.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
+auto const alreadyLoggedin = [] (MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = matchmakingData.user.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
 
 auto const gameLobbyControlledByUsers = [] (MatchmakingData &matchmakingData) -> bool {
   auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
@@ -831,6 +859,7 @@ public:
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 * state<NotLoggedin>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
 , state<NotLoggedin>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<Loggedin>
+, state<NotLoggedin>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName 
 , state<NotLoggedin>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
 // WaitingForCreateAccount---------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedin>
@@ -846,6 +875,8 @@ public:
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / relogToGameLobby                        = state<Loggedin>
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                                                               / removeUserFromGameLobby                 = state<Loggedin>
 // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+, state<Loggedin>                             + event<u_m::CreateAccount>                                                         / (logoutAccount,hashPassword)            = state<WaitingForPasswordHashed>
+, state<Loggedin>                             + event<u_m::LoginAccount>                                                          / (logoutAccount,checkPassword)           = state<WaitingForPasswordCheck>
 , state<Loggedin>                             + event<u_m::JoinChannel>                                                           / joinChannel         
 , state<Loggedin>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage         
 , state<Loggedin>                             + event<u_m::LeaveChannel>                                                          / leaveChannel         
@@ -865,9 +896,9 @@ public:
 , state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      = state<ProxyToGame>
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-, state<ProxyToGame>                          +event<ConnectionToGameLost>                                                        / proxyStopped                            = state<Loggedin>     
-, state<ProxyToGame>                          +event<m_g::LeaveGameSuccess>                                                       / leaveGame                               = state<Loggedin>     
-, state<ProxyToGame>                          +event<u_m::SendMessageToGame>                                                      / sendToGame
+, state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     
+, state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               = state<Loggedin>     
+, state<ProxyToGame>                          + event<SendMessageToGame>                                                          / sendToGame
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<ReciveMessage>                        +event<SendMessageToUser>                                                           / sendToUser
   );
@@ -875,9 +906,6 @@ public:
   }
 };
 
-// work around to print type for debuging
-// template <typename> struct Debug;
-//    Debug<SomeType> d;
 struct my_logger
 {
   template <class SM, class TEvent>
@@ -943,19 +971,24 @@ Matchmaking::process_event (std::string const &event)
       auto const &typeToSearch = splitMesssage.at (0);
       auto const &objectAsString = splitMesssage.at (1);
       bool typeFound = false;
-      auto objectAsStringStream = std::stringstream{};
-      objectAsStringStream << objectAsString;
-      boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
-        if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-          {
-            typeFound = true;
-            boost::json::error_code ec{};
-            sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsStringStream, ec)));
-            if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
-            return;
-          }
-      });
-      if (not typeFound) std::cout << "could not find a match for typeToSearch '" << typeToSearch << "'" << std::endl;
+      if (sm->impl.is (state<ProxyToGame>))
+        {
+          sm->impl.process_event (SendMessageToGame{ event });
+        }
+      else
+        {
+          boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
+            if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+              {
+                typeFound = true;
+                boost::json::error_code ec{};
+                sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+                if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+                return;
+              }
+          });
+          if (not typeFound) std::cout << "could not find a match for typeToSearch in userMatchmaking '" << typeToSearch << "'" << std::endl;
+        }
     }
   else
     {

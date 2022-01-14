@@ -101,7 +101,6 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LoginAsGuest, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LoginAsGuestSuccess, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), RatingChanged, (size_t, oldRating) (size_t, newRating))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledMessageError, (std::string, msg) (std::string, error))
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SendMessageToGame, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStarted, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStopped, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ConnectGameError, (std::string, error))
@@ -172,8 +171,9 @@ LoginAsGuest,
 LoginAsGuestSuccess,
 RatingChanged,
 UnhandledMessageError,
-SendMessageToGame,
-ConnectGameError
+ConnectGameError,
+ProxyStarted,
+ProxyStopped
   >  const  userMatchmaking{};
 }
 // clang-format on

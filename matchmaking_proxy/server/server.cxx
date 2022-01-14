@@ -1,4 +1,6 @@
 #include "server.hxx"
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 #include <range/v3/algorithm/find_if.hpp>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
@@ -6,6 +8,7 @@
 #include "myWebsocket.hxx"
 #include "server.hxx"
 #include <algorithm> // for max
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp> //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS
 #include <deque>
@@ -108,7 +111,10 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               // std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
               // matchmaking->init (myWebsocket, _io_context, matchmaking, matchmakings);
               matchmakings.emplace_back (
-                  _io_context, matchmakings, [] (std::string const &msg) { std::cout << "msg from proxy: " << msg << std::endl; }, gameLobbies, _pool);
+                  _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
+              std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
+              using namespace boost::asio::experimental::awaitable_operators;
+              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) || myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto, auto) { matchmakings.erase (matchmaking); });
             }
           catch (std::exception &e)
             {

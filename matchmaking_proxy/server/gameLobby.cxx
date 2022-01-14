@@ -20,7 +20,7 @@
 #include <type_traits>                            // for move
 #include <utility>                                // for pair
 
-GameLobby::GameLobby (std::string name_, std::string password_, std::function<void (std::string const &msgToSend, std::vector<std::string> const &accountsToSendMessageTo)> sendToUsersInGameLobby_) : name{ std::move (name_) }, password (std::move (password_)), sendToUsersInGameLobby{ sendToUsersInGameLobby_ } {}
+GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::move (name_) }, password (std::move (password_)) {}
 
 GameLobby::~GameLobby ()
 {
@@ -109,20 +109,10 @@ GameLobby::tryToRemoveAdminAndSetNewAdmin ()
     }
 }
 
-bool
+void
 GameLobby::removeUser (std::string const &accountNameToRemove)
 {
   accountNames.erase (std::remove_if (accountNames.begin (), accountNames.end (), [&accountNameToRemove] (auto const &accountNameInGameLobby) { return accountNameToRemove == accountNameInGameLobby; }), accountNames.end ());
-  if (lobbyAdminType == LobbyType::FirstUserInLobbyUsers)
-    {
-      auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
-      usersInGameLobby.maxUserSize = maxUserCount ();
-      usersInGameLobby.name = name.value ();
-      usersInGameLobby.durakGameOption = gameOption;
-      ranges::transform (accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
-      sendToUsersInGameLobby (objectToStringWithObjectName (usersInGameLobby), accountNames);
-    }
-  return accountNames.empty ();
 }
 
 size_t
@@ -172,7 +162,6 @@ GameLobby::cancelTimer ()
 {
   if (waitingForAnswerToStartGame)
     {
-      sendToUsersInGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames);
       readyUsers.clear ();
       _timer->cancel ();
       waitingForAnswerToStartGame = false;

@@ -80,36 +80,6 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection->async_accept (use_awaitable);
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection });
-              // auto matchmakingCallbacks = MatchmakingCallbacks{};
-              // matchmakingCallbacks.sendMsgToUser = [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); };
-              // matchmakingCallbacks.sendMsgToUsers = [&matchmakings = matchmakings] (std::string const &message, std::vector<std::string> const &accountsToSendMessageTo) {
-              //   for (auto const &accountToSendMessageTo : accountsToSendMessageTo)
-              //     {
-              //       for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
-              //         {
-              //           matchmaking.matchmakingStateMachine.process_event (SendMessageToUser{ message });
-              //         }
-              //     }
-              // };
-              // matchmakingCallbacks.sendMsgToChannel = [&matchmakings = matchmakings] (std::string const &message, std::string const &channelName) {
-              //   for (auto &matchmaking : matchmakings | ranges::views::filter ([&channelName] (MatchmakingStateMachine const &matchmakingStateMachine) { return ranges::find_if (matchmakingStateMachine.data.user.communicationChannels, [&channelName] (std::string const &userChannel) { return userChannel == channelName; }) != matchmakingStateMachine.data.user.communicationChannels.end (); }))
-              //     {
-              //       matchmaking.matchmakingStateMachine.process_event (SendMessageToUser{ message });
-              //     }
-              // };
-              // matchmakingCallbacks.connectToGame = [&matchmakings = matchmakings] (std::vector<std::string> const &accountsToConnect) {
-              //   for (auto const &accountToSendMessageTo : accountsToConnect)
-              //     {
-              //       for (auto &matchmaking : matchmakings | ranges::views::remove_if ([&accountToSendMessageTo] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName != accountToSendMessageTo; }))
-              //         {
-              //           matchmaking.matchmakingStateMachine.process_event (ConnectToGame{});
-              //         }
-              //     }
-              // };
-              // matchmakingCallbacks.isLoggedin = [&matchmakings = matchmakings] (std::string const &accountName) { return ranges::find_if (matchmakings, [&accountName] (MatchmakingStateMachine const &matchmakingStateMachine) { return matchmakingStateMachine.data.user.accountName == accountName; }) != matchmakings.end (); };
-              // matchmakings.emplace_back (OLDMatchmaking{ _io_context, _pool, gameLobbies, matchmakingCallbacks });
-              // std::list<MatchmakingStateMachine>::iterator matchmaking = std::next (matchmakings.end (), -1);
-              // matchmaking->init (myWebsocket, _io_context, matchmaking, matchmakings);
               matchmakings.emplace_back (
                   _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());

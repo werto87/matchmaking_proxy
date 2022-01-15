@@ -74,6 +74,8 @@ typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waita
 using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
+template <typename T> concept hasAccountName = requires(T t) { t.accountName; };
+
 // work around to print type for debuging
 template <typename> struct Debug;
 // Debug<SomeType> d;
@@ -88,7 +90,7 @@ struct NotLoggedin
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
 
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, )
+BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, (std::string, accountName))
 struct WaitingForPasswordHashed
 {
 };
@@ -232,8 +234,7 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
     {
       if (std::get<bool> (passwordMatches))
         {
-          matchmakingData.user.accountName = loginAccountObject.accountName;
-          sm.process_event (PasswordMatches{}, deps, subs);
+          sm.process_event (PasswordMatches{ loginAccountObject.accountName }, deps, subs);
         }
       else
         {
@@ -423,7 +424,6 @@ auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
-
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RelogToCreateGameLobbySuccess{}));
       auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
       usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
@@ -451,7 +451,7 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
 };
 
-auto const setGameOption = [] (shared_class::GameOption const &gameOption, MatchmakingData &matchmakingData) {
+auto const setGameOption = [] (user_matchmaking::GameOption const &gameOption, MatchmakingData &matchmakingData) {
   if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
@@ -816,19 +816,32 @@ auto const accountInDatabase = [] (auto const &typeWithAccountName) -> bool {
 
 auto const wantsToRelog = [] (user_matchmaking::RelogTo const &relogTo) -> bool { return relogTo.wantsToRelog; };
 
-auto const userInGameLobby = [] (MatchmakingData &matchmakingData) -> bool {
+std::string
+getAccountName (auto const &typeWithAccountName, MatchmakingData &matchmakingData)
+{
+  if constexpr (hasAccountName<typename std::decay<decltype (typeWithAccountName)>::type>)
+    {
+      return typeWithAccountName.accountName;
+    }
+  else
+    {
+      return matchmakingData.user.accountName;
+    }
+}
+
+auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
   return ranges::find_if (matchmakingData.gameLobbies,
-                          [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
+                          [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
                             auto const &accountNames = gameLobby.accountNames;
                             return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                           })
          != matchmakingData.gameLobbies.end ();
 };
 
-auto const alreadyLoggedin = [] (MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = matchmakingData.user.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
+auto const alreadyLoggedin = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = typeWithAccountName.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
 
-auto const gameLobbyControlledByUsers = [] (MatchmakingData &matchmakingData) -> bool {
-  auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
+auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
+  auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
     auto const &accountNames = gameLobby.accountNames;
     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
   });
@@ -836,15 +849,20 @@ auto const gameLobbyControlledByUsers = [] (MatchmakingData &matchmakingData) ->
 };
 
 auto const loginAccountErrorPasswordAccountName = [] (user_matchmaking::LoginAccount const &loginAccount, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccount.accountName, "Incorrect Username or Password" })); };
-auto const loginAccountSuccess = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ matchmakingData.user.accountName })); };
+auto const loginAccountSuccess = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) {
+  matchmakingData.user.accountName = typeWithAccountName.accountName;
+  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ matchmakingData.user.accountName }));
+};
 auto const createAccountErrorAccountAlreadyCreated = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ typeWithAccountName.accountName, "Account already Created" })); };
 auto const proxyStarted = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStarted{})); };
 auto const proxyStopped = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStopped{})); };
 auto const loginAccountErrorAccountAlreadyLoggedin = [] (user_matchmaking::LoginAccount const &loginAccount, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccount.accountName, "Account already logged in" })); };
-auto const wantsToRelogToGameLobby = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::WantToRelog{ matchmakingData.user.accountName, "Create Game Lobby" })); };
+auto const wantsToRelogToGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::WantToRelog{ typeWithAccountName.accountName, "Create Game Lobby" })); };
 auto const connectToGameError = [] (user_matchmaking::ConnectGameError const &connectGameError, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (connectGameError)); };
 auto const leaveGameLobbyErrorUserNotInGameLobby = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" })); };
 auto const leaveGameLobbyErrorControlledByMatchmaking = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" })); };
+auto const sendMessageToUser = [] (user_matchmaking::Message const &message, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (message)); };
+auto const stateCanNotHandleEvent = [] (auto const &event, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ "event not handled: '" + confu_json::type_name<typename std::decay<std::remove_cvref_t<decltype (event)>>> () + "'" })); };
 
 class StateMachineImpl
 {
@@ -861,30 +879,35 @@ public:
 , state<NotLoggedin>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<Loggedin>
 , state<NotLoggedin>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName 
 , state<NotLoggedin>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
-// WaitingForCreateAccount---------------------------------------------------------------------------------------------------------------------------------------------------
+, state<NotLoggedin>                          + event<_>                                                                          / stateCanNotHandleEvent
+// WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedin>
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / createAccount                           = state<Loggedin>
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / cancelCreateAccount                     = state<NotLoggedin>
-// WaitingForLogin-----------------------------------------------------------------------------------------------------------------------------------------------------------
+, state<WaitingForPasswordHashed>             + event<_>                                                                          / stateCanNotHandleEvent
+// WaitingForPasswordCheck-----------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ alreadyLoggedin ]                    / loginAccountErrorAccountAlreadyLoggedin = state<WaitingForUserWantsToRelogGameLobby>
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ userInGameLobby ]                    / wantsToRelogToGameLobby                 = state<WaitingForUserWantsToRelogGameLobby>
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                                                            / loginAccountSuccess                     = state<Loggedin>
 , state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                                    / cancelLoginAccount                      = state<NotLoggedin>
 , state<WaitingForPasswordCheck>              + event<PasswordDoesNotMatch>                                                       / loginAccountErrorPasswordAccountName    = state<NotLoggedin>
-// WaitingForPasswordCheck------------------------------------------------------------------------------------------------------------------------------------------------------------------
+, state<WaitingForPasswordCheck>              + event<_>                                                                          / stateCanNotHandleEvent
+// WaitingForUserWantsToRelogGameLobby------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / relogToGameLobby                        = state<Loggedin>
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                                                               / removeUserFromGameLobby                 = state<Loggedin>
+, state<WaitingForUserWantsToRelogGameLobby>  + event<_>                                                                          / stateCanNotHandleEvent
 // Loggedin---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<Loggedin>                             + event<u_m::CreateAccount>                                                         / (logoutAccount,hashPassword)            = state<WaitingForPasswordHashed>
 , state<Loggedin>                             + event<u_m::LoginAccount>                                                          / (logoutAccount,checkPassword)           = state<WaitingForPasswordCheck>
 , state<Loggedin>                             + event<u_m::JoinChannel>                                                           / joinChannel         
 , state<Loggedin>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage         
+, state<Loggedin>                             + event<u_m::Message>                                                               / sendMessageToUser         
 , state<Loggedin>                             + event<u_m::LeaveChannel>                                                          / leaveChannel         
 , state<Loggedin>                             + event<u_m::LogoutAccount>                                                         / logoutAccount                           = state<NotLoggedin>          
 , state<Loggedin>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby          
 , state<Loggedin>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby          
 , state<Loggedin>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby          
-, state<Loggedin>                             + event<shared_class::GameOption>                                                   / setGameOption         
+, state<Loggedin>                             + event<u_m::GameOption>                                                             / setGameOption         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby         
@@ -895,14 +918,16 @@ public:
 , state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
 , state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      = state<ProxyToGame>
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
+, state<Loggedin>                             + event<_>                                                                          / stateCanNotHandleEvent
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               = state<Loggedin>     
 , state<ProxyToGame>                          + event<SendMessageToGame>                                                          / sendToGame
+, state<ProxyToGame>                          + event<_>                                                                          / stateCanNotHandleEvent
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-,*state<ReciveMessage>                        +event<SendMessageToUser>                                                           / sendToUser
-  );
-    // clang-format on
+,*state<ReciveMessage>                        + event<SendMessageToUser>                                                          / sendToUser
+        // clang-format on
+    );
   }
 };
 

@@ -1,225 +1,248 @@
-// #include "../matchmaking_proxy/logic/OLDmatchmaking.hxx"
-// #include "../matchmaking_proxy/userMatchmakingSerialization.hxx" // for Cre...
-// #include "matchmaking_proxy/database/database.hxx"               // for cre...
-// #include "matchmaking_proxy/server/gameLobby.hxx"                // for Gam...
-// #include "matchmaking_proxy/server/user.hxx"                     // for User
-// #include <boost/asio/detached.hpp>
-// #include <catch2/catch.hpp> // for Ass...
-// #include <memory>           // for sha...
-// using namespace user_matchmaking;
+#include "../matchmaking_proxy/logic/matchmaking.hxx"
+#include "../matchmaking_proxy/userMatchmakingSerialization.hxx" // for Cre...
+#include "matchmaking_proxy/database/database.hxx"               // for cre...
+#include "matchmaking_proxy/server/gameLobby.hxx"
+#include "matchmaking_proxy/server/user.hxx" // for User
+#include "matchmaking_proxy/util.hxx"
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/thread_pool.hpp>
+#include <boost/sml.hpp>
+#include <catch2/catch.hpp> // for Ass...
+#include <memory>           // for sha...
+using namespace user_matchmaking;
 
-// TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
-// {
-//   database::createEmptyDatabase ();
-//   database::createTables ();
-//   using namespace sml;
-//   using namespace boost::asio;
-//   auto ioContext = io_context ();
-//   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
-//   boost::asio::thread_pool pool_{};
-//   std::list<GameLobby> gameLobbies_{};
-//   typedef sml::sm<Matchmaking> MatchmakingMachine;
-//   auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
-//   MatchmakingMachine loginMachine{ matchmaking };
-//   SECTION ("CreateAccount", "[matchmaking]")
-//   {
-//     loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
-//     REQUIRE (loginMachine.is (state<WaitingForPasswordHashed>));
-//     ioContext.run ();
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("LoginAccount", "[matchmaking]")
-//   {
-//     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
-//     loginMachine.process_event (LoginAccount{ "oldAcc", "abc" });
-//     REQUIRE (loginMachine.is (state<WaitingForPasswordCheck>));
-//     ioContext.run ();
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("LoginAsGuest", "[matchmaking]")
-//   {
-//     loginMachine.process_event (LoginAsGuest{});
-//     ioContext.run ();
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   ioContext.stop ();
-//   ioContext.reset ();
-// }
+TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::sml;
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto &matchmaking = matchmakings.emplace_back (
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+  SECTION ("CreateAccount", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    ioContext.run ();
+    CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
+  }
+  SECTION ("LoginAccount", "[matchmaking]")
+  {
+    database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
+    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
+    ioContext.run ();
+    CHECK (R"foo(LoginAccountSuccess|{"accountName":"oldAcc"})foo" == messages.at (0));
+  }
+  SECTION ("LoginAsGuest", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LoginAsGuest{}));
+    ioContext.run ();
+    CHECK (boost::starts_with (messages.at (0), "LoginAsGuestSuccess"));
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}
 
-// TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
-// {
-//   database::createEmptyDatabase ();
-//   database::createTables ();
-//   typedef sml::sm<Matchmaking> MatchmakingMachine;
-//   using namespace sml;
-//   using namespace boost::asio;
-//   auto ioContext = io_context ();
-//   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
-//   boost::asio::thread_pool pool_{};
-//   std::list<GameLobby> gameLobbies_{};
-//   auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
-//   MatchmakingMachine loginMachine{ matchmaking };
-//   SECTION ("CreateAccountCancel", "[matchmaking]")
-//   {
-//     loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
-//     loginMachine.process_event (CreateAccountCancel{});
-//     ioContext.run ();
-//     REQUIRE (loginMachine.is (state<NotLoggedin>));
-//   }
-//   SECTION ("LoginAccountCancel", "[matchmaking]")
-//   {
-//     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
-//     loginMachine.process_event (LoginAccount{ "oldAcc", "abc" });
-//     loginMachine.process_event (LoginAccountCancel{});
-//     ioContext.run ();
-//     REQUIRE (loginMachine.is (state<NotLoggedin>));
-//   }
-//   ioContext.stop ();
-//   ioContext.reset ();
-// }
+TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::sml;
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto &matchmaking = matchmakings.emplace_back (
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+  SECTION ("CreateAccountCancel", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    matchmaking.process_event (objectToStringWithObjectName (CreateAccountCancel{}));
+    ioContext.run ();
+    CHECK (messages.at (0) == "CreateAccountCancel|{}");
+  }
+  SECTION ("LoginAccountCancel", "[matchmaking]")
+  {
+    database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
+    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
+    matchmaking.process_event (objectToStringWithObjectName (LoginAccountCancel{}));
+    ioContext.run ();
+    CHECK (messages.at (0) == "LoginAccountCancel|{}");
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}
 
-// TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
-// {
-//   database::createEmptyDatabase ();
-//   database::createTables ();
-//   typedef sml::sm<Matchmaking> MatchmakingMachine;
-//   using namespace sml;
-//   using namespace boost::asio;
-//   auto ioContext = io_context ();
-//   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
-//   boost::asio::thread_pool pool_{};
-//   std::list<GameLobby> gameLobbies_{};
-//   auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
-//   MatchmakingMachine loginMachine{ matchmaking };
-//   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
-//   ioContext.run ();
-//   ioContext.stop ();
-//   ioContext.reset ();
-//   REQUIRE (loginMachine.is (state<Loggedin>));
-//   SECTION ("JoinChannel", "[matchmaking]")
-//   {
-//     loginMachine.process_event (JoinChannel{ "my channel" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("BroadCastMessage", "[matchmaking]")
-//   {
-//     loginMachine.process_event (BroadCastMessage{ "my channel", "Hello World!" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("LeaveChannel", "[matchmaking]")
-//   {
-//     loginMachine.process_event (LeaveChannel{ "my channel" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("CreateGameLobby", "[matchmaking]")
-//   {
-//     loginMachine.process_event (CreateGameLobby{ "my channel", "" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("JoinGameLobby", "[matchmaking]")
-//   {
-//     loginMachine.process_event (JoinGameLobby{ "my channel", "" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("SetMaxUserSizeInCreateGameLobby", "[matchmaking]")
-//   {
-//     loginMachine.process_event (SetMaxUserSizeInCreateGameLobby{ 42 });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("GameOption", "[matchmaking]")
-//   {
-//     loginMachine.process_event (shared_class::GameOption{ true, "some string" });
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("LeaveGameLobby", "[matchmaking]")
-//   {
-//     loginMachine.process_event (LeaveGameLobby{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("RelogTo", "[matchmaking]")
-//   {
-//     loginMachine.process_event (RelogTo{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("CreateGame", "[matchmaking]")
-//   {
-//     loginMachine.process_event (CreateGame{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("WantsToJoinGame", "[matchmaking]")
-//   {
-//     loginMachine.process_event (WantsToJoinGame{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("LeaveQuickGameQueue", "[matchmaking]")
-//   {
-//     loginMachine.process_event (LeaveQuickGameQueue{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   SECTION ("JoinMatchMakingQueue", "[matchmaking]")
-//   {
-//     loginMachine.process_event (JoinMatchMakingQueue{});
-//     REQUIRE (loginMachine.is (state<Loggedin>));
-//   }
-//   ioContext.stop ();
-//   ioContext.reset ();
-// }
+TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::sml;
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto &matchmaking = matchmakings.emplace_back (
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+  ioContext.run ();
+  ioContext.stop ();
+  ioContext.reset ();
+  CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
+  messages.clear ();
+  SECTION ("CreateAccount", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    ioContext.run ();
+    CHECK (messages.size () == 2);
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
+    CHECK (R"foo(CreateAccountError|{"accountName":"newAcc","error":"Account already Created"})foo" == messages.at (1));
+  }
+  SECTION ("LoginAccount", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "newAcc", "abc" }));
+    ioContext.run ();
+    CHECK (messages.size () == 2);
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
+    CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (1));
+  }
+  SECTION ("JoinChannel", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (JoinChannel{ "my channel" }));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
+  }
+  SECTION ("BroadCastMessage", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (JoinChannel{ "my channel" }));
+    matchmaking.process_event (objectToStringWithObjectName (BroadCastMessage{ "my channel", "Hello World!" }));
+    ioContext.run ();
+    CHECK (messages.size () == 2);
+    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
+    CHECK (R"foo(Message|{"fromAccount":"newAcc","channel":"my channel","message":"Hello World!"})foo" == messages.at (1));
+  }
+  SECTION ("LeaveChannel", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LeaveChannel{ "my channel" }));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(LeaveChannelError|{"channel":"my channel","error":"channel not found"})foo" == messages.at (0));
+  }
+  SECTION ("CreateGameLobby", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (CreateGameLobby{ "my channel", "" }));
+    ioContext.run ();
+    CHECK (messages.size () == 2);
+    CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
+    CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
+  }
+  SECTION ("JoinGameLobby", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (JoinGameLobby{ "my channel", "" }));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(JoinGameLobbyError|{"name":"my channel","error":"wrong password name combination or lobby does not exists"})foo" == messages.at (0));
+  }
+  SECTION ("SetMaxUserSizeInCreateGameLobby", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (SetMaxUserSizeInCreateGameLobby{ 42 }));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(SetMaxUserSizeInCreateGameLobbyError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
+  }
+  SECTION ("GameOption", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (user_matchmaking::GameOption{ true, "some string" }));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
+  }
+  SECTION ("LeaveGameLobby", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LeaveGameLobby{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0));
+  }
+  SECTION ("RelogTo", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (RelogTo{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(UnhandledEventError|{"error":"event not handled: 'RelogTo'"})foo" == messages.at (0));
+  }
+  SECTION ("CreateGame", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (CreateGame{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(CreateGameError|{"error":"Could not find a game lobby for the user"})foo" == messages.at (0));
+  }
+  SECTION ("WantsToJoinGame", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (WantsToJoinGame{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messages.at (0));
+  }
+  SECTION ("LeaveQuickGameQueue", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LeaveQuickGameQueue{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(LeaveQuickGameQueueError|{"error":"User is not in queue"})foo" == messages.at (0));
+  }
+  SECTION ("JoinMatchMakingQueue", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (JoinMatchMakingQueue{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0));
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}
 
-// TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
-// {
-//   database::createEmptyDatabase ();
-//   database::createTables ();
-//   typedef sml::sm<Matchmaking> MatchmakingMachine;
-//   using namespace sml;
-//   using namespace boost::asio;
-//   auto ioContext = io_context ();
-//   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
-//   boost::asio::thread_pool pool_{};
-//   std::list<GameLobby> gameLobbies_{};
-//   auto matchmaking = Matchmaking{ ioContext, pool_, gameLobbies_, {} };
-//   MatchmakingMachine loginMachine{ matchmaking };
-//   loginMachine.process_event (CreateAccount{ "newAcc", "abc" });
-//   ioContext.run ();
-//   ioContext.stop ();
-//   ioContext.reset ();
-//   REQUIRE (loginMachine.is (state<Loggedin>));
-//   SECTION ("LogoutAccount", "[matchmaking]")
-//   {
-//     loginMachine.process_event (LogoutAccount{});
-//     REQUIRE (loginMachine.is (state<NotLoggedin>));
-//   }
-//   ioContext.stop ();
-//   ioContext.reset ();
-// }
-
-// // Test for play
-// // TEST_CASE ("remove login machine while coroutine is running", "[matchmaking]")
-// // {
-// //   database::createEmptyDatabase ();
-// //   database::createTables ();
-// //   typedef sml::sm<Matchmaking> MatchmakingMachine;
-// //   using namespace sml;
-// //   using namespace boost::asio;
-// //   auto ioContext = io_context ();
-// //   auto users_ = std::list<std::shared_ptr<User>>{ std::make_shared<User> (), std::make_shared<User> () };
-// //   boost::asio::thread_pool pool_{};
-// //   std::list<GameLobby> gameLobbies_{};
-// //   auto matchmaking = Matchmaking{ ioContext,   pool_, gameLobbies_ };
-// //   auto loginMachine = std::make_unique<MatchmakingMachine> (matchmaking);
-// //   SECTION ("LoginAccount", "[matchmaking]")
-// //   {
-// //     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
-// //     loginMachine->process_event (LoginAccount{ "oldAcc", "abc" });
-// //     auto timer = std::make_shared<CoroTimer> (CoroTimer{ ioContext });
-// //     timer->expires_after (std::chrono::seconds{ 5 });
-// //     co_spawn (ioContext, timer->async_wait (), [&loginMachine] (auto) {
-// //       // DO NOT FORGET TO SLOW DOWN THE ASNYC_HASH FUNCTION SO THIS FINISHES FIRST
-// //       loginMachine.reset ();
-// //       std::cout << "reset called!" << std::endl;
-// //     });
-// //     std::cout << "run called!" << std::endl;
-// //     ioContext.run ();
-// //   }
-// //   ioContext.stop ();
-// //   ioContext.reset ();
-// // }
+TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::sml;
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto &matchmaking = matchmakings.emplace_back (
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+  ioContext.run ();
+  ioContext.stop ();
+  ioContext.reset ();
+  CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
+  messages.clear ();
+  SECTION ("LogoutAccount", "[matchmaking]")
+  {
+    matchmaking.process_event (objectToStringWithObjectName (LogoutAccount{}));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}

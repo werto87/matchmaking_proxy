@@ -8,19 +8,12 @@
 #include <filesystem>                              // for path
 #include <list>                                    // for list
 #include <memory>                                  // for share...
-namespace boost
+
+namespace boost::asio
 {
-namespace asio
-{
-class io_context;
-}
-}
-namespace boost
-{
-namespace asio
-{
+
 class thread_pool;
-}
+class io_context;
 }
 
 struct User;
@@ -34,7 +27,6 @@ public:
 
   boost::asio::io_context &_io_context;
   boost::asio::thread_pool &_pool;
-  std::list<std::shared_ptr<User>> users{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
 };

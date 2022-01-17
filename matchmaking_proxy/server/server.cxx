@@ -43,7 +43,7 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
         {
           ctx.use_certificate_chain_file (pathToSecrets / "fullchain.pem");
         }
-      catch (std::exception &e)
+      catch (std::exception const &e)
         {
           std::cout << "load fullchain: " << pathToSecrets / "fullchain.pem"
                     << " exception : " << e.what () << std::endl;
@@ -52,7 +52,7 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
         {
           ctx.use_private_key_file (pathToSecrets / "privkey.pem", boost::asio::ssl::context::pem);
         }
-      catch (std::exception &e)
+      catch (std::exception const &e)
         {
           std::cout << "load privkey: " << pathToSecrets / "privkey.pem"
                     << " exception : " << e.what () << std::endl;
@@ -61,7 +61,7 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
         {
           ctx.use_tmp_dh_file (pathToSecrets / "dh2048.pem");
         }
-      catch (std::exception &e)
+      catch (std::exception const &e)
         {
           std::cout << "load dh2048: " << pathToSecrets / "dh2048.pem"
                     << " exception : " << e.what () << std::endl;
@@ -86,13 +86,13 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) || myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto, auto) { matchmakings.erase (matchmaking); });
             }
-          catch (std::exception &e)
+          catch (std::exception const &e)
             {
               std::cout << "Server::listener () connect  Exception : " << e.what () << std::endl;
             }
         }
     }
-  catch (std::exception &e)
+  catch (std::exception const &e)
     {
       std::cout << "exception: " << e.what () << std::endl;
     }

@@ -2,21 +2,16 @@
 #include "../matchmaking_proxy/userMatchmakingSerialization.hxx" // for Cre...
 #include "matchmaking_proxy/database/database.hxx"               // for cre...
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/server/user.hxx" // for User
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/asio/detached.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <boost/sml.hpp>
 #include <catch2/catch.hpp> // for Ass...
-#include <memory>           // for sha...
 using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-  using namespace boost::sml;
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
@@ -53,7 +48,6 @@ TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-  using namespace boost::sml;
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
@@ -86,7 +80,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-  using namespace boost::sml;
+
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
@@ -177,13 +171,6 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
     CHECK (messages.size () == 1);
     CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0));
   }
-  SECTION ("RelogTo", "[matchmaking]")
-  {
-    matchmaking.process_event (objectToStringWithObjectName (RelogTo{}));
-    ioContext.run ();
-    CHECK (messages.size () == 1);
-    CHECK (R"foo(UnhandledEventError|{"error":"event not handled: 'RelogTo'"})foo" == messages.at (0));
-  }
   SECTION ("CreateGame", "[matchmaking]")
   {
     matchmaking.process_event (objectToStringWithObjectName (CreateGame{}));
@@ -220,7 +207,6 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-  using namespace boost::sml;
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};

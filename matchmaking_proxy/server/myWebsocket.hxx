@@ -116,7 +116,7 @@ MyWebsocket<T>::writeLoop ()
             }
         }
     }
-  catch (std::exception &e)
+  catch (std::exception const &e)
     {
       webSocket.reset ();
       if (timer) timer->cancel ();

@@ -5,6 +5,7 @@ util.cxx
 rating.cxx
 matchmaking.cxx
 useAsLib.cxx
+startGame.cxx
 )
 
 target_link_libraries(${TEST_TARGET_NAME}

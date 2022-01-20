@@ -263,9 +263,9 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
       ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       matchmakingData.matchmakingGame = std::move (ws);
-
       using namespace boost::asio::experimental::awaitable_operators;
       co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData, &sm, &deps, &subs] (std::string const &readResult) {
+        // TODO this if can be removed. game should send user left with user name and matchmaking logic can remove the user
         if (readResult == "LeaveGameSuccess|{}")
           {
             sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
@@ -709,9 +709,10 @@ sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingD
   ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
   ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
   co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-  auto startGame = user_matchmaking::StartGame{};
+  auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
   startGame.gameOption = gameLobby.gameOption;
+  startGame.ratedGame = gameLobby.lobbyAdminType == GameLobby::LobbyType::MatchMakingSystemRanked;
   co_await ws.async_write (boost::asio::buffer (objectToStringWithObjectName (startGame)));
   boost::beast::flat_buffer buffer;
   co_await ws.async_read (buffer);
@@ -942,7 +943,7 @@ public:
 , state<Loggedin>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby          
 , state<Loggedin>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby          
 , state<Loggedin>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby          
-, state<Loggedin>                             + event<u_m::GameOption>                                                             / setGameOption         
+, state<Loggedin>                             + event<u_m::GameOption>                                                            / setGameOption         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby         

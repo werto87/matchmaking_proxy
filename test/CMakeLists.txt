@@ -6,6 +6,7 @@ rating.cxx
 matchmaking.cxx
 useAsLib.cxx
 startGame.cxx
+server.cxx
 )
 
 target_link_libraries(${TEST_TARGET_NAME}

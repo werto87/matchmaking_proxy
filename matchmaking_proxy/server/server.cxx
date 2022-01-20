@@ -1,4 +1,5 @@
 #include "server.hxx"
+#include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <range/v3/algorithm/find_if.hpp>
@@ -10,7 +11,7 @@
 #include <algorithm> // for max
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/certify/extensions.hpp>
-#include <boost/certify/https_verification.hpp> //INCLUDING THIS IN MORE THAN ONE TRANSLATION UNITS LEADS TO MULTIPLE DEFINITIONS
+#include <boost/certify/https_verification.hpp>
 #include <deque>
 #include <exception>
 #include <functional>
@@ -30,7 +31,7 @@ using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 Server::Server (boost::asio::io_context &io_context, boost::asio::thread_pool &pool) : _io_context{ io_context }, _pool{ pool } {}
 
 boost::asio::awaitable<void>
-Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
 {
   try
     {
@@ -84,11 +85,75 @@ Server::listener (boost::asio::ip::tcp::endpoint const &endpoint, std::filesyste
                   _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) || myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto, auto) { matchmakings.erase (matchmaking); });
+              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) || myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto eptr, auto) {
+                try
+                  {
+                    if (eptr)
+                      {
+                        std::rethrow_exception (eptr);
+                      }
+                  }
+                catch (std::exception const &e)
+                  {
+                    std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
+                  }
+                matchmakings.erase (matchmaking);
+              });
             }
           catch (std::exception const &e)
             {
-              std::cout << "Server::listener () connect  Exception : " << e.what () << std::endl;
+              std::cout << "Server::userMatchmaking () connect  Exception : " << e.what () << std::endl;
+            }
+        }
+    }
+  catch (std::exception const &e)
+    {
+      std::cout << "exception: " << e.what () << std::endl;
+    }
+}
+
+auto const printException = [] (std::exception_ptr eptr, auto) {
+  try
+    {
+      if (eptr)
+        {
+          std::rethrow_exception (eptr);
+        }
+    }
+  catch (std::exception const &e)
+    {
+      std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
+    }
+};
+
+boost::asio::awaitable<void>
+Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)
+{
+  try
+    {
+      auto executor = co_await this_coro::executor;
+      tcp_acceptor acceptor (executor, endpoint);
+      for (;;)
+        {
+          try
+            {
+              auto socket = co_await acceptor.async_accept ();
+              typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
+              auto connection = std::make_shared<Websocket> (Websocket{ std::move (socket) });
+              connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
+              connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
+              co_await connection->async_accept ();
+              auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection });
+              using namespace boost::asio::experimental::awaitable_operators;
+              co_spawn (_io_context, myWebsocket->readLoop ([] (const std::string &msg) {
+                // TODO test "MatchmakingGame{}.process_event (msg);"
+                MatchmakingGame{}.process_event (msg);
+              }) || myWebsocket->writeLoop (),
+                        printException);
+            }
+          catch (std::exception const &e)
+            {
+              std::cout << "Server::gameMatchmaking () connect  Exception : " << e.what () << std::endl;
             }
         }
     }

@@ -7,6 +7,7 @@
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/io_context.hpp>
 #include <cstddef>
+#include <exception>
 #include <map>
 #include <variant>
 
@@ -67,7 +68,17 @@ struct Mockserver
             co_await connection->async_accept ();
             websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection) });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
-            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption] (const std::string &msg) mutable { websocket->sendMessage (mockserverOption.requestResponse.at (msg)); }) || websocket->writeLoop (), [&websockets = websockets, websocket] (auto, auto) { websockets.erase (websocket); });
+            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption] (const std::string &msg) mutable {
+              try
+                {
+                  websocket->sendMessage (mockserverOption.requestResponse.at (msg));
+                }
+              catch (std::exception const &e)
+                {
+                  std::cout << "unhandled message: " << msg << std::endl;
+                }
+            }) || websocket->writeLoop (),
+                                   [&websockets = websockets, websocket] (auto, auto) { websockets.erase (websocket); });
           }
         catch (std::exception &e)
           {

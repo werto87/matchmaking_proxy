@@ -9,6 +9,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <catch2/catch.hpp> // for Ass...
+#include <chrono>
 
 using namespace user_matchmaking;
 
@@ -28,7 +29,7 @@ createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio:
                   },
                   gameLobbies, pool };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
-  ioContext.run ();
+  ioContext.run_for (std::chrono::seconds{ 1 });
   ioContext.stop ();
   ioContext.reset ();
   matchmaking.process_event (objectToStringWithObjectName (joinMatchMakingQueue));
@@ -41,7 +42,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "StartGame|{\"players\":[\"player1\",\"player2\"],\"gameOption\":{\"someBool\":false,\"someString\":\"\"}}", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
+  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { R"foo(StartGame|{"players":["player1","player2"],"gameOption":{"someBool":false,"someString":""},"ratedGame":false})foo", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<Matchmaking> matchmakings{};
@@ -63,7 +64,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   {
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 1 });
     CHECK (messagesPlayer1.size () == 2);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));
@@ -75,7 +76,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   {
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ false }));
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 1 });
     CHECK (messagesPlayer1.size () == 1);
     CHECK ("GameStartCanceled|{}" == messagesPlayer1.at (0));
     CHECK (messagesPlayer2.size () == 1);
@@ -85,7 +86,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   {
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ false }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 1 });
     CHECK (messagesPlayer1.size () == 1);
     CHECK ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer1.at (0));
     CHECK (messagesPlayer2.size () == 2);
@@ -102,7 +103,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "StartGame|{\"players\":[\"player1\",\"player2\"],\"gameOption\":{\"someBool\":false,\"someString\":\"\"}}", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
+  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { R"foo(StartGame|{"players":["player1","player2"],"gameOption":{"someBool":false,"someString":""},"ratedGame":true})foo", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<Matchmaking> matchmakings{};
@@ -124,7 +125,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   {
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 1 });
     CHECK (messagesPlayer1.size () == 2);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));
@@ -152,7 +153,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                   },
                   gameLobbies, pool };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
-  ioContext.run ();
+  ioContext.run_for (std::chrono::seconds{ 1 });
   ioContext.stop ();
   ioContext.reset ();
   matchmaking.process_event (objectToStringWithObjectName (createGameLobby));
@@ -175,7 +176,7 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                   },
                   gameLobbies, pool };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
-  ioContext.run ();
+  ioContext.run_for (std::chrono::seconds{ 1 });
   ioContext.stop ();
   ioContext.reset ();
   matchmaking.process_event (objectToStringWithObjectName (joinGameLobby));
@@ -188,7 +189,7 @@ TEST_CASE ("2 player join coustom game", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "StartGame|{\"players\":[\"player1\",\"player2\"],\"gameOption\":{\"someBool\":false,\"someString\":\"\"}}", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
+  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { R"foo(StartGame|{"players":["player1","player2"],"gameOption":{"someBool":false,"someString":""},"ratedGame":false})foo", "StartGameSuccess|{}" }, { "LeaveGame|{}", "LeaveGameSuccess|{}" } } } };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<Matchmaking> matchmakings{};
@@ -212,7 +213,7 @@ TEST_CASE ("2 player join coustom game", "[matchmaking]")
 
     matchmakingPlayer1.process_event (objectToStringWithObjectName (CreateGame{}));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 1 });
     CHECK (messagesPlayer1.size () == 2);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));

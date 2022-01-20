@@ -47,16 +47,7 @@ MyWebsocket<T>::async_read_one_message ()
 {
 
   boost::beast::flat_buffer buffer;
-  try
-    {
-      co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
-    }
-  catch (boost::system::system_error &e)
-    {
-      webSocket.reset ();
-      if (timer) timer->cancel ();
-      throw e;
-    }
+  co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
   co_return msg;
 }
@@ -77,7 +68,8 @@ MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> on
     {
       webSocket.reset ();
       if (timer) timer->cancel ();
-      throw e;
+      std::cout << e.what () << std::endl;
+      throw;
     }
 }
 template <class T>

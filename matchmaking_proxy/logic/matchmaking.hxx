@@ -1,7 +1,6 @@
 #ifndef AB446319_39F6_4D7F_9EC5_860337CA5001
 #define AB446319_39F6_4D7F_9EC5_860337CA5001
 
-#include "../server/gameLobby.hxx"
 #include <functional>
 #include <list>
 #include <memory>
@@ -10,6 +9,8 @@ namespace boost::asio
 class io_context;
 class thread_pool;
 }
+
+struct GameLobby;
 
 class Matchmaking
 {

@@ -2,6 +2,7 @@
 #define FB5474CE_322D_4D7A_B298_185229E7B05A
 
 #include "matchmaking_proxy/server/myWebsocket.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -59,27 +60,33 @@ struct Mockserver
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption] (const std::string &msg) mutable {
               if (mockserverOption.requestResponse.count (msg)) websocket->sendMessage (mockserverOption.requestResponse.at (msg));
-              auto msgFound = false;
-              for (auto const &[startsWith, response] : mockserverOption.requestStartsWithResponse)
+              else
                 {
-                  if (boost::starts_with (msg, startsWith))
+                  auto msgFound = false;
+                  for (auto const &[startsWith, response] : mockserverOption.requestStartsWithResponse)
                     {
-                      msgFound = true;
-                      websocket->sendMessage (response);
-                      break;
+                      if (boost::starts_with (msg, startsWith))
+                        {
+                          msgFound = true;
+                          websocket->sendMessage (response);
+                          break;
+                        }
+                    }
+                  if (not msgFound)
+                    {
+                      std::cout << "unhandled message: " << msg << std::endl;
                     }
                 }
-              if (not msgFound)
-                {
-                  std::cout << "unhandled message: " << msg << std::endl;
-                }
-            }) || websocket->writeLoop (),
-                                   [&websockets = websockets, websocket] (auto, auto) { websockets.erase (websocket); });
+            }) && websocket->writeLoop (),
+                                   [&websockets = websockets, websocket] (auto eptr) {
+                                     printException (eptr);
+                                     websockets.erase (websocket);
+                                   });
           }
-        catch (std::exception &e)
+        catch (std::exception const &e)
           {
             std::cout << "Mockserver::listener ()  Exception : " << e.what () << std::endl;
-            throw;
+            throw e;
           }
       }
     for (auto &websocket : websockets)

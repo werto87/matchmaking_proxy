@@ -1,5 +1,6 @@
 #include "server.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <range/v3/algorithm/find_if.hpp>
@@ -85,18 +86,8 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
                   _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) || myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto eptr, auto) {
-                try
-                  {
-                    if (eptr)
-                      {
-                        std::rethrow_exception (eptr);
-                      }
-                  }
-                catch (std::exception const &e)
-                  {
-                    std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
-                  }
+              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) && myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto eptr) {
+                printException (eptr);
                 matchmakings.erase (matchmaking);
               });
             }
@@ -111,20 +102,6 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
       std::cout << "exception: " << e.what () << std::endl;
     }
 }
-
-auto const printException = [] (std::exception_ptr eptr, auto) {
-  try
-    {
-      if (eptr)
-        {
-          std::rethrow_exception (eptr);
-        }
-    }
-  catch (std::exception const &e)
-    {
-      std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
-    }
-};
 
 boost::asio::awaitable<void>
 Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)

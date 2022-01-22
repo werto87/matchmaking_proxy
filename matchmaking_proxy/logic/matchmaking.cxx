@@ -8,6 +8,7 @@
 #include "matchmaking_proxy/pw_hash/passwordHash.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -179,34 +180,6 @@ struct MatchmakingData
 
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
 
-template <typename TypeToSend>
-std::string
-objectToStringWithObjectName (TypeToSend const &typeToSend)
-{
-  std::stringstream ss{};
-  ss << confu_json::type_name<TypeToSend> () << '|' << confu_json::to_json (typeToSend);
-  return ss.str ();
-}
-
-template <typename T>
-T
-stringToObject (std::string const &objectAsString)
-{
-  T t{};
-  boost::json::error_code ec{};
-  auto jsonValue = confu_json::read_json (objectAsString, ec);
-  if (ec)
-    {
-      std::cerr << "error while parsing string: error code: " << ec << std::endl;
-      std::cerr << "error while parsing string: stringToParse: " << objectAsString << std::endl;
-    }
-  else
-    {
-      t = confu_json::to_object<T> (jsonValue);
-    }
-  return t;
-}
-
 template <typename Matchmaking, typename Event>
 void
 process_event (Matchmaking &matchmaking, Event const &event)
@@ -271,8 +244,11 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
             sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
           }
         matchmakingData.sendMsgToUser (readResult);
-      }) || matchmakingData.matchmakingGame.writeLoop (),
-                [&sm, &deps, &subs] (auto, auto) { sm.process_event (ConnectionToGameLost{}, deps, subs); });
+      }) && matchmakingData.matchmakingGame.writeLoop (),
+                [&sm, &deps, &subs] (auto eptr) {
+                  printException (eptr);
+                  sm.process_event (ConnectionToGameLost{}, deps, subs);
+                });
       sm.process_event (ConnectToGameSuccess{}, deps, subs);
     }
   catch (std::exception const &e)
@@ -282,19 +258,6 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
       throw e;
     }
 }
-auto const printException = [] (std::exception_ptr eptr) {
-  try
-    {
-      if (eptr)
-        {
-          std::rethrow_exception (eptr);
-        }
-    }
-  catch (std::exception const &e)
-    {
-      std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
-    }
-};
 
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), printException); };
 auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), printException); };
@@ -956,7 +919,7 @@ public:
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     
-, state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               = state<Loggedin>     
+, state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
 , state<ProxyToGame>                          + event<SendMessageToGame>                                                          / sendToGame
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<ReciveMessage>                        + event<SendMessageToUser>                                                          / sendToUser

@@ -154,7 +154,7 @@ GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std
   _timer = std::make_shared<boost::asio::system_timer> (io_context);
   _timer->expires_after (TIME_TO_ACCEPT_THE_INVITE);
   co_spawn (
-      _timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, boost::asio::detached);
+      _timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, printException);
 }
 
 void

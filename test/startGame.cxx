@@ -65,12 +65,14 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 1 });
-    CHECK (messagesPlayer1.size () == 2);
+    CHECK (messagesPlayer1.size () == 3);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));
-    CHECK (messagesPlayer2.size () == 2);
+    CHECK ("ProxyStopped|{}" == messagesPlayer1.at (2));
+    CHECK (messagesPlayer2.size () == 3);
     CHECK ("ProxyStarted|{}" == messagesPlayer2.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer2.at (1));
+    CHECK ("ProxyStopped|{}" == messagesPlayer2.at (2));
   }
   SECTION ("one player accept one player declined", "[matchmaking]")
   {
@@ -126,12 +128,14 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 1 });
-    CHECK (messagesPlayer1.size () == 2);
+    CHECK (messagesPlayer1.size () == 3);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));
-    CHECK (messagesPlayer2.size () == 2);
+    CHECK ("ProxyStopped|{}" == messagesPlayer1.at (2));
+    CHECK (messagesPlayer2.size () == 3);
     CHECK ("ProxyStarted|{}" == messagesPlayer2.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer2.at (1));
+    CHECK ("ProxyStopped|{}" == messagesPlayer2.at (2));
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -214,13 +218,15 @@ TEST_CASE ("2 player join coustom game", "[matchmaking]")
     matchmakingPlayer1.process_event (objectToStringWithObjectName (CreateGame{}));
     matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 1 });
-    CHECK (messagesPlayer1.size () == 2);
+    CHECK (messagesPlayer1.size () == 3);
     CHECK ("ProxyStarted|{}" == messagesPlayer1.at (0));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer1.at (1));
-    CHECK (messagesPlayer2.size () == 3);
+    CHECK ("ProxyStopped|{}" == messagesPlayer1.at (2));
+    CHECK (messagesPlayer2.size () == 4);
     CHECK ("AskIfUserWantsToJoinGame|{}" == messagesPlayer2.at (0));
     CHECK ("ProxyStarted|{}" == messagesPlayer2.at (1));
     CHECK ("LeaveGameSuccess|{}" == messagesPlayer2.at (2));
+    CHECK ("ProxyStopped|{}" == messagesPlayer2.at (3));
   }
   ioContext.stop ();
   ioContext.reset ();

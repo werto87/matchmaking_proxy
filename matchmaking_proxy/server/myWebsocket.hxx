@@ -64,11 +64,10 @@ MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> on
           onRead (std::move (oneMsg));
         }
     }
-  catch (boost::system::system_error &e)
+  catch (...)
     {
       webSocket.reset ();
       if (timer) timer->cancel ();
-      std::cout << e.what () << std::endl;
       throw;
     }
 }

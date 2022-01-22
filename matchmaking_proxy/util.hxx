@@ -30,4 +30,19 @@ stringToObject (std::string const &objectAsString)
   return t;
 }
 
+void printExceptionHelper (std::exception_ptr eptr);
+
+template <class... Fs> struct overloaded : Fs...
+{
+  using Fs::operator()...;
+};
+
+template <class... Fs> overloaded (Fs...) -> overloaded<Fs...>;
+
+auto const printException1 = [] (std::exception_ptr eptr) { printExceptionHelper (eptr); };
+
+auto const printException2 = [] (std::exception_ptr eptr, auto) { printExceptionHelper (eptr); };
+
+auto const printException = overloaded{ printException1, printException2 };
+
 #endif /* EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1 */

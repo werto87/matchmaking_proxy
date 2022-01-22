@@ -16,4 +16,19 @@ operator<< (std::ostream &o, const Container<T> &container)
   return o;
 }
 
+void printExceptionHelper (std::exception_ptr eptr);
+
+template <class... Fs> struct overloaded : Fs...
+{
+  using Fs::operator()...;
+};
+
+template <class... Fs> overloaded (Fs...) -> overloaded<Fs...>;
+
+auto const printException1 = [] (std::exception_ptr eptr) { printExceptionHelper (eptr); };
+
+auto const printException2 = [] (std::exception_ptr eptr, auto) { printExceptionHelper (eptr); };
+
+auto const printException = overloaded{ printException1, printException2 };
+
 #endif /* F913C042_CAFF_4558_AE02_952AE3C4F17A */

@@ -4,6 +4,7 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/sml.hpp>
 #include <confu_json/concept.hxx>
 #include <confu_json/confu_json.hxx>
@@ -112,7 +113,12 @@ struct my_logger
 };
 struct MatchmakingGame::StateMachineWrapper
 {
-  explicit StateMachineWrapper () {}
+  explicit StateMachineWrapper (MatchmakingGame *owner) :
+  impl (owner,
+#ifdef LOGGING_FOR_STATE_MACHINE
+                                                                                              logger,
+#endif
+                                                                                              matchmakingData){}
 
   MatchmakingGameData matchmakingData;
 

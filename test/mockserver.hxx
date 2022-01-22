@@ -2,6 +2,8 @@
 #define FB5474CE_322D_4D7A_B298_185229E7B05A
 
 #include "matchmaking_proxy/server/myWebsocket.hxx"
+#include "util.hxx"
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -14,23 +16,10 @@
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::use_awaitable_t<>::executor_with_default<boost::asio::any_io_executor>> Socket;
 
-auto const printException = [] (std::exception_ptr eptr) {
-  try
-    {
-      if (eptr)
-        {
-          std::rethrow_exception (eptr);
-        }
-    }
-  catch (std::exception const &e)
-    {
-      std::cout << "unhandled exception: '" << e.what () << "'" << std::endl;
-    }
-};
-
 struct MockserverOption
 {
   std::map<std::string, std::string> requestResponse{};
+  std::map<std::string, std::string> requestStartsWithResponse{};
 };
 
 struct Mockserver
@@ -69,11 +58,18 @@ struct Mockserver
             websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection) });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption] (const std::string &msg) mutable {
-              try
+              if (mockserverOption.requestResponse.count (msg)) websocket->sendMessage (mockserverOption.requestResponse.at (msg));
+              auto msgFound = false;
+              for (auto const &[startsWith, response] : mockserverOption.requestStartsWithResponse)
                 {
-                  websocket->sendMessage (mockserverOption.requestResponse.at (msg));
+                  if (boost::starts_with (msg, startsWith))
+                    {
+                      msgFound = true;
+                      websocket->sendMessage (response);
+                      break;
+                    }
                 }
-              catch (std::exception const &e)
+              if (not msgFound)
                 {
                   std::cout << "unhandled message: " << msg << std::endl;
                 }
@@ -82,7 +78,8 @@ struct Mockserver
           }
         catch (std::exception &e)
           {
-            std::cout << "Server::listener () connect  Exception : " << e.what () << std::endl;
+            std::cout << "Mockserver::listener ()  Exception : " << e.what () << std::endl;
+            throw;
           }
       }
     for (auto &websocket : websockets)

@@ -122,11 +122,10 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)
               co_await connection->async_accept ();
               auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (_io_context, myWebsocket->readLoop ([] (const std::string &msg) {
-                // TODO test "MatchmakingGame{}.process_event (msg);"
-                MatchmakingGame{}.process_event (msg);
-              }) || myWebsocket->writeLoop (),
-                        printException);
+              co_await(myWebsocket->readLoop ([myWebsocket] (const std::string &msg) {
+                auto matchmakingGame = MatchmakingGame{ [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };
+                matchmakingGame.process_event (msg);
+              }) || myWebsocket->writeLoop ());
             }
           catch (std::exception const &e)
             {

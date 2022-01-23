@@ -15,8 +15,9 @@
 #include <range/v3/view/transform.hpp>
 using namespace boost::sml;
 
-struct MatchmakingGameData
+struct MatchmakingGameDependencies
 {
+  std::function<void (std::string const &)> sendToGame{};
 };
 
 auto const accountNamesToAccounts = [] (std::vector<std::string> const &accountNames) {
@@ -27,7 +28,7 @@ auto const accountNamesToAccounts = [] (std::vector<std::string> const &accountN
          | ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | ranges::to<std::vector<database::Account>> ();
 };
 
-auto const gameOver = [] (matchmaking_game::GameOver const &gameOver) {
+auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, MatchmakingGameDependencies &matchmakingGameDependencies) {
   if (gameOver.ratedGame)
     {
       if (gameOver.draws.empty ())
@@ -53,6 +54,7 @@ auto const gameOver = [] (matchmaking_game::GameOver const &gameOver) {
             }
         }
     }
+  matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
 };
 
 class StateMachineImpl
@@ -113,14 +115,14 @@ struct my_logger
 };
 struct MatchmakingGame::StateMachineWrapper
 {
-  explicit StateMachineWrapper (MatchmakingGame *owner) :
+  StateMachineWrapper (MatchmakingGame *owner,MatchmakingGameDependencies matchmakingGameDependencies_) : matchmakingGameDependencies{std::move(matchmakingGameDependencies_)},
   impl (owner,
 #ifdef LOGGING_FOR_STATE_MACHINE
                                                                                               logger,
 #endif
-                                                                                              matchmakingData){}
+                                                                                              matchmakingGameDependencies){}
 
-  MatchmakingGameData matchmakingData;
+  MatchmakingGameDependencies matchmakingGameDependencies;
 
 #ifdef LOGGING_FOR_STATE_MACHINE
   my_logger logger;
@@ -135,6 +137,10 @@ MatchmakingGame::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
 {
   delete p;
 }
+
+
+MatchmakingGame::MatchmakingGame(std::function<void (std::string const&)> sendToGame): sm{ new StateMachineWrapper{this, MatchmakingGameDependencies{sendToGame}} } {}
+
 
 
 void MatchmakingGame::process_event (std::string const &event) {

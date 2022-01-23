@@ -968,7 +968,7 @@ struct my_logger
 };
 struct Matchmaking::StateMachineWrapper
 {
-  explicit StateMachineWrapper (Matchmaking *owner, boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool)
+  StateMachineWrapper (Matchmaking *owner, boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool)
       : matchmakingData{ ioContext, stateMachines_, sendMsgToUser, gameLobbies, pool }, impl (owner,
 #ifdef LOGGING_FOR_STATE_MACHINE
                                                                                               logger,

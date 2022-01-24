@@ -905,7 +905,7 @@ public:
 , state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue          
 , state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         
 , state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
-, state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      = state<ProxyToGame> /*TODO looks fishy why connect error and then ProxyToGame*/
+, state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     

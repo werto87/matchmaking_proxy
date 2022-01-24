@@ -46,6 +46,9 @@ BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), LeaveGameError, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), GameOver, (bool, ratedGame) (std::vector<std::string>, winners) (std::vector<std::string>, losers) (std::vector<std::string>, draws))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), GameOverSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), GameOverError, )
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGame, (std::string, accountName))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGameSuccess, (std::string, accountName))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGameError, (std::string, accountName) (std::string, error))
 
 // clang-format off
 namespace matchmaking_game{

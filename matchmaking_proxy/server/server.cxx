@@ -86,10 +86,20 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
                   _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) { matchmaking->process_event (msg); }) && myWebsocket->writeLoop (), [&matchmakings = matchmakings, matchmaking] (auto eptr) {
-                printException (eptr);
-                matchmakings.erase (matchmaking);
-              });
+              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {
+                if (matchmaking->hasProxyToGame ())
+                  {
+                    matchmaking->sendMessageToGame (msg);
+                  }
+                else
+                  {
+                    matchmaking->process_event (msg);
+                  }
+              }) && myWebsocket->writeLoop (),
+                        [&matchmakings = matchmakings, matchmaking] (auto eptr) {
+                          printException (eptr);
+                          matchmakings.erase (matchmaking);
+                        });
             }
           catch (std::exception const &e)
             {
@@ -122,8 +132,8 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)
               co_await connection->async_accept ();
               auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_await(myWebsocket->readLoop ([myWebsocket] (const std::string &msg) {
-                auto matchmakingGame = MatchmakingGame{ [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };
+              co_await(myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
+                auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop ());
             }

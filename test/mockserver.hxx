@@ -19,6 +19,7 @@ typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::use_
 
 struct MockserverOption
 {
+  std::optional<std::string> disconnectOnMessage{};
   std::map<std::string, std::string> requestResponse{};
   std::map<std::string, std::string> requestStartsWithResponse{};
 };
@@ -58,8 +59,13 @@ struct Mockserver
             co_await connection->async_accept ();
             websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection) });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
-            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption] (const std::string &msg) mutable {
-              if (mockserverOption.requestResponse.count (msg)) websocket->sendMessage (mockserverOption.requestResponse.at (msg));
+            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption, &ioContext = ioContext] (const std::string &msg) mutable {
+              if (mockserverOption.disconnectOnMessage && mockserverOption.disconnectOnMessage.value () == msg)
+                {
+                  ioContext.stop ();
+                }
+              else if (mockserverOption.requestResponse.count (msg))
+                websocket->sendMessage (mockserverOption.requestResponse.at (msg));
               else
                 {
                   auto msgFound = false;

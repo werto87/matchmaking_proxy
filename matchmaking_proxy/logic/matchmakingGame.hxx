@@ -2,13 +2,14 @@
 #define EFFCC19D_EF93_4BD9_B516_6E5932A5ECA0
 
 #include <deque>
+#include <list>
 #include <memory>
-
 namespace boost::asio
 {
 class io_context;
 class thread_pool;
 }
+class Matchmaking;
 
 class MatchmakingGame
 {
@@ -19,7 +20,7 @@ class MatchmakingGame
   };
 
 public:
-  MatchmakingGame (std::function<void (std::string const&)> sendToGame);
+  MatchmakingGame (std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &)> sendToGame);
 
   void process_event (std::string const &event);
 

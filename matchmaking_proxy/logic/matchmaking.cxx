@@ -125,7 +125,6 @@ struct ReciveMessage
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
-BOOST_FUSION_DEFINE_STRUCT ((), SendMessageToGame, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGame, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameError, )
@@ -237,18 +236,10 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       matchmakingData.matchmakingGame = std::move (ws);
       using namespace boost::asio::experimental::awaitable_operators;
-      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData, &sm, &deps, &subs] (std::string const &readResult) {
-        // TODO this if can be removed. game should send user left with user name and matchmaking logic can remove the user
-        if (readResult == "LeaveGameSuccess|{}")
-          {
-            sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
-          }
-        matchmakingData.sendMsgToUser (readResult);
-      }) && matchmakingData.matchmakingGame.writeLoop (),
-                [&sm, &deps, &subs] (auto eptr) {
-                  printException (eptr);
-                  sm.process_event (ConnectionToGameLost{}, deps, subs);
-                });
+      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData, &sm, &deps, &subs] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) && matchmakingData.matchmakingGame.writeLoop (), [&sm, &deps, &subs] (auto eptr) {
+        printException (eptr);
+        sm.process_event (ConnectionToGameLost{}, deps, subs);
+      });
       sm.process_event (ConnectToGameSuccess{}, deps, subs);
     }
   catch (std::exception const &e)
@@ -305,7 +296,6 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
 }
 
 auto const sendToUser = [] (SendMessageToUser const &sendMessageToUser, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (sendMessageToUser.msg); };
-auto const sendToGame = [] (SendMessageToGame const &msgToGame, MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.sendMessage (msgToGame.msg); };
 auto const leaveGame = [] (MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.close (); };
 
 auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
@@ -920,7 +910,6 @@ public:
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
-, state<ProxyToGame>                          + event<SendMessageToGame>                                                          / sendToGame
 // ReciveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<ReciveMessage>                        + event<SendMessageToUser>                                                          / sendToUser
         // clang-format on
@@ -1004,30 +993,29 @@ Matchmaking::process_event (std::string const &event)
       auto const &typeToSearch = splitMesssage.at (0);
       auto const &objectAsString = splitMesssage.at (1);
       bool typeFound = false;
-      if (sm->impl.is (state<ProxyToGame>))
-        {
-          sm->impl.process_event (SendMessageToGame{ event });
-        }
-      else
-        {
-          boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
-            if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-              {
-                typeFound = true;
-                boost::json::error_code ec{};
-                sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-                if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
-                return;
-              }
-          });
-          if (not typeFound) std::cout << "could not find a match for typeToSearch in userMatchmaking '" << typeToSearch << "'" << std::endl;
-        }
+      boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
+        if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+          {
+            typeFound = true;
+            boost::json::error_code ec{};
+            sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+            if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+            return;
+          }
+      });
+      if (not typeFound) std::cout << "could not find a match for typeToSearch in userMatchmaking '" << typeToSearch << "'" << std::endl;
     }
   else
     {
       std::cout << "Not supported event. event syntax: EventName|JsonObject"
                 << " msg: '" << event << "'" << std::endl;
     }
+}
+
+void
+Matchmaking::sendMessageToGame (std::string const &message)
+{
+  sm->matchmakingData.matchmakingGame.sendMessage (message);
 }
 
 bool
@@ -1040,6 +1028,18 @@ bool
 Matchmaking::isUserInChatChannel (std::string const &channelName) const
 {
   return sm->matchmakingData.user.communicationChannels.count (channelName);
+}
+
+bool
+Matchmaking::hasProxyToGame () const
+{
+  return sm->impl.is (state<ProxyToGame>);
+}
+
+void
+Matchmaking::disconnectFromProxy ()
+{
+  sm->impl.process_event (matchmaking_game::LeaveGameSuccess{});
 }
 
 boost::asio::awaitable<void>

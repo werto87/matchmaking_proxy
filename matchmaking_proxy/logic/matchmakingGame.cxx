@@ -1,4 +1,5 @@
 #include "matchmakingGame.hxx"
+#include "matchmaking.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx" // for Account
 #include "matchmaking_proxy/logic/rating.hxx"
@@ -9,6 +10,7 @@
 #include <confu_json/concept.hxx>
 #include <confu_json/confu_json.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
+#include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/filter.hpp>
@@ -17,6 +19,7 @@ using namespace boost::sml;
 
 struct MatchmakingGameDependencies
 {
+  std::list<Matchmaking> &stateMachines;
   std::function<void (std::string const &)> sendToGame{};
 };
 
@@ -57,6 +60,20 @@ auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, Matchmakin
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
 };
 
+auto const isLoggedin = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) { return ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingGameDependencies.stateMachines.end (); };
+auto const hasProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) { return ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName) && matchmaking.hasProxyToGame (); }) != matchmakingGameDependencies.stateMachines.end (); };
+
+auto const userLeftGameErrorNotLoggedin = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) { matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not logged in" })); };
+auto const userLeftGameErrorUserHasNoProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) { matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not in proxy state" })); };
+
+auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) {
+  if (auto matchmaking = ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }); matchmaking == matchmakingGameDependencies.stateMachines.end ())
+    {
+      matchmaking->disconnectFromProxy ();
+    }
+  matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
+};
+
 class StateMachineImpl
 {
 public:
@@ -68,7 +85,10 @@ public:
     // clang-format off
     return make_transition_table(
   // Default-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-  * "Default"_s                          + event<m_g::GameOver>                                           / gameOver                                          = X
+* "Default"_s                          + event<m_g::GameOver>                             / gameOver
+, "Default"_s                          + event<m_g::UserLeftGame>   [isLoggedin]          / userLeftGameErrorNotLoggedin
+, "Default"_s                          + event<m_g::UserLeftGame>   [hasProxy]            / userLeftGameErrorUserHasNoProxy
+, "Default"_s                          + event<m_g::UserLeftGame>                         / cancelProxyToGame
       );
     }
 };
@@ -139,7 +159,7 @@ MatchmakingGame::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
 }
 
 
-MatchmakingGame::MatchmakingGame(std::function<void (std::string const&)> sendToGame): sm{ new StateMachineWrapper{this, MatchmakingGameDependencies{sendToGame}} } {}
+MatchmakingGame::MatchmakingGame(std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &)> sendToGame): sm{ new StateMachineWrapper{this, MatchmakingGameDependencies{stateMachines_,sendToGame}} } {}
 
 
 

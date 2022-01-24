@@ -25,9 +25,15 @@ public:
 
   void process_event (std::string const &event);
 
+  void sendMessageToGame (std::string const &message);
+
   bool isLoggedInWithAccountName (std::string const &accountName) const;
 
   bool isUserInChatChannel (std::string const &channelName) const;
+
+  bool hasProxyToGame () const;
+
+  void disconnectFromProxy ();
 
   std::unique_ptr<StateMachineWrapper, StateMachineWrapperDeleter> sm; // only use this member inside of matchmaking.cxx. reason because of incomplete type
 };

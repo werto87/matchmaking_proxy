@@ -1,7 +1,7 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include "test/userDefinedGameOption.hxx" // for GameOption
+#include PATH_TO_USER_DEFINED_GAME_OPTION
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>

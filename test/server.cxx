@@ -134,6 +134,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto const userPort = 55555;
   auto const gamePort = 33333;
   auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
+  // TODO create some test certificates and share them on git
   auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };

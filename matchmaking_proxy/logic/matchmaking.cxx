@@ -236,7 +236,7 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       matchmakingData.matchmakingGame = std::move (ws);
       using namespace boost::asio::experimental::awaitable_operators;
-      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData, &sm, &deps, &subs] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) && matchmakingData.matchmakingGame.writeLoop (), [&sm, &deps, &subs] (auto eptr) {
+      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) && matchmakingData.matchmakingGame.writeLoop (), [&sm, &deps, &subs] (auto eptr) {
         printException (eptr);
         sm.process_event (ConnectionToGameLost{}, deps, subs);
       });

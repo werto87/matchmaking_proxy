@@ -137,14 +137,14 @@ struct MatchmakingGame::StateMachineWrapper
 {
   StateMachineWrapper (MatchmakingGame *owner,MatchmakingGameDependencies matchmakingGameDependencies_) : matchmakingGameDependencies{std::move(matchmakingGameDependencies_)},
   impl (owner,
-#ifdef LOGGING_FOR_STATE_MACHINE
+#ifdef LOG_FOR_STATE_MACHINE
                                                                                               logger,
 #endif
                                                                                               matchmakingGameDependencies){}
 
   MatchmakingGameDependencies matchmakingGameDependencies;
 
-#ifdef LOGGING_FOR_STATE_MACHINE
+#ifdef LOG_FOR_STATE_MACHINE
   my_logger logger;
   boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
 #else
@@ -182,7 +182,7 @@ void MatchmakingGame::process_event (std::string const &event) {
                 return;
               }
           });
-          if (not typeFound) std::cout << "could not find a match for typeToSearch in userMatchmaking '" << typeToSearch << "'" << std::endl;
+          if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
       
     }
   else

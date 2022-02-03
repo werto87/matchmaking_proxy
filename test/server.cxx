@@ -132,8 +132,8 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   thread_pool pool{ 2 };
   auto server = Server{ ioContext, pool };
   auto const userPort = 55555;
-  auto const gamePort = 33333;
-  auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
+  auto const gamePort = 22222;
+  // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
   // TODO create some test certificates and share them on git
   auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
@@ -144,6 +144,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     auto handleMsgFromGame = [] (boost::asio::io_context &ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
+      std::cout << msg << std::endl;
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
           myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
@@ -154,7 +155,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
         }
       else if (boost::starts_with (msg, "ProxyStarted"))
         {
-          myWebsocket->sendMessage ("LeaveGame|{}");
+          myWebsocket->sendMessage ("DurakLeaveGame|{}");
         }
       else if (boost::starts_with (msg, "LeaveGameSuccess"))
         {
@@ -181,35 +182,35 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   ioContext.reset ();
 }
 
-TEST_CASE ("messages from game to matchmaking", "[integration]")
-{
-  if (sodium_init () < 0)
-    {
-      std::cout << "sodium_init <= 0" << std::endl;
-      std::terminate ();
-      /* panic! the library couldn't be initialized, it is not safe to use */
-    }
-  database::createEmptyDatabase ();
-  database::createTables ();
-  using namespace boost::asio;
-  io_context ioContext (1);
-  signal_set signals (ioContext, SIGINT, SIGTERM);
-  signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
-  thread_pool pool{ 2 };
-  auto server = Server{ ioContext, pool };
-  auto const gamePort = 33333;
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
-  using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.gameMatchmaking (gameEndpoint), printException);
-  SECTION ("connect, gameOver", "[matchmaking]")
-  {
-    auto messagesFromMatchmaking = std::vector<std::string>{};
-    auto sendMessageBeforeStartRead = std::vector<std::string>{ { objectToStringWithObjectName (matchmaking_game::GameOver{}) } };
-    co_spawn (ioContext, connectWebsocket (ioContext, gameEndpoint, messagesFromMatchmaking, sendMessageBeforeStartRead), printException);
-    ioContext.run ();
-    CHECK (messagesFromMatchmaking.size () == 1);
-    CHECK (messagesFromMatchmaking.at (0) == "GameOverSuccess|{}");
-  }
-  ioContext.stop ();
-  ioContext.reset ();
-}
+// TEST_CASE ("messages from game to matchmaking", "[integration]")
+// {
+//   if (sodium_init () < 0)
+//     {
+//       std::cout << "sodium_init <= 0" << std::endl;
+//       std::terminate ();
+//       /* panic! the library couldn't be initialized, it is not safe to use */
+//     }
+//   database::createEmptyDatabase ();
+//   database::createTables ();
+//   using namespace boost::asio;
+//   io_context ioContext (1);
+//   signal_set signals (ioContext, SIGINT, SIGTERM);
+//   signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
+//   thread_pool pool{ 2 };
+//   auto server = Server{ ioContext, pool };
+//   auto const gamePort = 33333;
+//   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
+//   using namespace boost::asio::experimental::awaitable_operators;
+//   co_spawn (ioContext, server.gameMatchmaking (gameEndpoint), printException);
+//   SECTION ("connect, gameOver", "[matchmaking]")
+//   {
+//     auto messagesFromMatchmaking = std::vector<std::string>{};
+//     auto sendMessageBeforeStartRead = std::vector<std::string>{ { objectToStringWithObjectName (matchmaking_game::GameOver{}) } };
+//     co_spawn (ioContext, connectWebsocket (ioContext, gameEndpoint, messagesFromMatchmaking, sendMessageBeforeStartRead), printException);
+//     ioContext.run ();
+//     CHECK (messagesFromMatchmaking.size () == 1);
+//     CHECK (messagesFromMatchmaking.at (0) == "GameOverSuccess|{}");
+//   }
+//   ioContext.stop ();
+//   ioContext.reset ();
+// }

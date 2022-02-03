@@ -49,6 +49,7 @@ BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), GameOverError, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGame, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGameSuccess, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGameError, (std::string, accountName) (std::string, error))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), ConnectToGame, (std::string, accountName) (std::string, gameName))
 
 // clang-format off
 namespace matchmaking_game{
@@ -65,7 +66,8 @@ GameOverSuccess,
 GameOverError,
 UserLeftGame,
 UserLeftGameSuccess,
-UserLeftGameError
+UserLeftGameError,
+ConnectToGame
   >  const matchmakingGame{};
 }
 // clang-format on

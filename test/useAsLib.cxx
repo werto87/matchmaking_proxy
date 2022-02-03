@@ -40,29 +40,29 @@ TEST_CASE ("integration test", "[integration]")
 
   SECTION ("start the server to play around", "[matchmaking]")
   {
-    if (sodium_init () < 0)
-      {
-        std::cout << "sodium_init <= 0" << std::endl;
-        std::terminate ();
-        /* panic! the library couldn't be initialized, it is not safe to use */
-      }
-    database::createEmptyDatabase ();
-    database::createTables ();
-    using namespace boost::asio;
-    io_context io_context (1);
-    signal_set signals (io_context, SIGINT, SIGTERM);
-    signals.async_wait ([&] (auto, auto) { io_context.stop (); });
-    thread_pool pool{ 2 };
-    auto server = Server{ io_context, pool };
-    auto const userPort = 55555;
-    auto const gamePort = 33333;
-    // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
-    // TODO create some test certificates and share them on git
-    auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
-    auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
-    auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
-    using namespace boost::asio::experimental::awaitable_operators;
-    co_spawn (io_context, server.userMatchmaking (userEndpoint, pathToSecrets) || server.gameMatchmaking (gameEndpoint), printException);
-    io_context.run ();
+    // if (sodium_init () < 0)
+    //   {
+    //     std::cout << "sodium_init <= 0" << std::endl;
+    //     std::terminate ();
+    //     /* panic! the library couldn't be initialized, it is not safe to use */
+    //   }
+    // database::createEmptyDatabase ();
+    // database::createTables ();
+    // using namespace boost::asio;
+    // io_context io_context (1);
+    // signal_set signals (io_context, SIGINT, SIGTERM);
+    // signals.async_wait ([&] (auto, auto) { io_context.stop (); });
+    // thread_pool pool{ 2 };
+    // auto server = Server{ io_context, pool };
+    // auto const userPort = 55555;
+    // auto const gamePort = 33333;
+    // // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
+    // // TODO create some test certificates and share them on git
+    // auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+    // auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
+    // auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
+    // using namespace boost::asio::experimental::awaitable_operators;
+    // co_spawn (io_context, server.userMatchmaking (userEndpoint, pathToSecrets) || server.gameMatchmaking (gameEndpoint), printException);
+    // io_context.run ();
   }
 }

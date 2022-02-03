@@ -69,9 +69,6 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UsersInGameLobby, (std::string, 
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SetMaxUserSizeInCreateGameLobby, (size_t, maxUserSize))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SetMaxUserSizeInCreateGameLobbyError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), MaxUserSizeInCreateGameLobby, (size_t, maxUserSize))
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGame, )
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGameSuccess, )
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGameLobby, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGameLobbySuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), LeaveGameLobbyError, (std::string, error))
@@ -140,9 +137,6 @@ UsersInGameLobby,
 SetMaxUserSizeInCreateGameLobby,
 SetMaxUserSizeInCreateGameLobbyError,
 MaxUserSizeInCreateGameLobby,
-LeaveGame,
-LeaveGameSuccess,
-LeaveGameError,
 LeaveGameLobby,
 LeaveGameLobbySuccess,
 LeaveGameLobbyError,

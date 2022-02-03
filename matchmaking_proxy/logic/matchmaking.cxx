@@ -125,7 +125,6 @@ struct ReciveMessage
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
-BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGame, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameError, )
 
@@ -221,12 +220,12 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
 }
 
 boost::asio::awaitable<void>
-connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
+connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto &&deps, auto &&subs)
 {
 
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
+  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 };
   try
     {
       co_await ws->next_layer ().async_connect (gameEndpoint);
@@ -234,12 +233,17 @@ connectToGame (auto &&, auto &&sm, auto &&deps, auto &&subs)
       ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
       ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+      co_await ws->async_write (boost::asio::buffer (objectToStringWithObjectName (connectToGameEv)));
       matchmakingData.matchmakingGame = std::move (ws);
       using namespace boost::asio::experimental::awaitable_operators;
-      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) && matchmakingData.matchmakingGame.writeLoop (), [&sm, &deps, &subs] (auto eptr) {
-        printException (eptr);
-        sm.process_event (ConnectionToGameLost{}, deps, subs);
-      });
+      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) {
+        std::cout << "connectToGame: " << readResult << std::endl;
+        matchmakingData.sendMsgToUser (readResult);
+      }) && matchmakingData.matchmakingGame.writeLoop (),
+                [&sm, &deps, &subs] (auto eptr) {
+                  printException (eptr);
+                  sm.process_event (ConnectionToGameLost{}, deps, subs);
+                });
       sm.process_event (ConnectToGameSuccess{}, deps, subs);
     }
   catch (std::exception const &e)
@@ -857,6 +861,7 @@ auto const sendMessageToUser = [] (user_matchmaking::Message const &message, Mat
 // TODO this could be usefull for printing not handled events
 // auto const stateCanNotHandleEvent = [] (auto const &event, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ "event not handled: '" + confu_json::type_name<typename std::decay<std::remove_cvref_t<decltype (event)>>> () + "'" })); };
 
+// TODO make it build with gcc
 class StateMachineImpl
 {
 public:
@@ -905,7 +910,7 @@ public:
 , state<Loggedin>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper          
 , state<Loggedin>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue          
 , state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         
-, state<Loggedin>                             + event<ConnectToGame>                                                              / doConnectToGame
+, state<Loggedin>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame
 , state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      
 , state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
@@ -960,7 +965,7 @@ struct Matchmaking::StateMachineWrapper
 {
   StateMachineWrapper (Matchmaking *owner, boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool)
       : matchmakingData{ ioContext, stateMachines_, sendMsgToUser, gameLobbies, pool }, impl (owner,
-#ifdef LOGGING_FOR_STATE_MACHINE
+#ifdef LOG_FOR_STATE_MACHINE
                                                                                               logger,
 #endif
                                                                                               matchmakingData)
@@ -968,7 +973,7 @@ struct Matchmaking::StateMachineWrapper
   }
   MatchmakingData matchmakingData;
 
-#ifdef LOGGING_FOR_STATE_MACHINE
+#ifdef LOG_FOR_STATE_MACHINE
   my_logger logger;
   boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
 #else
@@ -1048,18 +1053,22 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
   // TODO use matchmakingGame connection for this start server thing.
   auto startServerAnswer = co_await sendStartGameToServer (gameLobby, matchmakingData);
+  std::cout << "startGame: " << startServerAnswer << std::endl;
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
   if (splitMesssage.size () == 2)
     {
       auto const &typeToSearch = splitMesssage.at (0);
+      auto const &objectAsString = splitMesssage.at (1);
       if (typeToSearch == "StartGameSuccess")
         {
           for (auto const &accountName : gameLobby.accountNames)
             {
               for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::remove_if ([&accountName] (Matchmaking const &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }))
                 {
-                  matchmaking.sm->impl.process_event (ConnectToGame{});
+                  // TODO looks fishy maybe we do not need this for and just use an if???
+
+                  matchmaking.sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
                 }
             }
         }

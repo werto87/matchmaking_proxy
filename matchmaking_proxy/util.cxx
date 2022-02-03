@@ -1,6 +1,6 @@
 #include "util.hxx"
 
-#ifdef LOGGING_CO_SPAWN_PRINT_EXCEPTIONS
+#ifdef LOG_CO_SPAWN_PRINT_EXCEPTIONS
 void
 printExceptionHelper (std::exception_ptr eptr)
 {

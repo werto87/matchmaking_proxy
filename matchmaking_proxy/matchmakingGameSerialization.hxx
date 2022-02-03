@@ -54,13 +54,18 @@ BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UserLeftGameError, (std::string,
 namespace matchmaking_game{
 static boost::hana::tuple<
   UnhandledMessageError,
-  StartGame,
-  StartGameError,
-  StartGameSuccess,
-  LeaveGameServer,
-  LeaveGameSuccess,
-  LeaveGameError,
-  GameOver
+StartGameError,
+StartGameSuccess,
+LeaveGameServer,
+LeaveGameSuccess,
+LeaveGameError,
+GameOver,
+StartGame,
+GameOverSuccess,
+GameOverError,
+UserLeftGame,
+UserLeftGameSuccess,
+UserLeftGameError
   >  const matchmakingGame{};
 }
 // clang-format on

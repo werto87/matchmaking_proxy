@@ -38,7 +38,7 @@
 
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), UnhandledMessageError, (std::string, msg) (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), StartGame, (std::vector<std::string>, players) (user_matchmaking::GameOption, gameOption) (bool, ratedGame))
-BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), StartGameError, (std::string, msg))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), StartGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), StartGameSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), LeaveGameServer, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_game), LeaveGameSuccess, )

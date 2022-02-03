@@ -1045,6 +1045,7 @@ Matchmaking::disconnectFromProxy ()
 boost::asio::awaitable<void>
 startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
+  // TODO use matchmakingGame connection for this start server thing.
   auto startServerAnswer = co_await sendStartGameToServer (gameLobby, matchmakingData);
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));

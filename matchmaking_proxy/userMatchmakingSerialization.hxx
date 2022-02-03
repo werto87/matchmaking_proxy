@@ -83,7 +83,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), RelogToError, (std::string, erro
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), CreateGame, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), CreateGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), StartGame, )
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), StartGameError, (std::string, msg))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), StartGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), JoinMatchMakingQueue, (bool, isRanked))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), JoinMatchMakingQueueSuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), JoinMatchMakingQueueError, (std::string, error))

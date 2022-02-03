@@ -54,7 +54,7 @@ struct GameLobby
   bool getWaitingForAnswerToStartGame () const;
 
   std::vector<std::string> accountNames{};
-  user_matchmaking::GameOption gameOption{};
+  shared_class::GameOption gameOption{};
   std::vector<std::string> readyUsers{};
   LobbyType lobbyAdminType = LobbyType::FirstUserInLobbyUsers;
   std::optional<std::string> name{};

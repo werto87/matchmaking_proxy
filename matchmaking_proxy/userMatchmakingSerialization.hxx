@@ -65,7 +65,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), JoinGameLobbySuccess, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), JoinGameLobbyError, (std::string, name) (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), GameOptionError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UserInGameLobby, (std::string, accountName))
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UsersInGameLobby, (std::string, name) (std::vector<user_matchmaking::UserInGameLobby>, users) (size_t, maxUserSize) (user_matchmaking::GameOption, durakGameOption))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UsersInGameLobby, (std::string, name) (std::vector<user_matchmaking::UserInGameLobby>, users) (size_t, maxUserSize) (shared_class::GameOption, durakGameOption))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SetMaxUserSizeInCreateGameLobby, (size_t, maxUserSize))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), SetMaxUserSizeInCreateGameLobbyError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), MaxUserSizeInCreateGameLobby, (size_t, maxUserSize))
@@ -171,7 +171,7 @@ LoginAsGuest,
 LoginAsGuestSuccess,
 RatingChanged,
 UnhandledMessageError,
-GameOption,
+shared_class::GameOption,
 ConnectGameError,
 ProxyStarted,
 ProxyStopped

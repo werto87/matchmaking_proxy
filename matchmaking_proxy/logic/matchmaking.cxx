@@ -425,7 +425,7 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
 };
 
-auto const setGameOption = [] (user_matchmaking::GameOption const &gameOption, MatchmakingData &matchmakingData) {
+auto const setGameOption = [] (shared_class::GameOption const &gameOption, MatchmakingData &matchmakingData) {
   if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
@@ -865,6 +865,7 @@ public:
   {
     namespace u_m = user_matchmaking;
     namespace m_g = matchmaking_game;
+    namespace s_c = shared_class;
     // clang-format off
   return make_transition_table(
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -896,7 +897,7 @@ public:
 , state<Loggedin>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby          
 , state<Loggedin>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby          
 , state<Loggedin>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby          
-, state<Loggedin>                             + event<u_m::GameOption>                                                            / setGameOption         
+, state<Loggedin>                             + event<s_c::GameOption>                                                            / setGameOption         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby         
 , state<Loggedin>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby         

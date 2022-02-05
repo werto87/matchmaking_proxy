@@ -57,6 +57,9 @@ connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio:
           co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
           co_await connection->async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
           auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection) });
+#ifdef LOG_MY_WEBSOCKET
+          std::cout << "connectWebsocketSSL: " << myWebsocket.get () << std::endl;
+#endif
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);
@@ -95,6 +98,9 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
               co_await connection->async_write (boost::asio::buffer (message), use_awaitable);
             }
           auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection) });
+#ifdef LOG_MY_WEBSOCKET
+          std::cout << "connectWebsocket: " << myWebsocket.get () << std::endl;
+#endif
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
             if (msg == "GameOverSuccess|{}")
@@ -144,7 +150,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     auto handleMsgFromGame = [] (boost::asio::io_context &ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
-      std::cout << msg << std::endl;
+      // std::cout << msg << std::endl;
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
           myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));

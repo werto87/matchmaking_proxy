@@ -125,8 +125,6 @@ struct ReciveMessage
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
-BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameSuccess, )
-BOOST_FUSION_DEFINE_STRUCT ((), ConnectToGameError, )
 
 struct User
 {
@@ -235,16 +233,32 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       co_await ws->async_write (boost::asio::buffer (objectToStringWithObjectName (connectToGameEv)));
       matchmakingData.matchmakingGame = std::move (ws);
+#ifdef LOG_MY_WEBSOCKET
+      std::cout << "connectToGame: " << &matchmakingData.matchmakingGame << std::endl;
+#endif
+      auto connectToGameResult = co_await matchmakingData.matchmakingGame.async_read_one_message ();
+      std::vector<std::string> splitMesssage{};
+      boost::algorithm::split (splitMesssage, connectToGameResult, boost::is_any_of ("|"));
+      if (splitMesssage.size () == 2)
+        {
+          auto const &typeToSearch = splitMesssage.at (0);
+          auto const &objectAsString = splitMesssage.at (1);
+          bool typeFound = false;
+          boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
+            if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+              {
+                typeFound = true;
+                boost::json::error_code ec{};
+                sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
+                if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+                return;
+              }
+          });
+          if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+        }
       using namespace boost::asio::experimental::awaitable_operators;
-      co_spawn (matchmakingData.ioContext, matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) {
-        std::cout << "connectToGame: " << readResult << std::endl;
-        matchmakingData.sendMsgToUser (readResult);
-      }) && matchmakingData.matchmakingGame.writeLoop (),
-                [&sm, &deps, &subs] (auto eptr) {
-                  printException (eptr);
-                  sm.process_event (ConnectionToGameLost{}, deps, subs);
-                });
-      sm.process_event (ConnectToGameSuccess{}, deps, subs);
+      // TODO error handling
+      co_await(matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) || matchmakingData.matchmakingGame.writeLoop ());
     }
   catch (std::exception const &e)
     {
@@ -912,7 +926,7 @@ public:
 , state<Loggedin>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         
 , state<Loggedin>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame
 , state<Loggedin>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      
-, state<Loggedin>                             + event<ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
+, state<Loggedin>                             + event<m_g::ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<Loggedin>     
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
@@ -1053,7 +1067,7 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
   // TODO use matchmakingGame connection for this start server thing.
   auto startServerAnswer = co_await sendStartGameToServer (gameLobby, matchmakingData);
-  std::cout << "startGame: " << startServerAnswer << std::endl;
+  // std::cout << "startGame: " << startServerAnswer << std::endl;
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
   if (splitMesssage.size () == 2)

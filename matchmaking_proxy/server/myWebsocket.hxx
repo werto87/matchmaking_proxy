@@ -49,6 +49,9 @@ MyWebsocket<T>::async_read_one_message ()
   boost::beast::flat_buffer buffer;
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
+#ifdef LOG_MY_WEBSOCKET
+  std::cout << this << " async_read_one_message: " << msg << std::endl;
+#endif
   co_return msg;
 }
 
@@ -102,6 +105,9 @@ MyWebsocket<T>::writeLoop ()
           while (not connection.expired () && not msgQueue.empty ())
             {
               auto tmpMsg = std::move (msgQueue.front ());
+#ifdef LOG_MY_WEBSOCKET
+              std::cout << this << " writeLoop: " << tmpMsg << std::endl;
+#endif
               msgQueue.pop_front ();
               co_await connection.lock ()->async_write (boost::asio::buffer (tmpMsg), boost::asio::use_awaitable);
             }

@@ -183,7 +183,6 @@ void MatchmakingGame::process_event (std::string const &event) {
               }
           });
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
-      
     }
   else
     {

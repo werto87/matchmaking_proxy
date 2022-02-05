@@ -159,7 +159,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   }
   SECTION ("GameOption", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (shared_class::GameOption{ true, "some string" }));
+    matchmaking.process_event (objectToStringWithObjectName (shared_class::GameOption{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));

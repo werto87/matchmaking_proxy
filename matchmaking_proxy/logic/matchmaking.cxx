@@ -232,7 +232,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
       co_await ws->async_write (boost::asio::buffer (objectToStringWithObjectName (connectToGameEv)));
-      matchmakingData.matchmakingGame = std::move (ws);
+      matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws) };
 #ifdef LOG_MY_WEBSOCKET
       std::cout << "connectToGame: " << &matchmakingData.matchmakingGame << std::endl;
 #endif

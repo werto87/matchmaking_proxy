@@ -13,19 +13,23 @@
 #include <cstddef>
 #include <cstdlib>
 #include <deque>
+#include <fmt/color.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/printf.h>
 #include <iostream>
 #include <list>
 #include <memory>
 #include <queue>
 #include <set>
 #include <string>
-
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 
 template <class T> class MyWebsocket
 {
 public:
-  MyWebsocket (std::shared_ptr<T> webSocket_) : webSocket{ webSocket_ } {}
+  explicit MyWebsocket (std::shared_ptr<T> webSocket_) : webSocket{ webSocket_ } {}
+  MyWebsocket (std::shared_ptr<T> webSocket_, std::string loggingName_, fmt::text_style loggingTextStyleForName_, size_t id_) : webSocket{ webSocket_ }, loggingName{ std::move (loggingName_) }, loggingTextStyleForName{ std::move (loggingTextStyleForName_) }, id{ id_ } {}
   boost::asio::awaitable<std::string> async_read_one_message ();
 
   boost::asio::awaitable<void> readLoop (std::function<void (std::string const &readResult)> onRead);
@@ -37,8 +41,11 @@ public:
 
 private:
   std::shared_ptr<T> webSocket{};
+  std::string loggingName{};
+  fmt::text_style loggingTextStyleForName{};
   std::deque<std::string> msgQueue{};
   std::shared_ptr<CoroTimer> timer{};
+  size_t id{};
 };
 
 template <class T>
@@ -50,7 +57,8 @@ MyWebsocket<T>::async_read_one_message ()
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
 #ifdef LOG_MY_WEBSOCKET
-  std::cout << this << " async_read_one_message: " << msg << std::endl;
+  fmt::print (loggingTextStyleForName, "[{} {}]", loggingName, id);
+  std::cout << "\t\t read: " << msg << std::endl;
 #endif
   co_return msg;
 }
@@ -106,7 +114,8 @@ MyWebsocket<T>::writeLoop ()
             {
               auto tmpMsg = std::move (msgQueue.front ());
 #ifdef LOG_MY_WEBSOCKET
-              std::cout << this << " writeLoop: " << tmpMsg << std::endl;
+              fmt::print (loggingTextStyleForName, "[{} {}]", loggingName, id);
+              std::cout << "\t\t write: " << tmpMsg << std::endl;
 #endif
               msgQueue.pop_front ();
               co_await connection.lock ()->async_write (boost::asio::buffer (tmpMsg), boost::asio::use_awaitable);

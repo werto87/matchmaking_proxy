@@ -31,6 +31,7 @@ ${PROJECT_OPTIONS}
   CONAN_PKG::certify
   CONAN_PKG::pipes
   CONAN_PKG::sml
+  CONAN_PKG::fmt
 )
 target_compile_definitions(${TARGET_NAME_LIB} INTERFACE 
 $<$<CONFIG:DEBUG>:DEBUG>

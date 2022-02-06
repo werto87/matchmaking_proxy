@@ -57,11 +57,9 @@ struct Mockserver
             connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
             connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
             co_await connection->async_accept ();
-            websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection) });
+            static size_t id = 0;
+            websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), "mockserver::listener", fmt::fg (fmt::color::yellow_green), id++ });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
-#ifdef LOG_MY_WEBSOCKET
-            std::cout << "mockserver::listener: " << &websocket << std::endl;
-#endif
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption, &ioContext = ioContext] (const std::string &msg) mutable {
               if (mockserverOption.disconnectOnMessage && mockserverOption.disconnectOnMessage.value () == msg)
                 {

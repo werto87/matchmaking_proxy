@@ -10,6 +10,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#include <cstddef>
 #include <filesystem>
 #include <range/v3/algorithm/find_if.hpp>
 #include <sodium/core.h>
@@ -56,10 +57,8 @@ connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio:
           co_await connection->next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
           co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
           co_await connection->async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
-          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection) });
-#ifdef LOG_MY_WEBSOCKET
-          std::cout << "connectWebsocketSSL: " << myWebsocket.get () << std::endl;
-#endif
+          static size_t id = 0;
+          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), id++ });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);
@@ -97,10 +96,8 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
             {
               co_await connection->async_write (boost::asio::buffer (message), use_awaitable);
             }
-          auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection) });
-#ifdef LOG_MY_WEBSOCKET
-          std::cout << "connectWebsocket: " << myWebsocket.get () << std::endl;
-#endif
+          static size_t id = 0;
+          auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), id++ });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
             if (msg == "GameOverSuccess|{}")
@@ -150,7 +147,6 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     auto handleMsgFromGame = [] (boost::asio::io_context &ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
-      // std::cout << msg << std::endl;
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
           myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));

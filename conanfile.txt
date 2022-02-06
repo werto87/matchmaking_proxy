@@ -10,6 +10,7 @@ catch2/2.13.7
 pipes/1.0.0
 sml/1.1.4
 durak/0.0.4@werto87/stable
+fmt/8.0.1
 [generators]
 cmake
 [options]

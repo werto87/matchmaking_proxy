@@ -64,7 +64,7 @@ printTagWithPadding (std::string const &tag, fmt::text_style const &style, size_
     }
   else
     {
-      fmt::print (style, "[{}]{}", tag, std::string (maxLength - tag.size (), ' '));
+      fmt::print (style, "[{}]{}", tag, std::string (maxLength - tag.size (), '-'));
     }
 }
 
@@ -77,7 +77,7 @@ MyWebsocket<T>::async_read_one_message ()
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
 #ifdef LOG_MY_WEBSOCKET
-  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 20);
+  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
   fmt::print ("[r] {}", msg);
   std::cout << std::endl;
 #endif
@@ -108,7 +108,7 @@ inline boost::asio::awaitable<void>
 MyWebsocket<T>::async_write_one_message (std::string message)
 {
 #ifdef LOG_MY_WEBSOCKET
-  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 20);
+  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
   fmt::print ("[w] {}", message);
   std::cout << std::endl;
 #endif

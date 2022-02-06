@@ -10,6 +10,7 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 #include <boost/optional.hpp>
 #include <cstddef>
 #include <cstdint>
@@ -24,6 +25,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 
@@ -53,15 +55,16 @@ private:
 };
 
 inline void
-printTag (std::string const &tag, fmt::text_style const &style)
+printTagWithPadding (std::string const &tag, fmt::text_style const &style, size_t maxLength)
 {
-  if (tag.length () >= 20)
+  if (maxLength < 3) throw std::logic_error{ "maxLength should be min 3" };
+  if (tag.length () > maxLength)
     {
-      fmt::print (style, "[{:<20}]", (tag.length () > 20) ? std::string{ tag.begin (), tag.begin () + 17 } + "..." : tag);
+      fmt::print (style, "[{:<" + std::to_string (maxLength) + "}]", std::string{ tag.begin (), tag.begin () + boost::numeric_cast<int> (maxLength) - 3 } + "...");
     }
   else
     {
-      fmt::print (style, "[{}]", tag);
+      fmt::print (style, "[{}]{}", tag, std::string (maxLength - tag.size (), ' '));
     }
 }
 
@@ -74,9 +77,8 @@ MyWebsocket<T>::async_read_one_message ()
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
 #ifdef LOG_MY_WEBSOCKET
-  auto tag = loggingName + (loggingName.empty () ? "" : " ") + id;
-  printTag (tag, loggingTextStyleForName);
-  fmt::print (" {}[r] {}", (tag.size () < 20) ? std::string (20 - tag.size (), ' ') : std::string{}, msg);
+  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 20);
+  fmt::print ("[r] {}", msg);
   std::cout << std::endl;
 #endif
   co_return msg;
@@ -106,9 +108,8 @@ inline boost::asio::awaitable<void>
 MyWebsocket<T>::async_write_one_message (std::string message)
 {
 #ifdef LOG_MY_WEBSOCKET
-  auto tag = loggingName + (loggingName.empty () ? "" : " ") + id;
-  printTag (tag, loggingTextStyleForName);
-  fmt::print (" {}[w] {}", (tag.size () < 20) ? std::string (20 - tag.size (), ' ') : std::string{}, message);
+  printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 20);
+  fmt::print ("[w] {}", message);
   std::cout << std::endl;
 #endif
   co_await webSocket->async_write (boost::asio::buffer (std::move (message)), boost::asio::use_awaitable);

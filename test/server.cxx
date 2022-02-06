@@ -12,6 +12,7 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <cstddef>
 #include <filesystem>
+#include <fmt/color.h>
 #include <range/v3/algorithm/find_if.hpp>
 #include <sodium/core.h>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
@@ -58,7 +59,7 @@ connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio:
           co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
           co_await connection->async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), id++ });
+          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);
@@ -97,7 +98,7 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
               co_await connection->async_write (boost::asio::buffer (message), use_awaitable);
             }
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), id++ });
+          auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await(myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
             if (msg == "GameOverSuccess|{}")
@@ -136,7 +137,8 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto server = Server{ ioContext, pool };
   auto const userPort = 55555;
   auto const gamePort = 22222;
-  // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
+  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   // TODO create some test certificates and share them on git
   auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
@@ -157,11 +159,13 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
         }
       else if (boost::starts_with (msg, "ProxyStarted"))
         {
-          myWebsocket->sendMessage ("DurakLeaveGame|{}");
-        }
-      else if (boost::starts_with (msg, "LeaveGameSuccess"))
-        {
-          ioContext.stop ();
+          // stop if both proxis started
+          static size_t gameOver = 0;
+          gameOver++;
+          if (gameOver == 2)
+            {
+              ioContext.stop ();
+            }
         }
     };
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, pathToSecrets, messagesFromGamePlayer1), printException);
@@ -173,12 +177,11 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
     CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer1.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer1.at (3) == "ProxyStarted|{}");
-    CHECK (messagesFromGamePlayer2.size () == 5);
+    CHECK (messagesFromGamePlayer2.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer2.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer2.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer2.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer2.at (3) == "ProxyStarted|{}");
-    CHECK (messagesFromGamePlayer2.at (4) == "LeaveGameSuccess|{}");
   }
   ioContext.stop ();
   ioContext.reset ();

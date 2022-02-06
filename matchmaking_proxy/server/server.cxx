@@ -83,7 +83,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
               co_await connection->next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection->async_accept (use_awaitable);
               static size_t id = 0;
-              auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), id++ });
+              auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
               matchmakings.emplace_back (
                   _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
@@ -134,7 +134,7 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)
               connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
               co_await connection->async_accept ();
               static size_t id = 0;
-              auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection, "gameMatchmaking", fmt::fg (fmt::color::blue_violet), id++ });
+              auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection, "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
               co_await(myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
                 auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };

@@ -26,9 +26,9 @@ struct MockserverOption
 
 struct Mockserver
 {
-  Mockserver (boost::asio::ip::tcp::endpoint endpoint, MockserverOption const &mockserverOption_) : mockserverOption{ mockserverOption_ }
+  Mockserver (boost::asio::ip::tcp::endpoint endpoint, MockserverOption const &mockserverOption_, std::string loggingName_ = {}, fmt::text_style loggingTextStyleForName_ = {}, std::string id_ = {}) : mockserverOption{ mockserverOption_ }
   {
-    co_spawn (ioContext, listener (endpoint), printException);
+    co_spawn (ioContext, listener (endpoint, loggingName_, loggingTextStyleForName_, id_), printException);
     thread = std::thread{ [this] () { ioContext.run (); } };
   }
 
@@ -39,7 +39,7 @@ struct Mockserver
   }
 
   boost::asio::awaitable<void>
-  listener (boost::asio::ip::tcp::endpoint endpoint)
+  listener (boost::asio::ip::tcp::endpoint endpoint, std::string loggingName_, fmt::text_style loggingTextStyleForName_, std::string id_)
   {
     using namespace boost::beast;
     using namespace boost::asio;
@@ -57,8 +57,7 @@ struct Mockserver
             connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
             connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
             co_await connection->async_accept ();
-            static size_t id = 0;
-            websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), "mockserver::listener", fmt::fg (fmt::color::yellow_green), id++ });
+            websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), loggingName_, loggingTextStyleForName_, id_ });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption, &ioContext = ioContext] (const std::string &msg) mutable {
               if (mockserverOption.disconnectOnMessage && mockserverOption.disconnectOnMessage.value () == msg)

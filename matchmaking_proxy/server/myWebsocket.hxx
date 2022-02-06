@@ -1,6 +1,7 @@
 #ifndef FDE41782_20C3_436A_B415_E198F593F0AE
 #define FDE41782_20C3_436A_B415_E198F593F0AE
 
+#include "matchmaking_proxy/util.hxx"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/io_context.hpp>
@@ -11,6 +12,7 @@
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/optional.hpp>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <deque>
 #include <fmt/color.h>
@@ -29,10 +31,12 @@ template <class T> class MyWebsocket
 {
 public:
   explicit MyWebsocket (std::shared_ptr<T> webSocket_) : webSocket{ webSocket_ } {}
-  MyWebsocket (std::shared_ptr<T> webSocket_, std::string loggingName_, fmt::text_style loggingTextStyleForName_, size_t id_) : webSocket{ webSocket_ }, loggingName{ std::move (loggingName_) }, loggingTextStyleForName{ std::move (loggingTextStyleForName_) }, id{ id_ } {}
+  MyWebsocket (std::shared_ptr<T> webSocket_, std::string loggingName_, fmt::text_style loggingTextStyleForName_, std::string id_) : webSocket{ webSocket_ }, loggingName{ std::move (loggingName_) }, loggingTextStyleForName{ std::move (loggingTextStyleForName_) }, id{ std::move (id_) } {}
   boost::asio::awaitable<std::string> async_read_one_message ();
 
   boost::asio::awaitable<void> readLoop (std::function<void (std::string const &readResult)> onRead);
+
+  boost::asio::awaitable<void> async_write_one_message (std::string message);
 
   boost::asio::awaitable<void> writeLoop ();
 
@@ -43,10 +47,23 @@ private:
   std::shared_ptr<T> webSocket{};
   std::string loggingName{};
   fmt::text_style loggingTextStyleForName{};
+  std::string id{ std::to_string (rndNumber<uint16_t> ()) };
   std::deque<std::string> msgQueue{};
   std::shared_ptr<CoroTimer> timer{};
-  size_t id{};
 };
+
+inline void
+printTag (std::string const &tag, fmt::text_style const &style)
+{
+  if (tag.length () >= 20)
+    {
+      fmt::print (style, "[{:<20}]", (tag.length () > 20) ? std::string{ tag.begin (), tag.begin () + 17 } + "..." : tag);
+    }
+  else
+    {
+      fmt::print (style, "[{}]", tag);
+    }
+}
 
 template <class T>
 inline boost::asio::awaitable<std::string>
@@ -57,8 +74,10 @@ MyWebsocket<T>::async_read_one_message ()
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
 #ifdef LOG_MY_WEBSOCKET
-  fmt::print (loggingTextStyleForName, "[{} {}]", loggingName, id);
-  std::cout << "\t\t read: " << msg << std::endl;
+  auto tag = loggingName + (loggingName.empty () ? "" : " ") + id;
+  printTag (tag, loggingTextStyleForName);
+  fmt::print (" {}[r] {}", (tag.size () < 20) ? std::string (20 - tag.size (), ' ') : std::string{}, msg);
+  std::cout << std::endl;
 #endif
   co_return msg;
 }
@@ -81,6 +100,18 @@ MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> on
       if (timer) timer->cancel ();
       throw;
     }
+}
+template <class T>
+inline boost::asio::awaitable<void>
+MyWebsocket<T>::async_write_one_message (std::string message)
+{
+#ifdef LOG_MY_WEBSOCKET
+  auto tag = loggingName + (loggingName.empty () ? "" : " ") + id;
+  printTag (tag, loggingTextStyleForName);
+  fmt::print (" {}[w] {}", (tag.size () < 20) ? std::string (20 - tag.size (), ' ') : std::string{}, message);
+  std::cout << std::endl;
+#endif
+  co_await webSocket->async_write (boost::asio::buffer (std::move (message)), boost::asio::use_awaitable);
 }
 template <class T>
 inline boost::asio::awaitable<void>
@@ -113,12 +144,8 @@ MyWebsocket<T>::writeLoop ()
           while (not connection.expired () && not msgQueue.empty ())
             {
               auto tmpMsg = std::move (msgQueue.front ());
-#ifdef LOG_MY_WEBSOCKET
-              fmt::print (loggingTextStyleForName, "[{} {}]", loggingName, id);
-              std::cout << "\t\t write: " << tmpMsg << std::endl;
-#endif
               msgQueue.pop_front ();
-              co_await connection.lock ()->async_write (boost::asio::buffer (tmpMsg), boost::asio::use_awaitable);
+              co_await async_write_one_message (std::move (tmpMsg));
             }
         }
     }

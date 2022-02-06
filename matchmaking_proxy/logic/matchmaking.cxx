@@ -51,6 +51,7 @@
 #include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <cstddef>
+#include <fmt/color.h>
 #include <functional> // for __base
 #include <iostream>   // for string
 #include <iostream>
@@ -220,7 +221,6 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
 boost::asio::awaitable<void>
 connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto &&deps, auto &&subs)
 {
-
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 };
@@ -231,11 +231,9 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
       ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
       co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
-      co_await ws->async_write (boost::asio::buffer (objectToStringWithObjectName (connectToGameEv)));
-      matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws) };
-#ifdef LOG_MY_WEBSOCKET
-      std::cout << "connectToGame: " << &matchmakingData.matchmakingGame << std::endl;
-#endif
+      static size_t id = 0;
+      matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
+      co_await matchmakingData.matchmakingGame.async_write_one_message (objectToStringWithObjectName (connectToGameEv));
       auto connectToGameResult = co_await matchmakingData.matchmakingGame.async_read_one_message ();
       std::vector<std::string> splitMesssage{};
       boost::algorithm::split (splitMesssage, connectToGameResult, boost::is_any_of ("|"));
@@ -271,7 +269,10 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), printException); };
 auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), printException); };
 auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), printException); };
-auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException); };
+auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void {
+  //
+  boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException);
+};
 
 auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
 
@@ -673,21 +674,21 @@ auto const createAccount = [] (PasswordHashed const &passwordHash, MatchmakingDa
 boost::asio::awaitable<std::string>
 sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
-  auto ws = Websocket{ matchmakingData.ioContext };
+  auto ws = std::make_shared<Websocket> (matchmakingData.ioContext);
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-  co_await ws.next_layer ().async_connect (gameEndpoint);
-  ws.next_layer ().expires_never ();
-  ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-  ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-  co_await ws.async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+  co_await ws->next_layer ().async_connect (gameEndpoint);
+  ws->next_layer ().expires_never ();
+  ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+  ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+  co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+  static size_t id = 0;
+  auto myWebsocket = MyWebsocket<Websocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
   startGame.gameOption = gameLobby.gameOption;
   startGame.ratedGame = gameLobby.lobbyAdminType == GameLobby::LobbyType::MatchMakingSystemRanked;
-  co_await ws.async_write (boost::asio::buffer (objectToStringWithObjectName (startGame)));
-  boost::beast::flat_buffer buffer;
-  co_await ws.async_read (buffer);
-  auto msg = boost::beast::buffers_to_string (buffer.data ());
+  co_await myWebsocket.async_write_one_message (objectToStringWithObjectName (startGame));
+  auto msg = co_await myWebsocket.async_read_one_message ();
   co_return msg;
 }
 

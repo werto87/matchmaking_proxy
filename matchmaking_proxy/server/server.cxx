@@ -89,7 +89,6 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {
-                // TODO here could be something wrong: message is send to matchmaking but should be send to game
                 if (matchmaking->hasProxyToGame ())
                   {
                     matchmaking->sendMessageToGame (msg);

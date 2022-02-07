@@ -18,6 +18,6 @@ printExceptionHelper (std::exception_ptr eptr)
     }
 }
 #else
+void printExceptionHelper (std::exception_ptr) {}
 
 #endif
-void printExceptionHelper (std::exception_ptr) {}

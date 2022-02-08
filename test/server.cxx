@@ -160,12 +160,10 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
         }
       else if (boost::starts_with (msg, "ProxyStarted"))
         {
-          // stop if both proxis started
           gameOver++;
           if (gameOver == 2)
             {
               ioContext.stop ();
-              // myWebsocket->sendMessage ("DurakLeaveGame|{}");
             }
         }
     };

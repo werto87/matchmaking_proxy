@@ -1,5 +1,6 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
@@ -35,6 +36,45 @@
 
 using namespace boost::asio;
 
+boost::asio::awaitable<void>
+connectWebsocketSSL2 (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::vector<std::string> sendMessageBeforeStartRead = {}, std::optional<std::string> connectionName = {})
+{
+  try
+    {
+      using namespace boost::asio;
+      using namespace boost::beast;
+      ssl::context ctx{ ssl::context::tlsv12_client };
+      ctx.set_verify_mode (boost::asio::ssl::verify_none); // DO NOT USE THIS IN PRODUCTION THIS WILL IGNORE CHECKING FOR TRUSTFUL CERTIFICATE
+      try
+        {
+          typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
+          auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ ioContext, ctx });
+          get_lowest_layer (*connection).expires_never ();
+          connection->set_option (websocket::stream_base::timeout::suggested (role_type::client));
+          connection->set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
+          co_await get_lowest_layer (*connection).async_connect (endpoint, use_awaitable);
+          co_await connection->next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
+          co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
+          static size_t id = 0;
+          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), connectionName ? connectionName.value () : std::string{ "connectWebsocket" }, fmt::fg (fmt::color::chocolate), std::to_string (id++) });
+          for (auto message : sendMessageBeforeStartRead)
+            {
+              co_await myWebsocket->async_write_one_message (message);
+            }
+          using namespace boost::asio::experimental::awaitable_operators;
+          co_await(myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext] (const std::string &msg) { handleMsgFromGame (ioContext, msg, myWebsocket); }) && myWebsocket->writeLoop ());
+        }
+      catch (std::exception const &e)
+        {
+          std::cout << "connectWebsocketSSL () connect  Exception : " << e.what () << std::endl;
+        }
+    }
+  catch (std::exception const &e)
+    {
+      std::cout << "exception: " << e.what () << std::endl;
+    }
+}
+
 // TEST_CASE ("integration test", "[integration]")
 // {
 
@@ -49,11 +89,11 @@ using namespace boost::asio;
 //     database::createEmptyDatabase ();
 //     database::createTables ();
 //     using namespace boost::asio;
-//     io_context io_context (1);
-//     signal_set signals (io_context, SIGINT, SIGTERM);
-//     signals.async_wait ([&] (auto, auto) { io_context.stop (); });
+//     io_context ioContext (1);
+//     signal_set signals (ioContext, SIGINT, SIGTERM);
+//     signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
 //     thread_pool pool{ 2 };
-//     auto server = Server{ io_context, pool };
+//     auto server = Server{ ioContext, pool };
 //     auto const userPort = 55555;
 //     auto const gamePort = 22222;
 //     // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
@@ -62,7 +102,27 @@ using namespace boost::asio;
 //     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
 //     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
 //     using namespace boost::asio::experimental::awaitable_operators;
-//     co_spawn (io_context, server.userMatchmaking (userEndpoint, pathToSecrets) || server.gameMatchmaking (gameEndpoint), printException);
-//     io_context.run ();
+//     co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets) || server.gameMatchmaking (gameEndpoint), printException);
+//     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
+//     auto const joinGameLogic = [] (auto &&, auto const &msg, auto &&myWebsocket) {
+//       std::vector<std::string> splitMesssage{};
+//       boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
+//       if (splitMesssage.size () == 2)
+//         {
+//           auto const &typeToSearch = splitMesssage.at (0);
+//           auto const &objectAsString = splitMesssage.at (1);
+//           if (typeToSearch == "AskIfUserWantsToJoinGame")
+//             {
+//               myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
+//             }
+//           if (typeToSearch == "ProxyStarted")
+//             {
+//               myWebsocket->sendMessage ("DurakLeaveGame|{}");
+//             }
+//         }
+//     };
+//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), printException);
+//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), printException);
+//     ioContext.run ();
 //   }
 // }

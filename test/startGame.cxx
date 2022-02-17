@@ -13,8 +13,6 @@
 
 using namespace user_matchmaking;
 
-// TODO find a way to stop the tests do not use static beacause it does not get reset
-
 Matchmaking &
 createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinMatchMakingQueue const &joinMatchMakingQueue, int &proxyStartedCalled)
 {

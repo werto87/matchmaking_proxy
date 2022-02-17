@@ -33,6 +33,7 @@ ${PROJECT_OPTIONS}
   CONAN_PKG::sml
   CONAN_PKG::fmt
 )
+#TODO test address sanitizer with -fno-omit-frame-pointer
 target_compile_definitions(${TARGET_NAME_LIB} INTERFACE 
 $<$<CONFIG:DEBUG>:DEBUG>
 _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS

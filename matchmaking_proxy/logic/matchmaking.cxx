@@ -1066,9 +1066,7 @@ Matchmaking::disconnectFromProxy ()
 boost::asio::awaitable<void>
 startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
-  // TODO use matchmakingGame connection for this start server thing.
   auto startServerAnswer = co_await sendStartGameToServer (gameLobby, matchmakingData);
-  // std::cout << "startGame: " << startServerAnswer << std::endl;
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, startServerAnswer, boost::is_any_of ("|"));
   if (splitMesssage.size () == 2)
@@ -1079,11 +1077,9 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
         {
           for (auto const &accountName : gameLobby.accountNames)
             {
-              for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::remove_if ([&accountName] (Matchmaking const &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }))
+              if (auto matchmakingItr = ranges::find_if (matchmakingData.stateMachines, [&accountName] (Matchmaking const &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
                 {
-                  // TODO looks fishy maybe we do not need this for and just use an if???
-
-                  matchmaking.sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
+                  matchmakingItr->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
                 }
             }
         }

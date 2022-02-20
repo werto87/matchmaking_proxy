@@ -255,7 +255,6 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
         }
       using namespace boost::asio::experimental::awaitable_operators;
-      // TODO error handling
       co_await(matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) || matchmakingData.matchmakingGame.writeLoop ());
     }
   catch (std::exception const &e)

@@ -798,7 +798,7 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
       else
         {
           auto gameLobby = GameLobby{};
-          if (auto error = gameLobby.setMaxUserCount (matchmakingData.matchmakingOption.usersNeededToStartQuickGame))
+          if (auto error = gameLobby.setMaxUserCount ((lobbyType == GameLobby::LobbyType::MatchMakingSystemUnranked) ? matchmakingData.matchmakingOption.usersNeededToStartQuickGame : matchmakingData.matchmakingOption.usersNeededToStartRankedGame))
             {
               throw std::logic_error{ "Configuration Error. Please check MatchmakingOption. Error: " + error.value () };
             }

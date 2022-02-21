@@ -17,7 +17,7 @@ Matchmaking &
 createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinMatchMakingQueue const &joinMatchMakingQueue, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{});
   matchmaking = { ioContext,
                   matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
@@ -33,7 +33,7 @@ createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio:
                   },
                   gameLobbies,
                   pool,
-                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
+                  MatchmakingOption{} };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -147,7 +147,7 @@ Matchmaking &
 createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, CreateGameLobby const &createGameLobby, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{});
   matchmaking = { ioContext,
                   matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
@@ -163,7 +163,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                   },
                   gameLobbies,
                   pool,
-                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
+                  MatchmakingOption{} };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -176,7 +176,7 @@ Matchmaking &
 createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinGameLobby const &joinGameLobby, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{});
   matchmaking = { ioContext,
                   matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
@@ -192,7 +192,7 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                   },
                   gameLobbies,
                   pool,
-                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
+                  MatchmakingOption{} };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();

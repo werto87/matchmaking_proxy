@@ -5,6 +5,7 @@
 struct MatchmakingOption
 {
   size_t usersNeededToStartQuickGame{ 2 };
+  size_t usersNeededToStartRankedGame{ 2 };
   size_t allowedRatingDifference{ 100 };
 };
 

@@ -274,23 +274,21 @@ auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) ->
   boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException);
 };
 
-auto constexpr ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING = size_t{ 100 };
-
 bool
-isInRatingrange (size_t userRating, size_t lobbyAverageRating)
+isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRatingDifference)
 {
   auto const difference = userRating > lobbyAverageRating ? userRating - lobbyAverageRating : lobbyAverageRating - userRating;
-  return difference < ALLOWED_DIFFERENCE_FOR_RANKED_GAME_MATCHMAKING;
+  return difference < allowedRatingDifference;
 }
 
 bool
-checkRating (size_t userRating, std::vector<std::string> const &accountNames)
+checkRating (size_t userRating, std::vector<std::string> const &accountNames, size_t allowedRatingDifference)
 {
-  return isInRatingrange (userRating, averageRating (accountNames));
+  return isInRatingrange (userRating, averageRating (accountNames), allowedRatingDifference);
 }
 
 bool
-matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameLobby::LobbyType const &lobbyType)
+matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameLobby::LobbyType const &lobbyType, size_t allowedRatingDifference)
 {
   if (gameLobby.lobbyAdminType == lobbyType && gameLobby.accountNames.size () < gameLobby.maxUserCount ())
     {
@@ -299,7 +297,7 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
           soci::session sql (soci::sqlite3, databaseName);
           if (auto userInDatabase = confu_soci::findStruct<database::Account> (sql, "accountName", accountName))
             {
-              return checkRating (userInDatabase->rating, gameLobby.accountNames);
+              return checkRating (userInDatabase->rating, gameLobby.accountNames, allowedRatingDifference);
             }
         }
       else
@@ -781,7 +779,7 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
   auto lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked;
   if (ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == matchmakingData.gameLobbies.end ())
     {
-      if (auto gameLobbyToAddUser = ranges::find_if (matchmakingData.gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType); }); gameLobbyToAddUser != matchmakingData.gameLobbies.end ())
+      if (auto gameLobbyToAddUser = ranges::find_if (matchmakingData.gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = matchmakingData.user.accountName, &matchmakingData] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType, matchmakingData.matchmakingOption.allowedRatingDifference); }); gameLobbyToAddUser != matchmakingData.gameLobbies.end ())
         {
           if (auto error = gameLobbyToAddUser->tryToAddUser (matchmakingData.user))
             {

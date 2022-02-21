@@ -68,6 +68,7 @@
 #include <set>
 #include <sstream> // for basic_...
 #include <sstream>
+#include <stdexcept>
 #include <string> // for operat...
 #include <string>
 #include <type_traits>
@@ -799,8 +800,7 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
           auto gameLobby = GameLobby{};
           if (auto error = gameLobby.setMaxUserCount (matchmakingData.matchmakingOption.usersNeededToStartQuickGame))
             {
-              std::cout << "Configuration Error. Please check MatchmakingOption" << std::endl;
-              std::cout << error.value () << std::endl;
+              throw std::logic_error{ "Configuration Error. Please check MatchmakingOption. Error: " + error.value () };
             }
           gameLobby.lobbyAdminType = lobbyType;
           if (auto error = gameLobby.tryToAddUser (matchmakingData.user))

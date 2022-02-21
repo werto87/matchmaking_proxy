@@ -16,18 +16,16 @@ class thread_pool;
 class io_context;
 }
 
-struct User;
-
 class Server
 {
 public:
-  Server (boost::asio::io_context &io_context, boost::asio::thread_pool &pool);
+  Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_);
 
   boost::asio::awaitable<void> userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets);
   boost::asio::awaitable<void> gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint);
 
-  boost::asio::io_context &_io_context;
-  boost::asio::thread_pool &_pool;
+  boost::asio::io_context &ioContext;
+  boost::asio::thread_pool &pool;
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
 };

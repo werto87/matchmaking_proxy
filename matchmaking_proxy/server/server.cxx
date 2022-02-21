@@ -30,7 +30,7 @@ using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 
-Server::Server (boost::asio::io_context &io_context, boost::asio::thread_pool &pool) : _io_context{ io_context }, _pool{ pool } {}
+Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
 Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
@@ -85,10 +85,10 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
               matchmakings.emplace_back (
-                  _io_context, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, _pool);
+                  ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (_io_context, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {
+              co_spawn (ioContext, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {
                 if (matchmaking->hasProxyToGame ())
                   {
                     matchmaking->sendMessageToGame (msg);

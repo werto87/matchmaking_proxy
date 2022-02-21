@@ -17,8 +17,9 @@ Matchmaking &
 createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinMatchMakingQueue const &joinMatchMakingQueue, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool);
-  matchmaking = { ioContext, matchmakings,
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+  matchmaking = { ioContext,
+                  matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                     messages.push_back (msg);
                     if (msg == "ProxyStarted|{}")
@@ -30,7 +31,9 @@ createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio:
                           }
                       }
                   },
-                  gameLobbies, pool };
+                  gameLobbies,
+                  pool,
+                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -144,8 +147,9 @@ Matchmaking &
 createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, CreateGameLobby const &createGameLobby, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool);
-  matchmaking = { ioContext, matchmakings,
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+  matchmaking = { ioContext,
+                  matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                     messages.push_back (msg);
                     if (msg == "ProxyStarted|{}")
@@ -157,7 +161,9 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                           }
                       }
                   },
-                  gameLobbies, pool };
+                  gameLobbies,
+                  pool,
+                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -170,8 +176,9 @@ Matchmaking &
 createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinGameLobby const &joinGameLobby, int &proxyStartedCalled)
 {
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool);
-  matchmaking = { ioContext, matchmakings,
+      ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
+  matchmaking = { ioContext,
+                  matchmakings,
                   [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                     messages.push_back (msg);
                     if (msg == "ProxyStarted|{}")
@@ -183,7 +190,9 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                           }
                       }
                   },
-                  gameLobbies, pool };
+                  gameLobbies,
+                  pool,
+                  MatchmakingOption{ .usersNeededToStartQuickGame = 2 } };
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();

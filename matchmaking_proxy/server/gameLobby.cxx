@@ -24,6 +24,7 @@ GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::mov
 
 GameLobby::~GameLobby ()
 {
+  // TODO looks fisyh maybe we do not need this dtor
   if (_timer) _timer->cancel ();
 }
 

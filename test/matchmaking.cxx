@@ -20,7 +20,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
   SECTION ("CreateAccount", "[matchmaking]")
   {
     matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -56,7 +56,7 @@ TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
     matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -89,7 +89,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
@@ -215,7 +215,7 @@ TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_);
+      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{ .usersNeededToStartQuickGame = 2 });
   matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();

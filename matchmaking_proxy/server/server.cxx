@@ -7,6 +7,7 @@
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
 #endif
+#include "matchmakingOption.hxx"
 #include "myWebsocket.hxx"
 #include "server.hxx"
 #include <algorithm> // for max
@@ -33,7 +34,7 @@ using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption)
 {
   try
     {
@@ -85,7 +86,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
               matchmakings.emplace_back (
-                  ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool);
+                  ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {

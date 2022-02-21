@@ -2,6 +2,7 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
+#include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "test/mockserver.hxx"
@@ -144,7 +145,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets) || server.gameMatchmaking (gameEndpoint), printException);
+  co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }) || server.gameMatchmaking (gameEndpoint), printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};

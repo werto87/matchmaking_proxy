@@ -8,7 +8,7 @@
 #include <catch2/catch.hpp> // for Ass...
 using namespace user_matchmaking;
 
-TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
+TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
@@ -44,7 +44,7 @@ TEST_CASE ("matchmaking NotLoggedin -> Loggedin", "[matchmaking]")
   ioContext.reset ();
 }
 
-TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
+TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
@@ -76,7 +76,7 @@ TEST_CASE ("matchmaking NotLoggedin -> NotLoggedin", "[matchmaking]")
   ioContext.reset ();
 }
 
-TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
+TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
@@ -203,7 +203,7 @@ TEST_CASE ("matchmaking Loggedin -> Loggedin", "[matchmaking]")
   ioContext.reset ();
 }
 
-TEST_CASE ("matchmaking Loggedin -> NotLoggedin", "[matchmaking]")
+TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();

@@ -180,10 +180,10 @@ struct MatchmakingData
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
 
 template <typename Matchmaking, typename Event>
-void
-process_event (Matchmaking &matchmaking, Event const &event)
+bool
+processEvent (Matchmaking &matchmaking, Event const &event)
 {
-  matchmaking.sm->impl.process_event (event);
+  return matchmaking.sm->impl.process_event (event);
 }
 
 boost::asio::awaitable<void>
@@ -652,7 +652,7 @@ auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannel
 auto const broadCastMessage = [] (user_matchmaking::BroadCastMessage const &broadCastMessageObject, MatchmakingData &matchmakingData) {
   for (Matchmaking &matchmaking : matchmakingData.stateMachines | ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (Matchmaking const &matchmaking) { return matchmaking.isUserInChatChannel (chatChannel); }))
     {
-      process_event (matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
+      processEvent (matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
     }
 };
 
@@ -872,10 +872,6 @@ auto const connectToGameError = [] (user_matchmaking::ConnectGameError const &co
 auto const leaveGameLobbyErrorUserNotInGameLobby = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" })); };
 auto const leaveGameLobbyErrorControlledByMatchmaking = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" })); };
 auto const sendMessageToUser = [] (user_matchmaking::Message const &message, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (message)); };
-// TODO find a way to inform user if he sends something which does not get handled
-// TODO this could be usefull for printing not handled events
-// auto const stateCanNotHandleEvent = [] (auto const &event, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ "event not handled: '" + confu_json::type_name<typename std::decay<std::remove_cvref_t<decltype (event)>>> () + "'" })); };
-
 // TODO make it build with gcc
 
 template <class T>
@@ -1082,11 +1078,12 @@ Matchmaking::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
 
 Matchmaking::Matchmaking (boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool, MatchmakingOption const &matchmakingOption_) : sm{ new StateMachineWrapper{ this, ioContext, stateMachines_, sendMsgToUser, gameLobbies, pool, matchmakingOption_ } } {}
 
-void
-Matchmaking::process_event (std::string const &event)
+std::optional<std::string>
+Matchmaking::processEvent (std::string const &event)
 {
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, event, boost::is_any_of ("|"));
+  auto result = std::optional<std::string>{};
   if (splitMesssage.size () == 2)
     {
       auto const &typeToSearch = splitMesssage.at (0);
@@ -1097,18 +1094,20 @@ Matchmaking::process_event (std::string const &event)
           {
             typeFound = true;
             boost::json::error_code ec{};
-            sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-            if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+            auto messageAsObject = confu_json::read_json (objectAsString, ec);
+            if (ec) result = "read_json error: " + ec.message ();
+            else if (not sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (messageAsObject)))
+              result = "No transition found";
             return;
           }
       });
-      if (not typeFound) std::cout << "could not find a match for typeToSearch in userMatchmaking '" << typeToSearch << "'" << std::endl;
+      if (not typeFound) result = "could not find a match for typeToSearch in shared_class::gameTypes '" + typeToSearch + "'";
     }
   else
     {
-      std::cout << "Not supported event. event syntax: EventName|JsonObject"
-                << " msg: '" << event << "'" << std::endl;
+      result = "Not supported event. event syntax: EventName|JsonObject";
     }
+  return result;
 }
 
 void

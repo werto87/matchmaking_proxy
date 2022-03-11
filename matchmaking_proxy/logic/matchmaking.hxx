@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 namespace boost::asio
 {
 class io_context;
@@ -24,7 +25,7 @@ class Matchmaking
 public:
   Matchmaking (boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool, MatchmakingOption const &matchmakingOption);
 
-  void process_event (std::string const &event);
+  std::optional<std::string> processEvent (std::string const &event);
 
   void sendMessageToGame (std::string const &message);
 

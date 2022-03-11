@@ -100,7 +100,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledMessageError, (std::str
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStarted, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStopped, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ConnectGameError, (std::string, error))
-BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledEventError, (std::string, error))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledEventError, (std::string, unhandledEvent) (std::string, reason))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), GetMatchmakingLogic, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), MatchmakingLogic, (std::string, logic))
 

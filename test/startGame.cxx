@@ -34,11 +34,11 @@ createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio:
                   gameLobbies,
                   pool,
                   MatchmakingOption{} };
-  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
+  matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
   ioContext.reset ();
-  matchmaking.process_event (objectToStringWithObjectName (joinMatchMakingQueue));
+  matchmaking.processEvent (objectToStringWithObjectName (joinMatchMakingQueue));
   return matchmaking;
 }
 
@@ -70,8 +70,8 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   messagesPlayer2.clear ();
   SECTION ("both player accept invite", "[matchmaking]")
   {
-    matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer1.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer2.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 5 });
     REQUIRE (messagesPlayer1.size () == 1);
     REQUIRE ("ProxyStarted|{}" == messagesPlayer1.at (0));
@@ -80,8 +80,8 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   }
   SECTION ("one player accept one player declined", "[matchmaking]")
   {
-    matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ false }));
+    matchmakingPlayer1.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer2.processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
     ioContext.run_for (std::chrono::seconds{ 5 });
     REQUIRE (messagesPlayer1.size () == 1);
     REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0));
@@ -90,8 +90,8 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   }
   SECTION ("one player declined one player accept", "[matchmaking]")
   {
-    matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ false }));
-    matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer1.processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
+    matchmakingPlayer2.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 5 });
     REQUIRE (messagesPlayer1.size () == 1);
     REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer1.at (0));
@@ -131,8 +131,8 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   messagesPlayer2.clear ();
   SECTION ("both player accept invite", "[matchmaking]")
   {
-    matchmakingPlayer1.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer1.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer2.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 5 });
     REQUIRE (messagesPlayer1.size () == 1);
     REQUIRE ("ProxyStarted|{}" == messagesPlayer1.at (0));
@@ -164,11 +164,11 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                   gameLobbies,
                   pool,
                   MatchmakingOption{} };
-  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
+  matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
   ioContext.reset ();
-  matchmaking.process_event (objectToStringWithObjectName (createGameLobby));
+  matchmaking.processEvent (objectToStringWithObjectName (createGameLobby));
   return matchmaking;
 }
 
@@ -193,11 +193,11 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                   gameLobbies,
                   pool,
                   MatchmakingOption{} };
-  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
+  matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
   ioContext.reset ();
-  matchmaking.process_event (objectToStringWithObjectName (joinGameLobby));
+  matchmaking.processEvent (objectToStringWithObjectName (joinGameLobby));
   return matchmaking;
 }
 
@@ -230,8 +230,8 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   messagesPlayer2.clear ();
   SECTION ("both player accept invite", "[matchmaking]")
   {
-    matchmakingPlayer1.process_event (objectToStringWithObjectName (CreateGame{}));
-    matchmakingPlayer2.process_event (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer1.processEvent (objectToStringWithObjectName (CreateGame{}));
+    matchmakingPlayer2.processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
     ioContext.run_for (std::chrono::seconds{ 5 });
     REQUIRE (messagesPlayer1.size () == 1);
     REQUIRE ("ProxyStarted|{}" == messagesPlayer1.at (0));

@@ -24,20 +24,20 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
       ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
   SECTION ("CreateAccount", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
     ioContext.run ();
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
   }
   SECTION ("LoginAccount", "[matchmaking]")
   {
     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
-    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
     ioContext.run ();
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"oldAcc"})foo" == messages.at (0));
   }
   SECTION ("LoginAsGuest", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LoginAsGuest{}));
+    matchmaking.processEvent (objectToStringWithObjectName (LoginAsGuest{}));
     ioContext.run ();
     CHECK (boost::starts_with (messages.at (0), "LoginAsGuestSuccess"));
   }
@@ -60,16 +60,16 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
       ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
-    matchmaking.process_event (objectToStringWithObjectName (CreateAccountCancel{}));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateAccountCancel{}));
     ioContext.run ();
     CHECK (messages.at (0) == "CreateAccountCancel|{}");
   }
   SECTION ("LoginAccountCancel", "[matchmaking]")
   {
     database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY");
-    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
-    matchmaking.process_event (objectToStringWithObjectName (LoginAccountCancel{}));
+    matchmaking.processEvent (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (LoginAccountCancel{}));
     ioContext.run ();
     CHECK (messages.at (0) == "LoginAccountCancel|{}");
   }
@@ -91,7 +91,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
       ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
-  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+  matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
   ioContext.reset ();
@@ -99,7 +99,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   messages.clear ();
   SECTION ("CreateAccount", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
     CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
@@ -107,7 +107,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("LoginAccount", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LoginAccount{ "newAcc", "abc" }));
+    matchmaking.processEvent (objectToStringWithObjectName (LoginAccount{ "newAcc", "abc" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
     CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
@@ -115,15 +115,15 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("JoinChannel", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (JoinChannel{ "my channel" }));
+    matchmaking.processEvent (objectToStringWithObjectName (JoinChannel{ "my channel" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
   }
   SECTION ("BroadCastMessage", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (JoinChannel{ "my channel" }));
-    matchmaking.process_event (objectToStringWithObjectName (BroadCastMessage{ "my channel", "Hello World!" }));
+    matchmaking.processEvent (objectToStringWithObjectName (JoinChannel{ "my channel" }));
+    matchmaking.processEvent (objectToStringWithObjectName (BroadCastMessage{ "my channel", "Hello World!" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
     CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
@@ -131,14 +131,14 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("LeaveChannel", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LeaveChannel{ "my channel" }));
+    matchmaking.processEvent (objectToStringWithObjectName (LeaveChannel{ "my channel" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(LeaveChannelError|{"channel":"my channel","error":"channel not found"})foo" == messages.at (0));
   }
   SECTION ("CreateGameLobby", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (CreateGameLobby{ "my channel", "" }));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateGameLobby{ "my channel", "" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
     CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
@@ -146,56 +146,56 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("JoinGameLobby", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (JoinGameLobby{ "my channel", "" }));
+    matchmaking.processEvent (objectToStringWithObjectName (JoinGameLobby{ "my channel", "" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(JoinGameLobbyError|{"name":"my channel","error":"wrong password name combination or lobby does not exists"})foo" == messages.at (0));
   }
   SECTION ("SetMaxUserSizeInCreateGameLobby", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (SetMaxUserSizeInCreateGameLobby{ 42 }));
+    matchmaking.processEvent (objectToStringWithObjectName (SetMaxUserSizeInCreateGameLobby{ 42 }));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(SetMaxUserSizeInCreateGameLobbyError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
   }
   SECTION ("GameOption", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (shared_class::GameOption{}));
+    matchmaking.processEvent (objectToStringWithObjectName (shared_class::GameOption{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
   }
   SECTION ("LeaveGameLobby", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LeaveGameLobby{}));
+    matchmaking.processEvent (objectToStringWithObjectName (LeaveGameLobby{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0));
   }
   SECTION ("CreateGame", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (CreateGame{}));
+    matchmaking.processEvent (objectToStringWithObjectName (CreateGame{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(CreateGameError|{"error":"Could not find a game lobby for the user"})foo" == messages.at (0));
   }
   SECTION ("WantsToJoinGame", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (WantsToJoinGame{}));
+    matchmaking.processEvent (objectToStringWithObjectName (WantsToJoinGame{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messages.at (0));
   }
   SECTION ("LeaveQuickGameQueue", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LeaveQuickGameQueue{}));
+    matchmaking.processEvent (objectToStringWithObjectName (LeaveQuickGameQueue{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(LeaveQuickGameQueueError|{"error":"User is not in queue"})foo" == messages.at (0));
   }
   SECTION ("JoinMatchMakingQueue", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (JoinMatchMakingQueue{}));
+    matchmaking.processEvent (objectToStringWithObjectName (JoinMatchMakingQueue{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0));
@@ -217,7 +217,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   auto messages = std::vector<std::string>{};
   auto &matchmaking = matchmakings.emplace_back (
       ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
-  matchmaking.process_event (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
+  matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
   ioContext.reset ();
@@ -225,7 +225,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   messages.clear ();
   SECTION ("LogoutAccount", "[matchmaking]")
   {
-    matchmaking.process_event (objectToStringWithObjectName (LogoutAccount{}));
+    matchmaking.processEvent (objectToStringWithObjectName (LogoutAccount{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
@@ -257,6 +257,21 @@ TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back(message); }, gameLobbies, pool_, MatchmakingOption{} };
-  matchmaking.process_event (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
+  matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
   REQUIRE (not messages.empty ());
+}
+
+TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaking]")
+{
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back(message); }, gameLobbies, pool_, MatchmakingOption{} };
+  auto error = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::JoinChannel{}));
+  REQUIRE (error);
+  REQUIRE (error.value () == "No transition found");
 }

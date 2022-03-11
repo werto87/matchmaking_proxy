@@ -1,5 +1,6 @@
 #include "server.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -89,14 +90,17 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
                   ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption);
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (ioContext, myWebsocket->readLoop ([matchmaking] (const std::string &msg) {
+              co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
                 if (matchmaking->hasProxyToGame ())
                   {
                     matchmaking->sendMessageToGame (msg);
                   }
                 else
                   {
-                    matchmaking->process_event (msg);
+                    if (auto const &error = matchmaking->processEvent (msg))
+                      {
+                        myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, error.value () }));
+                      }
                   }
               }) && myWebsocket->writeLoop (),
                         [&matchmakings = matchmakings, matchmaking] (auto eptr) {

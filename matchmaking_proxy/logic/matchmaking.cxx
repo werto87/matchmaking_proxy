@@ -121,7 +121,7 @@ struct ConnectedWithGame
 
 BOOST_FUSION_DEFINE_STRUCT ((), SendMessageToUser, (std::string, msg))
 
-struct ReceiveMessage
+struct GlobalState
 {
 };
 
@@ -270,10 +270,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), printException); };
 auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), printException); };
 auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), printException); };
-auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void {
-  //
-  boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException);
-};
+auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException); };
 
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRatingDifference)
@@ -880,6 +877,9 @@ auto const sendMessageToUser = [] (user_matchmaking::Message const &message, Mat
 // auto const stateCanNotHandleEvent = [] (auto const &event, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ "event not handled: '" + confu_json::type_name<typename std::decay<std::remove_cvref_t<decltype (event)>>> () + "'" })); };
 
 // TODO make it build with gcc
+
+auto const matchmakingLogic = [] () {};
+
 class StateMachineImpl
 {
 public:
@@ -934,8 +934,9 @@ public:
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>     
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
-// ReceiveMessage------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-,*state<ReceiveMessage>                        + event<SendMessageToUser>                                                          / sendToUser
+// GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+,*state<GlobalState>                        + event<SendMessageToUser>                                                          / sendToUser
+, state<GlobalState>                        + event<u_m::MatchmakingLogic>                                                          / matchmakingLogic
         // clang-format on
     );
   }

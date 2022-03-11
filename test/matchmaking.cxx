@@ -5,6 +5,7 @@
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
+#include <boost/sml.hpp>
 #include <catch2/catch.hpp> // for Ass...
 using namespace user_matchmaking;
 
@@ -231,4 +232,18 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   }
   ioContext.stop ();
   ioContext.reset ();
+}
+
+TEST_CASE ("matchmaking visitCurrentStates", "[matchmaking]")
+{
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} };
+  auto currentStates = matchmaking.currentStatesAsString ();
+  REQUIRE (currentStates.size () == 2);
 }

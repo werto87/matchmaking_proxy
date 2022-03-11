@@ -36,6 +36,10 @@ public:
 
   void disconnectFromProxy ();
 
+  std::vector<std::string> currentStatesAsString () const;
+
+  std::string stateMachineAsString () const;
+
   std::unique_ptr<StateMachineWrapper, StateMachineWrapperDeleter> sm; // only use this member inside of matchmaking.cxx. reason because of incomplete type
 };
 

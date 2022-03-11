@@ -1066,6 +1066,88 @@ Matchmaking::disconnectFromProxy ()
   sm->impl.process_event (matchmaking_game::LeaveGameSuccess{});
 }
 
+std::vector<std::string>
+Matchmaking::currentStatesAsString () const
+{
+  auto results = std::vector<std::string>{};
+  sm->impl.visit_current_states ([&results] (auto state) { results.push_back (state.c_str ()); });
+  return results;
+}
+
+using namespace boost;
+
+template <class T>
+void
+dump_transition (std::stringstream &ss) noexcept
+{
+  auto src_state = std::string{ sml::aux::string<typename T::src_state>{}.c_str () };
+  auto dst_state = std::string{ sml::aux::string<typename T::dst_state>{}.c_str () };
+  if (dst_state == "X")
+    {
+      dst_state = "[*]";
+    }
+
+  if (T::initial)
+    {
+      ss << "[*] --> " << src_state << std::endl;
+    }
+
+  ss << src_state << " --> " << dst_state;
+
+  const auto has_event = !sml::aux::is_same<typename T::event, sml::anonymous>::value;
+  const auto has_guard = !sml::aux::is_same<typename T::guard, sml::front::always>::value;
+  const auto has_action = !sml::aux::is_same<typename T::action, sml::front::none>::value;
+
+  if (has_event || has_guard || has_action)
+    {
+      ss << " :";
+    }
+
+  if (has_event)
+    {
+      ss << " " << boost::sml::aux::get_type_name<typename T::event> ();
+    }
+
+  if (has_guard)
+    {
+      ss << " [" << boost::sml::aux::get_type_name<typename T::guard::type> () << "]";
+    }
+
+  if (has_action)
+    {
+      ss << " / " << boost::sml::aux::get_type_name<typename T::action::type> ();
+    }
+
+  ss << std::endl;
+}
+
+template <template <class...> class T, class... Ts>
+std::string
+dump_transitions (const T<Ts...> &) noexcept
+{
+  auto ss = std::stringstream{};
+  int _[]{ 0, (dump_transition<Ts> (ss), 0)... };
+  (void)_;
+  return ss.str ();
+}
+
+template <class SM>
+std::string
+dump (const SM &) noexcept
+{
+  auto ss = std::stringstream{};
+  ss << "@startuml" << std::endl << std::endl;
+  ss << dump_transitions (typename SM::transitions{});
+  ss << std::endl << "@enduml" << std::endl;
+  return ss.str ();
+}
+
+std::string
+Matchmaking::stateMachineAsString () const
+{
+  return dump (sm->impl);
+}
+
 boost::asio::awaitable<void>
 startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {

@@ -234,7 +234,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   ioContext.reset ();
 }
 
-TEST_CASE ("matchmaking visitCurrentStates", "[matchmaking]")
+TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
 {
   using namespace boost::asio;
   auto ioContext = io_context ();
@@ -244,6 +244,18 @@ TEST_CASE ("matchmaking visitCurrentStates", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} };
-  auto currentStates = matchmaking.currentStatesAsString ();
-  REQUIRE (currentStates.size () == 2);
+  REQUIRE (matchmaking.currentStatesAsString ().size () == 2);
+}
+
+TEST_CASE ("matchmaking stateMachineAsString", "[matchmaking]")
+{
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<GameLobby> gameLobbies_{};
+  std::list<Matchmaking> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} };
+  REQUIRE (not matchmaking.stateMachineAsString ().empty ());
 }

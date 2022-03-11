@@ -878,14 +878,12 @@ auto const sendMessageToUser = [] (user_matchmaking::Message const &message, Mat
 
 // TODO make it build with gcc
 
-using namespace boost;
-
 template <class T>
 void
 dump_transition (std::stringstream &ss) noexcept
 {
-  auto src_state = std::string{ sml::aux::string<typename T::src_state>{}.c_str () };
-  auto dst_state = std::string{ sml::aux::string<typename T::dst_state>{}.c_str () };
+  auto src_state = std::string{ boost::sml::aux::string<typename T::src_state>{}.c_str () };
+  auto dst_state = std::string{ boost::sml::aux::string<typename T::dst_state>{}.c_str () };
   if (dst_state == "X")
     {
       dst_state = "[*]";
@@ -898,9 +896,9 @@ dump_transition (std::stringstream &ss) noexcept
 
   ss << src_state << " --> " << dst_state;
 
-  const auto has_event = !sml::aux::is_same<typename T::event, sml::anonymous>::value;
-  const auto has_guard = !sml::aux::is_same<typename T::guard, sml::front::always>::value;
-  const auto has_action = !sml::aux::is_same<typename T::action, sml::front::none>::value;
+  const auto has_event = !boost::sml::aux::is_same<typename T::event, boost::sml::anonymous>::value;
+  const auto has_guard = !boost::sml::aux::is_same<typename T::guard, boost::sml::front::always>::value;
+  const auto has_action = !boost::sml::aux::is_same<typename T::action, boost::sml::front::none>::value;
 
   if (has_event || has_guard || has_action)
     {

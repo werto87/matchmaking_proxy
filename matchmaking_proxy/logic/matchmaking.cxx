@@ -878,7 +878,77 @@ auto const sendMessageToUser = [] (user_matchmaking::Message const &message, Mat
 
 // TODO make it build with gcc
 
-auto const matchmakingLogic = [] () {};
+using namespace boost;
+
+template <class T>
+void
+dump_transition (std::stringstream &ss) noexcept
+{
+  auto src_state = std::string{ sml::aux::string<typename T::src_state>{}.c_str () };
+  auto dst_state = std::string{ sml::aux::string<typename T::dst_state>{}.c_str () };
+  if (dst_state == "X")
+    {
+      dst_state = "[*]";
+    }
+
+  if (T::initial)
+    {
+      ss << "[*] --> " << src_state << std::endl;
+    }
+
+  ss << src_state << " --> " << dst_state;
+
+  const auto has_event = !sml::aux::is_same<typename T::event, sml::anonymous>::value;
+  const auto has_guard = !sml::aux::is_same<typename T::guard, sml::front::always>::value;
+  const auto has_action = !sml::aux::is_same<typename T::action, sml::front::none>::value;
+
+  if (has_event || has_guard || has_action)
+    {
+      ss << " :";
+    }
+
+  if (has_event)
+    {
+      ss << " " << boost::sml::aux::get_type_name<typename T::event> ();
+    }
+
+  if (has_guard)
+    {
+      ss << " [" << boost::sml::aux::get_type_name<typename T::guard::type> () << "]";
+    }
+
+  if (has_action)
+    {
+      ss << " / " << boost::sml::aux::get_type_name<typename T::action::type> ();
+    }
+
+  ss << std::endl;
+}
+
+template <template <class...> class T, class... Ts>
+std::string
+dump_transitions (const T<Ts...> &) noexcept
+{
+  auto ss = std::stringstream{};
+  int _[]{ 0, (dump_transition<Ts> (ss), 0)... };
+  (void)_;
+  return ss.str ();
+}
+
+template <class SM>
+std::string
+dump () noexcept
+{
+  auto ss = std::stringstream{};
+  ss << "@startuml" << std::endl << std::endl;
+  ss << dump_transitions (typename SM::transitions{});
+  ss << std::endl << "@enduml" << std::endl;
+  return ss.str ();
+}
+
+std::string dumpStateMachine ();
+
+auto const matchmakingLogic = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::MatchmakingLogic{ dumpStateMachine () })); };
 
 class StateMachineImpl
 {
@@ -930,17 +1000,23 @@ public:
 , state<LoggedIn>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         
 , state<LoggedIn>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame
 , state<LoggedIn>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      
-, state<LoggedIn>                             + event<m_g::ConnectToGameSuccess>                                                       / proxyStarted                            = state<ProxyToGame>
+, state<LoggedIn>                             + event<m_g::ConnectToGameSuccess>                                                  / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>     
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
 // GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-,*state<GlobalState>                        + event<SendMessageToUser>                                                          / sendToUser
-, state<GlobalState>                        + event<u_m::MatchmakingLogic>                                                          / matchmakingLogic
+,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
+, state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
         // clang-format on
     );
   }
 };
+
+std::string
+dumpStateMachine ()
+{
+  return dump<boost::sml::sm<StateMachineImpl>> ();
+}
 
 struct my_logger
 {
@@ -1073,80 +1149,6 @@ Matchmaking::currentStatesAsString () const
   auto results = std::vector<std::string>{};
   sm->impl.visit_current_states ([&results] (auto state) { results.push_back (state.c_str ()); });
   return results;
-}
-
-using namespace boost;
-
-template <class T>
-void
-dump_transition (std::stringstream &ss) noexcept
-{
-  auto src_state = std::string{ sml::aux::string<typename T::src_state>{}.c_str () };
-  auto dst_state = std::string{ sml::aux::string<typename T::dst_state>{}.c_str () };
-  if (dst_state == "X")
-    {
-      dst_state = "[*]";
-    }
-
-  if (T::initial)
-    {
-      ss << "[*] --> " << src_state << std::endl;
-    }
-
-  ss << src_state << " --> " << dst_state;
-
-  const auto has_event = !sml::aux::is_same<typename T::event, sml::anonymous>::value;
-  const auto has_guard = !sml::aux::is_same<typename T::guard, sml::front::always>::value;
-  const auto has_action = !sml::aux::is_same<typename T::action, sml::front::none>::value;
-
-  if (has_event || has_guard || has_action)
-    {
-      ss << " :";
-    }
-
-  if (has_event)
-    {
-      ss << " " << boost::sml::aux::get_type_name<typename T::event> ();
-    }
-
-  if (has_guard)
-    {
-      ss << " [" << boost::sml::aux::get_type_name<typename T::guard::type> () << "]";
-    }
-
-  if (has_action)
-    {
-      ss << " / " << boost::sml::aux::get_type_name<typename T::action::type> ();
-    }
-
-  ss << std::endl;
-}
-
-template <template <class...> class T, class... Ts>
-std::string
-dump_transitions (const T<Ts...> &) noexcept
-{
-  auto ss = std::stringstream{};
-  int _[]{ 0, (dump_transition<Ts> (ss), 0)... };
-  (void)_;
-  return ss.str ();
-}
-
-template <class SM>
-std::string
-dump (const SM &) noexcept
-{
-  auto ss = std::stringstream{};
-  ss << "@startuml" << std::endl << std::endl;
-  ss << dump_transitions (typename SM::transitions{});
-  ss << std::endl << "@enduml" << std::endl;
-  return ss.str ();
-}
-
-std::string
-Matchmaking::stateMachineAsString () const
-{
-  return dump (sm->impl);
 }
 
 boost::asio::awaitable<void>

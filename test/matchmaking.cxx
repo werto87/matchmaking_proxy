@@ -247,7 +247,7 @@ TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
   REQUIRE (matchmaking.currentStatesAsString ().size () == 2);
 }
 
-TEST_CASE ("matchmaking stateMachineAsString", "[matchmaking]")
+TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
 {
   using namespace boost::asio;
   auto ioContext = io_context ();
@@ -256,6 +256,7 @@ TEST_CASE ("matchmaking stateMachineAsString", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} };
-  REQUIRE (not matchmaking.stateMachineAsString ().empty ());
+  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back(message); }, gameLobbies, pool_, MatchmakingOption{} };
+  matchmaking.process_event (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
+  REQUIRE (not messages.empty ());
 }

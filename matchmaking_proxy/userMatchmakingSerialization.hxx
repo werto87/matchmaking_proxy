@@ -101,6 +101,7 @@ BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStarted, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ProxyStopped, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), ConnectGameError, (std::string, error))
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), UnhandledEventError, (std::string, error))
+BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), GetMatchmakingLogic, )
 BOOST_FUSION_DEFINE_STRUCT ((user_matchmaking), MatchmakingLogic, (std::string, logic))
 
 // clang-format off
@@ -171,6 +172,7 @@ shared_class::GameOption,
 ConnectGameError,
 ProxyStarted,
 ProxyStopped,
+GetMatchmakingLogic,
 MatchmakingLogic
   >  const  userMatchmaking{};
 }

@@ -22,12 +22,6 @@
 
 GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::move (name_) }, password (std::move (password_)) {}
 
-GameLobby::~GameLobby ()
-{
-  // TODO looks fisyh maybe we do not need this dtor
-  if (_timer) _timer->cancel ();
-}
-
 std::optional<std::string>
 GameLobby::setMaxUserCount (size_t userMaxCount)
 {

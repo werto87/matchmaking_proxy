@@ -21,7 +21,6 @@ struct GameLobby
 
   GameLobby () = default;
   GameLobby (std::string name_, std::string password_);
-  ~GameLobby ();
 
   enum struct LobbyType
   {

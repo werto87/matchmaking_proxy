@@ -28,7 +28,6 @@ public:
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
   std::list<Matchmaking> matchmakings{};
-  std::list<GameLobby> gameLobbies{};
 };
 
 #endif /* AD140436_3FBA_4D63_8C0E_9113B92859E0 */

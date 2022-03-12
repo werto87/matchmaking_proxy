@@ -74,6 +74,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
         }
       boost::certify::enable_native_https_server_verification (ctx);
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
+      std::list<GameLobby> gameLobbies{};
       for (;;)
         {
           try

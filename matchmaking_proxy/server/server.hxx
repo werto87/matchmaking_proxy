@@ -15,6 +15,7 @@ namespace boost::asio
 class thread_pool;
 class io_context;
 }
+struct MatchmakingOption;
 
 class Server
 {

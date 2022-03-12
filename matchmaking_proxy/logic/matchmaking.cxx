@@ -3,6 +3,7 @@
 #include "confu_json/confu_json.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/pw_hash/passwordHash.hxx"
@@ -127,55 +128,6 @@ struct GlobalState
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
-
-struct User
-{
-  std::string accountName{};
-  std::set<std::string> communicationChannels{};
-};
-
-struct MatchmakingData
-{
-  MatchmakingData (boost::asio::io_context &ioContext_, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_) : ioContext{ ioContext_ }, stateMachines{ stateMachines_ }, sendMsgToUser{ sendMsgToUser_ }, gameLobbies{ gameLobbies_ }, pool{ pool_ }, matchmakingOption{ matchmakingOption_ } { cancelCoroutineTimer->expires_at (std::chrono::system_clock::time_point::max ()); }
-
-  boost::asio::awaitable<std::optional<boost::system::system_error>>
-  cancelCoroutine ()
-  {
-    try
-      {
-        co_await cancelCoroutineTimer->async_wait ();
-        co_return std::optional<boost::system::system_error>{};
-      }
-    catch (boost::system::system_error &e)
-      {
-        using namespace boost::system::errc;
-        if (operation_canceled == e.code ())
-          {
-          }
-        else
-          {
-            std::cout << "error in timer boost::system::errc: " << e.code () << std::endl;
-            abort ();
-          }
-        co_return e;
-      }
-  }
-  void
-  cancelAndResetTimer ()
-  {
-    cancelCoroutineTimer->expires_at (std::chrono::system_clock::time_point::max ());
-  }
-
-  boost::asio::io_context &ioContext;
-  std::unique_ptr<CoroTimer> cancelCoroutineTimer{ std::make_unique<CoroTimer> (CoroTimer{ ioContext }) };
-  std::list<Matchmaking> &stateMachines;
-  std::function<void (std::string const &msg)> sendMsgToUser{};
-  User user{};
-  std::list<GameLobby> &gameLobbies;
-  boost::asio::thread_pool &pool;
-  MyWebsocket<Websocket> matchmakingGame{ {} };
-  MatchmakingOption matchmakingOption{};
-};
 
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
 
@@ -1052,12 +1004,12 @@ struct my_logger
 };
 struct Matchmaking::StateMachineWrapper
 {
-  StateMachineWrapper (Matchmaking *owner, boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool, MatchmakingOption const &matchmakingOption_)
-      : matchmakingData{ ioContext, stateMachines_, sendMsgToUser, gameLobbies, pool, matchmakingOption_ }, impl (owner,
+  StateMachineWrapper (Matchmaking *owner, MatchmakingData &&matchmakingData_)
+      : matchmakingData{ std::move (matchmakingData_) }, impl (owner,
 #ifdef LOG_FOR_STATE_MACHINE
-                                                                                                                  logger,
+                                                               logger,
 #endif
-                                                                                                                  matchmakingData)
+                                                               matchmakingData)
   {
   }
   MatchmakingData matchmakingData;
@@ -1076,7 +1028,7 @@ Matchmaking::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
   delete p;
 }
 
-Matchmaking::Matchmaking (boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool, MatchmakingOption const &matchmakingOption_) : sm{ new StateMachineWrapper{ this, ioContext, stateMachines_, sendMsgToUser, gameLobbies, pool, matchmakingOption_ } } {}
+Matchmaking::Matchmaking (MatchmakingData &&matchmakingData) : sm{ new StateMachineWrapper{ this, std::move (matchmakingData) } } {}
 
 std::optional<std::string>
 Matchmaking::processEvent (std::string const &event)

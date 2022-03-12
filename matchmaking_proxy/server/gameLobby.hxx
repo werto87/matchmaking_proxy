@@ -18,7 +18,6 @@ struct User;
 
 struct GameLobby
 {
-
   GameLobby () = default;
   GameLobby (std::string name_, std::string password_);
 

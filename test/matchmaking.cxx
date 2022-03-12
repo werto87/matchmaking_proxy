@@ -1,6 +1,7 @@
 #include "../matchmaking_proxy/logic/matchmaking.hxx"
 #include "../matchmaking_proxy/userMatchmakingSerialization.hxx" // for Cre...
 #include "matchmaking_proxy/database/database.hxx"               // for cre...
+#include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
@@ -16,12 +17,11 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
+
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
   SECTION ("CreateAccount", "[matchmaking]")
   {
     matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -52,12 +52,11 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
+
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
     matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -85,12 +84,10 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
@@ -211,12 +208,10 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (
-      ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{});
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
@@ -239,11 +234,10 @@ TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
   REQUIRE (matchmaking.currentStatesAsString ().size () == 2);
 }
 
@@ -252,11 +246,10 @@ TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back(message); }, gameLobbies, pool_, MatchmakingOption{} };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
   matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
   REQUIRE (not messages.empty ());
 }
@@ -266,11 +259,10 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-  std::list<GameLobby> gameLobbies_{};
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back(message); }, gameLobbies, pool_, MatchmakingOption{} };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
   auto error = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::JoinChannel{}));
   REQUIRE (error);
   REQUIRE (error.value () == "No transition found");

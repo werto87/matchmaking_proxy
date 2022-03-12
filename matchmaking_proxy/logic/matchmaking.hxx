@@ -1,7 +1,6 @@
 #ifndef AB446319_39F6_4D7F_9EC5_860337CA5001
 #define AB446319_39F6_4D7F_9EC5_860337CA5001
 
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include <functional>
 #include <list>
 #include <memory>
@@ -12,7 +11,7 @@ class io_context;
 class thread_pool;
 }
 
-struct GameLobby;
+struct MatchmakingData;
 
 class Matchmaking
 {
@@ -23,7 +22,7 @@ class Matchmaking
   };
 
 public:
-  Matchmaking (boost::asio::io_context &ioContext, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser, std::list<GameLobby> &gameLobbies, boost::asio::thread_pool &pool, MatchmakingOption const &matchmakingOption);
+  Matchmaking (MatchmakingData &&matchmakingData);
 
   std::optional<std::string> processEvent (std::string const &event);
 

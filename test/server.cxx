@@ -41,7 +41,7 @@ using namespace boost::asio;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 boost::asio::awaitable<void>
-connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets, std::vector<std::string> &messagesFromGame)
+connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::vector<std::string> &messagesFromGame)
 {
   try
     {
@@ -168,9 +168,9 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
             }
         }
     };
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, pathToSecrets, messagesFromGamePlayer1), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, messagesFromGamePlayer1), printException);
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, pathToSecrets, messagesFromGamePlayer2), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, messagesFromGamePlayer2), printException);
     ioContext.run ();
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));

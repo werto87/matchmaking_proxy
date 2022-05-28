@@ -3,35 +3,32 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/server/matchmakingOption.hxx"
+#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "test/mockserver.hxx"
+#include <algorithm> // for max
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
-#include <cstddef>
-#include <filesystem>
-#include <fmt/color.h>
-#include <range/v3/algorithm/find_if.hpp>
-#include <sodium/core.h>
-#ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
-#include <experimental/coroutine>
-#endif
-#include "matchmaking_proxy/server/myWebsocket.hxx"
-#include <algorithm> // for max
-#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 #include <catch2/catch.hpp>
+#include <cstddef>
 #include <deque>
 #include <exception>
+#include <filesystem>
+#include <fmt/color.h>
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
 #include <openssl/ssl3.h>
+#include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>
+#include <sodium/core.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -141,7 +138,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   // TODO create some test certificates and share them on git
-  auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+  auto const pathToSecrets = std::filesystem::path{ "/home/walde/otherTestCert" };
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
   using namespace boost::asio::experimental::awaitable_operators;

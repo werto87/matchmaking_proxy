@@ -80,7 +80,11 @@ typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waita
 using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
-template <typename T> concept hasAccountName = requires(T t) { t.accountName; };
+template <typename T>
+concept hasAccountName = requires (T t)
+{
+  t.accountName;
+};
 
 // work around to print type for debuging
 template <typename> struct Debug;
@@ -623,6 +627,7 @@ boost::asio::awaitable<std::string>
 sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
   auto ws = std::make_shared<Websocket> (matchmakingData.ioContext);
+  // TODO make it possible to set port and ip
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
   co_await ws->next_layer ().async_connect (gameEndpoint);
   ws->next_layer ().expires_never ();

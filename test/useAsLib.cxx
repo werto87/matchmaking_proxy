@@ -1,6 +1,7 @@
 // #include "matchmaking_proxy/database/database.hxx"
 // #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 // #include "matchmaking_proxy/matchmakingGameSerialization.hxx"
+// #include "matchmaking_proxy/server/matchmakingOption.hxx"
 // #include "matchmaking_proxy/server/server.hxx"
 // #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 // #include "matchmaking_proxy/util.hxx"
@@ -95,7 +96,7 @@
 //     auto server = Server{ ioContext, pool };
 //     auto const userPort = 55555;
 //     auto const gamePort = 22222;
-//     // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
+//     auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
 //     // TODO create some test certificates and share them on git
 //     auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
 //     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
@@ -109,7 +110,6 @@
 //       if (splitMesssage.size () == 2)
 //         {
 //           auto const &typeToSearch = splitMesssage.at (0);
-//           auto const &objectAsString = splitMesssage.at (1);
 //           if (typeToSearch == "AskIfUserWantsToJoinGame")
 //             {
 //               myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));

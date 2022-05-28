@@ -138,7 +138,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   // TODO create some test certificates and share them on git
-  auto const pathToSecrets = std::filesystem::path{ "/home/walde/otherTestCert" };
+  auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
   auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
   auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
   using namespace boost::asio::experimental::awaitable_operators;

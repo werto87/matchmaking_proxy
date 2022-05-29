@@ -4,6 +4,7 @@
 #include "matchmaking_proxy/util.hxx"                         // for object...
 #include <algorithm>                                          // for remove_if
 #include <chrono>                                             // for seconds
+#include <exception>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
 #endif
@@ -117,13 +118,13 @@ GameLobby::accountCount ()
 }
 
 boost::asio::awaitable<void>
-GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameOverCallback)
+GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameInviteOver)
 {
   try
     {
       co_await timer->async_wait (boost::asio::use_awaitable);
       waitingForAnswerToStartGame = false;
-      gameOverCallback ();
+      gameInviteOver ();
     }
   catch (boost::system::system_error &e)
     {
@@ -137,6 +138,11 @@ GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::func
           std::cout << "error in timer boost::system::errc: " << e.code () << std::endl;
           abort ();
         }
+    }
+  catch (std::exception &e)
+    {
+      std::cout << "runTimer exception: " << e.what () << std::endl;
+      abort ();
     }
 }
 

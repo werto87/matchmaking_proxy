@@ -19,6 +19,7 @@ struct User;
 struct GameLobby
 {
   GameLobby () = default;
+  ~GameLobby () { cancelTimer (); }
   GameLobby (std::string name_, std::string password_);
 
   enum struct LobbyType
@@ -44,7 +45,7 @@ struct GameLobby
 
   size_t accountCount ();
 
-  boost::asio::awaitable<void> runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameOverCallback);
+  boost::asio::awaitable<void> runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameInviteOver);
 
   void startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver);
 

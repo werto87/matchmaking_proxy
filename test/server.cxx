@@ -133,16 +133,16 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
   thread_pool pool{ 2 };
   auto server = Server{ ioContext, pool };
-  auto const userPort = 55555;
-  auto const gamePort = 22222;
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto const userMatchmakingPort = 55555;
+  auto const gameMatchmakingPort = 22222;
+  auto const matchmakingGamePort = 44444;
+  auto const userGameViaMatchmakingPort = 33333;
+  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   // TODO create some test certificates and share them on git
   auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
-  auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{}) || server.gameMatchmaking (gameEndpoint), printException);
+  co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, pathToSecrets, MatchmakingOption{}, { ip::tcp::v4 (), matchmakingGamePort }, { ip::tcp::v4 (), userGameViaMatchmakingPort }) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
@@ -165,9 +165,9 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
             }
         }
     };
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, messagesFromGamePlayer1), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), printException);
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, userEndpoint, messagesFromGamePlayer2), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer2), printException);
     ioContext.run ();
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));

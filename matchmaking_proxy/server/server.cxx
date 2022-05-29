@@ -4,6 +4,7 @@
 #include "matchmaking_proxy/util.hxx"
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <range/v3/algorithm/find_if.hpp>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
@@ -36,7 +37,7 @@ using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint)
 {
   try
     {
@@ -88,7 +89,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
               co_await connection->async_accept (use_awaitable);
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
-              matchmakings.emplace_back (Matchmaking{ MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption } });
+              matchmakings.emplace_back (Matchmaking{ MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint } });
               std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
@@ -122,7 +123,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint, std::fi
 }
 
 boost::asio::awaitable<void>
-Server::gameMatchmaking (boost::asio::ip::tcp::endpoint const &endpoint)
+Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
 {
   try
     {

@@ -181,14 +181,13 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 };
   try
     {
-      co_await ws->next_layer ().async_connect (gameEndpoint);
+      co_await ws->next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
       ws->next_layer ().expires_never ();
       ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
       ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-      co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+      co_await ws->async_handshake ("localhost:" + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
       static size_t id = 0;
       matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
       co_await matchmakingData.matchmakingGame.async_write_one_message (objectToStringWithObjectName (connectToGameEv));
@@ -627,13 +626,11 @@ boost::asio::awaitable<std::string>
 sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
   auto ws = std::make_shared<Websocket> (matchmakingData.ioContext);
-  // TODO make it possible to set port and ip
-  auto gameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 };
-  co_await ws->next_layer ().async_connect (gameEndpoint);
+  co_await ws->next_layer ().async_connect (matchmakingData.matchmakingGameEndpoint);
   ws->next_layer ().expires_never ();
   ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
   ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-  co_await ws->async_handshake ("localhost:" + std::to_string (gameEndpoint.port ()), "/");
+  co_await ws->async_handshake ("localhost:" + std::to_string (matchmakingData.matchmakingGameEndpoint.port ()), "/");
   static size_t id = 0;
   auto myWebsocket = MyWebsocket<Websocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
   auto startGame = matchmaking_game::StartGame{};

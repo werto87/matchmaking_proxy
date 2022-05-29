@@ -21,7 +21,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   SECTION ("CreateAccount", "[matchmaking]")
   {
     matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -56,7 +56,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
     matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
@@ -87,7 +87,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
@@ -211,7 +211,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
   ioContext.run ();
   ioContext.stop ();
@@ -237,7 +237,7 @@ TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   REQUIRE (matchmaking.currentStatesAsString ().size () == 2);
 }
 
@@ -249,7 +249,7 @@ TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
   REQUIRE (not messages.empty ());
 }
@@ -262,7 +262,7 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   std::list<Matchmaking> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{} } };
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   auto error = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::JoinChannel{}));
   REQUIRE (error);
   REQUIRE (error.value () == "No transition found");

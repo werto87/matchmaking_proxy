@@ -98,6 +98,7 @@
 //     auto const gamePort = 22222;
 //     auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
 //     // TODO create some test certificates and share them on git
+//     // TODO make it possible to run this with the mock server and with the real project
 //     auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
 //     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
 //     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };

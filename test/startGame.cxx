@@ -16,7 +16,7 @@ using namespace user_matchmaking;
 Matchmaking &
 createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinMatchMakingQueue const &joinMatchMakingQueue, int &proxyStartedCalled)
 {
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   matchmaking = { MatchmakingData{ ioContext, matchmakings,
                                    [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                                      messages.push_back (msg);
@@ -29,7 +29,7 @@ createAccountAndJoinMatchmakingGame (std::string const &playerName, boost::asio:
                                            }
                                        }
                                    },
-                                   gameLobbies, pool, MatchmakingOption{} } };
+                                   gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -142,7 +142,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
 Matchmaking &
 createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, CreateGameLobby const &createGameLobby, int &proxyStartedCalled)
 {
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   matchmaking = { MatchmakingData{ ioContext, matchmakings,
                                    [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                                      messages.push_back (msg);
@@ -155,7 +155,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                                            }
                                        }
                                    },
-                                   gameLobbies, pool, MatchmakingOption{} } };
+                                   gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -167,7 +167,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
 Matchmaking &
 createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<Matchmaking> &matchmakings, boost::asio::thread_pool &pool, JoinGameLobby const &joinGameLobby, int &proxyStartedCalled)
 {
-  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{} });
+  auto &matchmaking = matchmakings.emplace_back (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } });
   matchmaking = { MatchmakingData{ ioContext, matchmakings,
                                    [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                                      messages.push_back (msg);
@@ -180,7 +180,7 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                                            }
                                        }
                                    },
-                                   gameLobbies, pool, MatchmakingOption{} } };
+                                   gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
   matchmaking.processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" }));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();

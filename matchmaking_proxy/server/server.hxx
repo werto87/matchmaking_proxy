@@ -22,7 +22,7 @@ class Server
 public:
   Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_);
 
-  boost::asio::awaitable<void> userMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint);
+  boost::asio::awaitable<void> userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint);
   boost::asio::awaitable<void> gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint);
 
   boost::asio::io_context &ioContext;

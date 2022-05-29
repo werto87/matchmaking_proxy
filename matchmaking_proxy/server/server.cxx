@@ -37,12 +37,12 @@ using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint)
 {
   try
     {
       auto executor = co_await this_coro::executor;
-      tcp_acceptor acceptor (executor, endpoint);
+      tcp_acceptor acceptor (executor, userEndpoint);
       net::ssl::context ctx (net::ssl::context::tls_server);
       ctx.set_verify_mode (ssl::context::verify_peer);
       ctx.set_default_verify_paths ();

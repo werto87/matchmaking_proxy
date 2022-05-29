@@ -96,14 +96,14 @@ TEST_CASE ("integration test", "[integration]")
     auto server = Server{ ioContext, pool };
     auto const userPort = 55555;
     auto const gamePort = 22222;
-    // auto mockserver = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", "StartGameSuccess|{}" } } } };
     // TODO create some test certificates and share them on git
-    // TODO make it possible to run this with the mock server and with the real project
     auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
+    auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 };
+    auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 3232 };
     using namespace boost::asio::experimental::awaitable_operators;
-    co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 3232 }) || server.gameMatchmaking (gameEndpoint), printException);
+    co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
     auto const joinGameLogic = [&ioContext] (auto &&, auto const &msg, auto &&myWebsocket) {
       std::vector<std::string> splitMesssage{};

@@ -94,7 +94,9 @@ TEST_CASE ("integration test", "[integration]")
     auto const userPort = 55555;
     auto const gamePort = 22222;
     // TODO create some test certificates and share them on git
-    auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+    // TODO run mock server which reads the game over messages and stops instead of the current stopping logic
+    // auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+    auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/fastCert" };
     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
     auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 };

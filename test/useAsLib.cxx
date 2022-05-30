@@ -106,11 +106,11 @@ TEST_CASE ("integration test", "[integration]")
     co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
     auto const joinGameLogic = [&ioContext] (auto &&, auto const &msg, auto &&myWebsocket) {
-      std::vector<std::string> splitMesssage{};
-      boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
-      if (splitMesssage.size () == 2)
+      std::vector<std::string> splitMessage{};
+      boost::algorithm::split (splitMessage, msg, boost::is_any_of ("|"));
+      if (splitMessage.size () == 2)
         {
-          auto const &typeToSearch = splitMesssage.at (0);
+          auto const &typeToSearch = splitMessage.at (0);
           if (typeToSearch == "AskIfUserWantsToJoinGame")
             {
               myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));

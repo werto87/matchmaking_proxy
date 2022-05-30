@@ -22,6 +22,7 @@ struct MockserverOption
   std::optional<std::string> disconnectOnMessage{};
   std::map<std::string, std::string> requestResponse{};
   std::map<std::string, std::string> requestStartsWithResponse{};
+  std::map<std::string, std::function<void ()>> callOnMessageStartsWith{};
 };
 
 struct Mockserver
@@ -60,6 +61,14 @@ struct Mockserver
             websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), loggingName_, loggingTextStyleForName_, id_ });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption, &ioContext = ioContext] (const std::string &msg) mutable {
+              for (auto const &[startsWith, callback] : mockserverOption.callOnMessageStartsWith)
+                {
+                  if (boost::starts_with (msg, startsWith))
+                    {
+                      callback ();
+                      break;
+                    }
+                }
               if (mockserverOption.disconnectOnMessage && mockserverOption.disconnectOnMessage.value () == msg)
                 {
                   ioContext.stop ();

@@ -95,7 +95,7 @@ TEST_CASE ("integration test", "[integration]")
     auto const gamePort = 22222;
     // TODO create some test certificates and share them on git
     // TODO run mock server which reads the game over messages and stops instead of the current stopping logic
-    // auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+    auto mockserver = Mockserver{ { ip::tcp::v4 (), 12312 }, { .callOnMessageStartsWith{ { "GameOver", [&ioContext] () { ioContext.stop (); } } } }, "GameToMatchmaking" };
     auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/fastCert" };
     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
@@ -117,10 +117,6 @@ TEST_CASE ("integration test", "[integration]")
           else if (typeToSearch == "ProxyStarted")
             {
               myWebsocket->sendMessage ("DurakLeaveGame|{}");
-            }
-          else if (typeToSearch == "DurakGameOverWon")
-            {
-              ioContext.stop ();
             }
         }
     };

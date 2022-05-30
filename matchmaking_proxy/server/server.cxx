@@ -66,11 +66,11 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
         }
       try
         {
-          ctx.use_tmp_dh_file (pathToSecrets / "dh2048.pem");
+          ctx.use_tmp_dh_file (pathToSecrets / "dhparams.pem");
         }
       catch (std::exception const &e)
         {
-          std::cout << "load dh2048: " << pathToSecrets / "dh2048.pem"
+          std::cout << "load dhparams: " << pathToSecrets / "dhparams.pem"
                     << " exception : " << e.what () << std::endl;
         }
       boost::certify::enable_native_https_server_verification (ctx);

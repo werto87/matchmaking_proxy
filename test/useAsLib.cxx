@@ -104,7 +104,7 @@ TEST_CASE ("integration test", "[integration]")
     using namespace boost::asio::experimental::awaitable_operators;
     co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
-    auto const joinGameLogic = [&ioContext] (auto &&, auto const &msg, auto &&myWebsocket) {
+    auto const joinGameLogic = [] (auto &&, auto const &msg, auto &&myWebsocket) {
       std::vector<std::string> splitMessage{};
       boost::algorithm::split (splitMessage, msg, boost::is_any_of ("|"));
       if (splitMessage.size () == 2)

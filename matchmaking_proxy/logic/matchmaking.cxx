@@ -212,7 +212,17 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
         }
       using namespace boost::asio::experimental::awaitable_operators;
-      co_await(matchmakingData.matchmakingGame.readLoop ([&matchmakingData] (std::string const &readResult) { matchmakingData.sendMsgToUser (readResult); }) || matchmakingData.matchmakingGame.writeLoop ());
+      co_await(matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
+        if ("LeaveGameSuccess|{}" == readResult)
+          {
+            sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+          }
+        else
+          {
+            matchmakingData.sendMsgToUser (readResult);
+          }
+      }) || matchmakingData.matchmakingGame.writeLoop ());
+      sm.process_event (ConnectionToGameLost{}, deps, subs);
     }
   catch (std::exception const &e)
     {

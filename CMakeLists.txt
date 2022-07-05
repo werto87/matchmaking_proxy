@@ -54,3 +54,23 @@ IF(BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 ENDIF(BUILD_TESTS)
+
+set(TARGET_NAME project)
+add_executable(${TARGET_NAME} main.cxx)
+target_link_libraries(${TARGET_NAME} PRIVATE
+  ${TARGET_NAME_LIB}
+  ${PROJECT_WARNINGS}
+  ${PROJECT_OPTIONS}
+  CONAN_PKG::range-v3
+  CONAN_PKG::confu_soci
+  CONAN_PKG::confu_json
+  CONAN_PKG::libsodium
+  CONAN_PKG::certify
+  CONAN_PKG::pipes
+  CONAN_PKG::sml
+  CONAN_PKG::fmt
+  CONAN_PKG::durak
+)
+
+target_compile_definitions(${TARGET_NAME} PRIVATE PATH_TO_USER_DEFINED_GAME_OPTION="userDefinedGameOption.hxx"
+)

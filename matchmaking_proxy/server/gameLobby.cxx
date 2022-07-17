@@ -5,9 +5,6 @@
 #include <algorithm>                                          // for remove_if
 #include <chrono>                                             // for seconds
 #include <exception>
-#ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
-#include <experimental/coroutine>
-#endif
 #include <iostream>                               // for string
 #include <new>                                    // for operat...
 #include <range/v3/algorithm/find_if.hpp>         // for find_if

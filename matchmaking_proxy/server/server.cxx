@@ -1,30 +1,27 @@
 #include "server.hxx"
+#include "matchmakingOption.hxx"
+#include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <chrono>
-#include <range/v3/algorithm/find_if.hpp>
-#ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
-#include <experimental/coroutine>
-#endif
-#include "matchmakingOption.hxx"
-#include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "myWebsocket.hxx"
 #include "server.hxx"
 #include <algorithm> // for max
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 #include <boost/current_function.hpp>
+#include <chrono>
 #include <deque>
 #include <exception>
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
 #include <openssl/ssl3.h>
+#include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>
 #include <stdexcept>
 #include <string>

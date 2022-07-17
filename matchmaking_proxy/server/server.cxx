@@ -146,6 +146,7 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
         {
           try
             {
+              std::cout << "wait for game over" << std::endl;
               auto socket = co_await acceptor.async_accept ();
               typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
               auto connection = std::make_shared<Websocket> (Websocket{ std::move (socket) });
@@ -155,10 +156,11 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection, "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_await(myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
+              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
                 auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };
                 matchmakingGame.process_event (msg);
-              }) || myWebsocket->writeLoop ());
+              }) || myWebsocket->writeLoop (),
+                        printException);
             }
           catch (std::exception const &e)
             {

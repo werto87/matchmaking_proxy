@@ -100,6 +100,11 @@ MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> on
     {
       webSocket.reset ();
       if (timer) timer->cancel ();
+#ifdef LOG_MY_WEBSOCKET_READ_END
+      printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
+      fmt::print ("[c]");
+      std::cout << std::endl;
+#endif
       throw;
     }
 }

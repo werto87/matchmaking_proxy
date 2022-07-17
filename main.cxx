@@ -14,7 +14,10 @@ auto const DEFAULT_PORT_USER = u_int16_t{ 55555 };
 auto const DEFAULT_PORT_MATCHMAKING_TO_GAME = u_int16_t{ 4242 };
 auto const DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING = u_int16_t{ 3232 };
 auto const DEFAULT_PORT_GAME_TO_MATCHMAKING = u_int16_t{ 12312 };
-auto const PATH_TO_SECRETS = std::getenv ("HOME") / std::filesystem::path{ "certificate/fastCert" };
+auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
+auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
+auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
+auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
 
 int
 main ()
@@ -41,7 +44,7 @@ main ()
       auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_MATCHMAKING_TO_GAME };
       auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING };
       auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_GAME_TO_MATCHMAKING };
-      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_SECRETS, MatchmakingOption{}, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
+      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
       ioContext.run ();
     }
   catch (std::exception &e)

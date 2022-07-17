@@ -5,6 +5,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <chrono>
 #include <range/v3/algorithm/find_if.hpp>
 #ifdef BOOST_ASIO_HAS_CLANG_LIBCXX
 #include <experimental/coroutine>
@@ -33,11 +34,32 @@ using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
-
+typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path const &pathToSecrets, MatchmakingOption const &matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint)
+tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds const &timeToWaitBeforeCallingFunctionAgain)
+{
+  for (;;) // try until no exception
+    {
+      try
+        {
+          fun ();
+          break;
+        }
+      catch (std::exception &e)
+        {
+          std::cout << "exception : " << e.what () << std::endl;
+        }
+      std::cout << "trying again in: " << timeToWaitBeforeCallingFunctionAgain.count () << " seconds" << std::endl;
+      auto timer = CoroTimer{ co_await boost::asio::this_coro::executor };
+      timer.expires_after (timeToWaitBeforeCallingFunctionAgain);
+      co_await timer.async_wait ();
+    }
+}
+
+boost::asio::awaitable<void>
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, boost::asio::ip::tcp::endpoint matchmakingGameEndpoint, boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint)
 {
   try
     {
@@ -46,33 +68,24 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
       net::ssl::context ctx (net::ssl::context::tls_server);
       ctx.set_verify_mode (ssl::context::verify_peer);
       ctx.set_default_verify_paths ();
-      try
-        {
-          ctx.use_certificate_chain_file (pathToSecrets / "fullchain.pem");
-        }
-      catch (std::exception const &e)
-        {
-          std::cout << "load fullchain: " << pathToSecrets / "fullchain.pem"
-                    << " exception : " << e.what () << std::endl;
-        }
-      try
-        {
-          ctx.use_private_key_file (pathToSecrets / "privkey.pem", boost::asio::ssl::context::pem);
-        }
-      catch (std::exception const &e)
-        {
-          std::cout << "load privkey: " << pathToSecrets / "privkey.pem"
-                    << " exception : " << e.what () << std::endl;
-        }
-      try
-        {
-          ctx.use_tmp_dh_file (pathToSecrets / "dhparams.pem");
-        }
-      catch (std::exception const &e)
-        {
-          std::cout << "load dhparams: " << pathToSecrets / "dhparams.pem"
-                    << " exception : " << e.what () << std::endl;
-        }
+      co_await tryUntilNoException (
+          [&pathToChainFile, &ctx] () {
+            std::cout << "load fullchain: " << pathToChainFile << std::endl;
+            ctx.use_certificate_chain_file (pathToChainFile);
+          },
+          pollingSleepTimer);
+      co_await tryUntilNoException (
+          [&pathToPrivateFile, &ctx] () {
+            std::cout << "load privkey: " << pathToPrivateFile << std::endl;
+            ctx.use_private_key_file (pathToPrivateFile, boost::asio::ssl::context::pem);
+          },
+          pollingSleepTimer);
+      co_await tryUntilNoException (
+          [&pathToTmpDhFile, &ctx] () {
+            std::cout << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
+            ctx.use_tmp_dh_file (pathToTmpDhFile);
+          },
+          pollingSleepTimer);
       boost::certify::enable_native_https_server_verification (ctx);
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
       std::list<GameLobby> gameLobbies{};

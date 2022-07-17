@@ -139,10 +139,12 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   auto const userGameViaMatchmakingPort = 33333;
   auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
-  // TODO create some test certificates and share them on git
-  auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/otherTestCert" };
+  auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
+  auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
+  auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
+  auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, pathToSecrets, MatchmakingOption{}, { ip::tcp::v4 (), matchmakingGamePort }, { ip::tcp::v4 (), userGameViaMatchmakingPort }) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), printException);
+  co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, { ip::tcp::v4 (), matchmakingGamePort }, { ip::tcp::v4 (), userGameViaMatchmakingPort }) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};

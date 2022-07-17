@@ -96,13 +96,16 @@ TEST_CASE ("integration test", "[integration]")
     // TODO create some test certificates and share them on git
     // TODO run mock server which reads the game over messages and stops instead of the current stopping logic
     auto mockserver = Mockserver{ { ip::tcp::v4 (), 12312 }, { .callOnMessageStartsWith{ { "GameOver", [&ioContext] () { ioContext.stop (); } } } }, "GameToMatchmaking" };
-    auto const pathToSecrets = std::filesystem::path{ "/home/walde/certificate/fastCert" };
+    auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
+    auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
+    auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
+    auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
     auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), userPort };
     auto gameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gamePort };
     auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 };
     auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 3232 };
     using namespace boost::asio::experimental::awaitable_operators;
-    co_spawn (ioContext, server.userMatchmaking (userEndpoint, pathToSecrets, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
+    co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
     auto const joinGameLogic = [] (auto &&, auto const &msg, auto &&myWebsocket) {
       std::vector<std::string> splitMessage{};

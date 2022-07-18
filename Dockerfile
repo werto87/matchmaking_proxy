@@ -17,7 +17,7 @@ RUN conan profile new default --detect
 WORKDIR /matchmaking_proxy
 
 RUN conan profile new clang
-
+# TODO use compiler version from clang --version command instead this hardcoded value it will break next clang release
 RUN echo -e "[settings]\nos=Linux\narch=x86_64\ncompiler=clang\ncompiler.version=14\ncompiler.libcxx=libc++\n[env]\nCC=/usr/bin/clang\nCXX=/usr/bin/clang++" > /root/.conan/profiles/clang
 
 RUN which clang

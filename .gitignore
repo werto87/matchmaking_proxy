@@ -6,3 +6,4 @@ template_db.session.sql
 project-cppcheck-build-dir/*
 *.db
 database/*
+compile_commands.json

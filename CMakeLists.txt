@@ -32,6 +32,7 @@ target_link_libraries(${TARGET_NAME_LIB} INTERFACE
   CONAN_PKG::pipes
   CONAN_PKG::sml
   CONAN_PKG::fmt
+  CONAN_PKG::corrade
 )
 
 # TODO test address sanitizer with -fno-omit-frame-pointer

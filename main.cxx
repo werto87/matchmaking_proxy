@@ -6,22 +6,38 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
+#include <Corrade/Utility/Arguments.h>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/json/src.hpp>
 #include <sodium/core.h>
 
-auto const DEFAULT_PORT_USER = u_int16_t{ 55555 };
-auto const DEFAULT_PORT_MATCHMAKING_TO_GAME = u_int16_t{ 4242 };
-auto const DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING = u_int16_t{ 3232 };
-auto const DEFAULT_PORT_GAME_TO_MATCHMAKING = u_int16_t{ 12312 };
-auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
-auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
-auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
-auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
+auto const DEFAULT_PORT_USER = std::string{ "55555" };
+auto const DEFAULT_PORT_MATCHMAKING_TO_GAME = std::string{ "4242" };
+auto const DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING = std::string{ "3232" };
+auto const DEFAULT_PORT_GAME_TO_MATCHMAKING = std::string{ "12312" };
+auto const DEFAULT_PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
+auto const DEFAULT_PATH_TO_PRIVATE_FILE = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
+auto const DEFAULT_PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
+auto const DEFAULT_SECRETS_POLLING_SLEEP_TIMER_SECONDS = std::string{ "2" };
+auto const DEFAULT_ADDRESS_OF_GAME = std::string{ "127.0.0.1" };
 
 int
-main ()
+main (int argc, char **argv)
 {
+  Corrade::Utility::Arguments args{};
+  // clang-format off
+  args
+    .addOption("port-user", DEFAULT_PORT_USER).setHelp("port-user", "port user to game via matchmaking")
+    .addOption("port-matchmaking-to-game", DEFAULT_PORT_MATCHMAKING_TO_GAME).setHelp("port-matchmaking-to-game", "port matchmaking to game")
+    .addOption("port-user-to-game-via-matchmaking", DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING).setHelp("port-user-to-game-via-matchmaking", "port user to game via matchmaking")
+    .addOption("port-game-to-matchmaking", DEFAULT_PORT_GAME_TO_MATCHMAKING).setHelp("port-game-to-matchmaking", "port game to matchmaking")
+    .addOption("path-to-chain-file", DEFAULT_PATH_TO_CHAIN_FILE).setHelp("path-to-chain-file", "path to chain file")
+    .addOption("path-to-private-file", DEFAULT_PATH_TO_PRIVATE_FILE).setHelp("path-to-private-file", "path to private file")
+    .addOption("path-to-dh-file", DEFAULT_PATH_TO_DH_File).setHelp("path-to-dh-file", "path to dh file")
+    .addOption("secrets-polling-sleep-time-seconds", DEFAULT_SECRETS_POLLING_SLEEP_TIMER_SECONDS).setHelp("secrets-polling-sleep-time-seconds", "secrets polling sleep time seconds")
+    .addOption("address-of-game", DEFAULT_ADDRESS_OF_GAME).setHelp("address-of-game", "address of game")
+    .setGlobalHelp("durak matchmaking")
+    .parse(argc, argv);
   if (sodium_init () < 0)
     {
       std::cout << "sodium_init <= 0" << std::endl;
@@ -39,12 +55,28 @@ main ()
       signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
       thread_pool pool{ 2 };
       auto server = Server{ ioContext, pool };
+      auto const PORT_USER =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-user")));
+      auto const PORT_MATCHMAKING_TO_GAME =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-matchmaking-to-game")));
+      auto const PORT_USER_TO_GAME_VIA_MATCHMAKING =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-user-to-game-via-matchmaking")));
+      auto const PORT_GAME_TO_MATCHMAKING =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-game-to-matchmaking")));
+      auto const PATH_TO_CHAIN_FILE =  args.value ("path-to-chain-file");
+      auto const PATH_TO_PRIVATE_FILE =  args.value ("path-to-private-file");
+      auto const PATH_TO_DH_File =  args.value ("path-to-dh-file");
+      auto const SECRETS_POLLING_SLEEP_TIMER_SECONDS =  std::stoul(args.value ("secrets-polling-sleep-time-seconds"));
+      std::string raw_ip_address = args.value ("address-of-game");
+      boost::system::error_code ec;
+      boost::asio::ip::address ADDRESS_GAME =
+      boost::asio::ip::address::from_string(raw_ip_address, ec);
+      if (ec.value() != 0) {
+      std::cout << " Failed to parse the IP address: '" << raw_ip_address << "' Error code = " << ec.value() << ". Message: " << ec.message()<<std::endl;
+      return ec.value();
+      }
       using namespace boost::asio::experimental::awaitable_operators;
-      auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_USER };
-      auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_MATCHMAKING_TO_GAME };
-      auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING };
-      auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), DEFAULT_PORT_GAME_TO_MATCHMAKING };
-      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
+      auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_USER };
+      auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ ADDRESS_GAME, PORT_MATCHMAKING_TO_GAME };
+      auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_USER_TO_GAME_VIA_MATCHMAKING };
+      auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_GAME_TO_MATCHMAKING };
+      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_FILE, PATH_TO_DH_File, std::chrono::seconds{SECRETS_POLLING_SLEEP_TIMER_SECONDS}, MatchmakingOption{}, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
       ioContext.run ();
     }
   catch (std::exception &e)

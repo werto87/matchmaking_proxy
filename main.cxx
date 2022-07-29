@@ -57,7 +57,7 @@ main (int argc, char **argv)
       auto server = Server{ ioContext, pool };
       auto const PORT_USER =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-user")));
       auto const PORT_MATCHMAKING_TO_GAME =  args.value ("port-matchmaking-to-game");
-      auto const PORT_USER_TO_GAME_VIA_MATCHMAKING =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-user-to-game-via-matchmaking")));
+      auto const PORT_USER_TO_GAME_VIA_MATCHMAKING =  args.value ("port-user-to-game-via-matchmaking");
       auto const PORT_GAME_TO_MATCHMAKING =  boost::numeric_cast<u_int16_t>(std::stoul(args.value ("port-game-to-matchmaking")));
       auto const PATH_TO_CHAIN_FILE =  args.value ("path-to-chain-file");
       auto const PATH_TO_PRIVATE_FILE =  args.value ("path-to-private-file");
@@ -66,9 +66,8 @@ main (int argc, char **argv)
       std::string ADDRESS_GAME = args.value ("address-of-game");
       using namespace boost::asio::experimental::awaitable_operators;
       auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_USER };
-      auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_USER_TO_GAME_VIA_MATCHMAKING };
       auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_GAME_TO_MATCHMAKING };
-      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_FILE, PATH_TO_DH_File, std::chrono::seconds{SECRETS_POLLING_SLEEP_TIMER_SECONDS}, MatchmakingOption{}, ADDRESS_GAME,PORT_MATCHMAKING_TO_GAME, userGameViaMatchmakingEndpoint) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
+      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_FILE, PATH_TO_DH_File, std::chrono::seconds{SECRETS_POLLING_SLEEP_TIMER_SECONDS}, MatchmakingOption{}, ADDRESS_GAME,PORT_MATCHMAKING_TO_GAME, PORT_USER_TO_GAME_VIA_MATCHMAKING) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
       ioContext.run ();
     }
   catch (std::exception &e)

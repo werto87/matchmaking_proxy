@@ -210,9 +210,12 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                   }
                 catch (std::exception const &e)
                   {
-                    std::cout << "exception: " << e.what () << std::endl;
-                    std::cout << "messageAsObject: " << objectAsString << std::endl;
-                    std::cout << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << std::endl;
+                    auto messageForUser = std::stringstream{};
+                    messageForUser << "exception: " << e.what () << std::endl;
+                    messageForUser << "messageAsObject: " << objectAsString << std::endl;
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << std::endl;
+                    // TODO send this also to user
+                    std::cout << messageForUser.str ();
                   }
 
                 if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
@@ -1080,9 +1083,12 @@ Matchmaking::processEvent (std::string const &event)
                   }
                 catch (std::exception const &e)
                   {
-                    std::cout << "exception: " << e.what () << std::endl;
-                    std::cout << "messageAsObject: " << messageAsObject << std::endl;
-                    std::cout << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << std::endl;
+                    auto messageForUser = std::stringstream{};
+                    messageForUser << "exception: " << e.what () << std::endl;
+                    messageForUser << "messageAsObject: " << messageAsObject << std::endl;
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << std::endl;
+                    // TODO send this also to user
+                    std::cout << messageForUser.str ();
                   }
               }
           }

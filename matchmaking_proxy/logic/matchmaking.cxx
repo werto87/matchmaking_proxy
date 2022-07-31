@@ -204,9 +204,18 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
               {
                 typeFound = true;
                 boost::json::error_code ec{};
-                sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
+                try
+                  {
+                    sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
+                  }
+                catch (std::exception const &e)
+                  {
+                    std::cout << "exception: " << e.what () << std::endl;
+                    std::cout << "messageAsObject: " << objectAsString << std::endl;
+                    std::cout << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << std::endl;
+                  }
+
                 if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
-                return;
               }
           });
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
@@ -1060,9 +1069,22 @@ Matchmaking::processEvent (std::string const &event)
             boost::json::error_code ec{};
             auto messageAsObject = confu_json::read_json (objectAsString, ec);
             if (ec) result = "read_json error: " + ec.message ();
-            else if (not sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (messageAsObject)))
-              result = "No transition found";
-            return;
+            else
+              {
+                try
+                  {
+                    if (not sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (messageAsObject)))
+                      {
+                        result = "No transition found";
+                      }
+                  }
+                catch (std::exception const &e)
+                  {
+                    std::cout << "exception: " << e.what () << std::endl;
+                    std::cout << "messageAsObject: " << messageAsObject << std::endl;
+                    std::cout << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << std::endl;
+                  }
+              }
           }
       });
       if (not typeFound) result = "could not find a match for typeToSearch in shared_class::gameTypes '" + typeToSearch + "'";

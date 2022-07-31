@@ -1,12 +1,13 @@
 set(TEST_TARGET_NAME _test)
-add_executable(${TEST_TARGET_NAME} 
-main.cxx
-util.cxx
-rating.cxx
-matchmaking.cxx
-useAsLib.cxx
-startGame.cxx
-server.cxx
+add_executable(${TEST_TARGET_NAME}
+    main.cxx
+    util.cxx
+    rating.cxx
+    matchmaking.cxx
+    useAsLib.cxx
+    startGame.cxx
+    server.cxx
+    gameOption.cxx
 )
 
 target_link_libraries(${TEST_TARGET_NAME}
@@ -16,7 +17,7 @@ target_link_libraries(${TEST_TARGET_NAME}
 )
 add_test(NAME ${TEST_TARGET_NAME}
     COMMAND ${TEST_TARGET_NAME} -r junit
-) 
+)
 
 target_compile_definitions(${TARGET_NAME_LIB} INTERFACE PATH_TO_USER_DEFINED_GAME_OPTION="test/userDefinedGameOption.hxx"
 )

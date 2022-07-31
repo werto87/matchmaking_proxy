@@ -105,7 +105,8 @@
 //     auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 };
 //     auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 3232 };
 //     using namespace boost::asio::experimental::awaitable_operators;
-//     co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, matchmakingGameEndpoint, userGameViaMatchmakingEndpoint) || server.gameMatchmaking (gameEndpoint), printException);
+//     co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, "localhost", "4242", "3232") || server.gameMatchmaking (gameEndpoint), printException);
+
 //     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
 //     auto const joinGameLogic = [] (auto &&, auto const &msg, auto &&myWebsocket) {
 //       std::vector<std::string> splitMessage{};

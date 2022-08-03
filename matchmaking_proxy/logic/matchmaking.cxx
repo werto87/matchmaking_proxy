@@ -214,7 +214,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                     messageForUser << "exception: " << e.what () << '\n';
                     messageForUser << "messageAsObject: " << objectAsString << '\n';
                     messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << '\n';
-                    // TODO send this also to user
+                    // TODO send this also to user 
                     std::cout << messageForUser.str () << std::endl;
                   }
 

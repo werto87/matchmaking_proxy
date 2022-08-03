@@ -211,11 +211,11 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                 catch (std::exception const &e)
                   {
                     auto messageForUser = std::stringstream{};
-                    messageForUser << "exception: " << e.what () << std::endl;
-                    messageForUser << "messageAsObject: " << objectAsString << std::endl;
-                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << std::endl;
+                    messageForUser << "exception: " << e.what () << '\n';
+                    messageForUser << "messageAsObject: " << objectAsString << '\n';
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << '\n';
                     // TODO send this also to user
-                    std::cout << messageForUser.str ();
+                    std::cout << messageForUser.str () << std::endl;
                   }
 
                 if (ec) std::cout << "read_json error: " << ec.message () << std::endl;

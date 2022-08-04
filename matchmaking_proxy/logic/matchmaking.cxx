@@ -49,6 +49,7 @@
 #include <cassert>
 #include <chrono>
 #include <confu_json/concept.hxx>
+#include <confu_json/to_json.hxx>
 #include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <cstddef>
@@ -212,8 +213,8 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                   {
                     auto messageForUser = std::stringstream{};
                     messageForUser << "exception: " << e.what () << '\n';
-                    messageForUser << "messageAsObject: " << objectAsString << '\n';
-                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << '\n';
+                    messageForUser << "objectAsString: '" << objectAsString << "'\n";
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
                     // TODO send this also to user
                     std::cout << messageForUser.str () << std::endl;
                   }
@@ -1086,7 +1087,7 @@ Matchmaking::processEvent (std::string const &event)
                     auto messageForUser = std::stringstream{};
                     messageForUser << "exception: " << e.what () << '\n';
                     messageForUser << "messageAsObject: " << messageAsObject << '\n';
-                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << '\n';
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << confu_json::to_json<> (x) << "'" << '\n';
                     // TODO send this also to user
                     std::cout << messageForUser.str () << std::endl;
                   }

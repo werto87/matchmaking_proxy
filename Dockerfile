@@ -5,6 +5,8 @@ COPY . /matchmaking_proxy
 
 RUN pacman-key --init
 
+RUN pacman -Sy archlinux-keyring --noconfirm
+
 RUN pacman -Syu --noconfirm
 
 # use pip here because its recomended way to install conan from the conan team

@@ -214,7 +214,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                     messageForUser << "exception: " << e.what () << '\n';
                     messageForUser << "messageAsObject: " << objectAsString << '\n';
                     messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << objectAsString << "'" << '\n';
-                    // TODO send this also to user 
+                    // TODO send this also to user
                     std::cout << messageForUser.str () << std::endl;
                   }
 
@@ -848,7 +848,7 @@ auto const connectToGameError = [] (user_matchmaking::ConnectGameError const &co
 auto const leaveGameLobbyErrorUserNotInGameLobby = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" })); };
 auto const leaveGameLobbyErrorControlledByMatchmaking = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" })); };
 auto const sendMessageToUser = [] (user_matchmaking::Message const &message, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (message)); };
-// TODO make it build with gcc 
+// TODO make it build with gcc
 
 template <class T>
 void
@@ -1084,11 +1084,11 @@ Matchmaking::processEvent (std::string const &event)
                 catch (std::exception const &e)
                   {
                     auto messageForUser = std::stringstream{};
-                    messageForUser << "exception: " << e.what () << std::endl;
-                    messageForUser << "messageAsObject: " << messageAsObject << std::endl;
-                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << std::endl;
+                    messageForUser << "exception: " << e.what () << '\n';
+                    messageForUser << "messageAsObject: " << messageAsObject << '\n';
+                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << messageAsObject << "'" << '\n';
                     // TODO send this also to user
-                    std::cout << messageForUser.str ();
+                    std::cout << messageForUser.str () << std::endl;
                   }
               }
           }

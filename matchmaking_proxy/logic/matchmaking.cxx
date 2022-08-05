@@ -211,12 +211,12 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                   }
                 catch (std::exception const &e)
                   {
-                    auto messageForUser = std::stringstream{};
-                    messageForUser << "exception: " << e.what () << '\n';
-                    messageForUser << "objectAsString: '" << objectAsString << "'\n";
-                    messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
-                    // TODO send this also to user
-                    std::cout << messageForUser.str () << std::endl;
+                    auto errorHandleMessageFromGame = std::stringstream{};
+                    errorHandleMessageFromGame << "exception: " << e.what () << '\n';
+                    errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
+                    errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
+                    std::cout << errorHandleMessageFromGame.str () << std::endl;
+                    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
                   }
 
                 if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
@@ -1088,8 +1088,7 @@ Matchmaking::processEvent (std::string const &event)
                     messageForUser << "exception: " << e.what () << '\n';
                     messageForUser << "messageAsObject: " << messageAsObject << '\n';
                     messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << confu_json::to_json<> (x) << "'" << '\n';
-                    // TODO send this also to user
-                    std::cout << messageForUser.str () << std::endl;
+                    result = messageForUser.str ();
                   }
               }
           }

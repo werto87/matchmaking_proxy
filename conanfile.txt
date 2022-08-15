@@ -18,4 +18,4 @@ cmake
 boost:header_only=True
 soci:with_sqlite3=True
 catch2:with_main=True
-catch2:with_benchmark=True 
+catch2:with_benchmark=True

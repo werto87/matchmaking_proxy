@@ -4,7 +4,7 @@ certify/cci.20201114
 boost/1.78.0
 confu_soci/0.2.0@werto87/stable
 libsodium/1.0.18
-confu_json/0.0.8@werto87/stable
+confu_json/0.0.9
 magic_enum/0.7.2 
 catch2/2.13.7
 pipes/1.0.0

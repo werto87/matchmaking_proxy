@@ -25,6 +25,7 @@ int
 main (int argc, char **argv)
 {
   Corrade::Utility::Arguments args{};
+
   // clang-format off
   args
     .addOption("port-user", DEFAULT_PORT_USER).setHelp("port-user", "port user to game via matchmaking")

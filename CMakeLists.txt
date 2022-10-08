@@ -3,6 +3,7 @@ project(project VERSION 1.0.0
   DESCRIPTION project
   LANGUAGES CXX
 )
+
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 include(cmake/Cache.cmake)
 set(PROJECT_WARNINGS project_warning)
@@ -46,20 +47,17 @@ target_compile_definitions(${TARGET_NAME_LIB} INTERFACE
 
   # BOOST_ASIO_ENABLE_HANDLER_TRACKING
   # LOG_FOR_STATE_MACHINE
-  LOG_CO_SPAWN_PRINT_EXCEPTIONS
-  LOG_MY_WEBSOCKET
-  LOG_MY_WEBSOCKET_READ_END
+#  LOG_CO_SPAWN_PRINT_EXCEPTIONS
+#  LOG_MY_WEBSOCKET
+#  LOG_MY_WEBSOCKET_READ_END
 
   # LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
 )
 
 # create executable
-OPTION(BUILD_TESTS "enable tests" OFF)
+enable_testing()
+add_subdirectory(test)
 
-IF(BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(test)
-ENDIF(BUILD_TESTS)
 
 set(TARGET_NAME project)
 add_executable(${TARGET_NAME} main.cxx)

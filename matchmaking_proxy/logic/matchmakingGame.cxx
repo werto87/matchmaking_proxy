@@ -31,6 +31,19 @@ auto const accountNamesToAccounts = [] (std::vector<std::string> const &accountN
          | ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | ranges::to<std::vector<database::Account>> ();
 };
 
+void
+sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameDependencies &matchmakingGameDependencies, std::vector<database::Account>const& accounts, const std::vector<database::Account> &accountsWithNewRating)
+{
+  for (size_t i = 0; i < accounts.size(); ++i)
+    {
+      if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=accounts.at (i).accountName](Matchmaking const& matchmaking){
+            return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
+          matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{accounts.at (i).rating,accountsWithNewRating.at (i).rating}));
+        }
+      soci::session sql (soci::sqlite3, databaseName);
+      confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
+    }
+}
 auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, MatchmakingGameDependencies &matchmakingGameDependencies) {
   if (gameOver.ratedGame)
     {
@@ -39,39 +52,16 @@ auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, Matchmakin
           auto losers=accountNamesToAccounts (gameOver.losers);
           auto winners=accountNamesToAccounts (gameOver.winners);
           auto [winnersWithNewRating, losersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
-          for (size_t i = 0; i < winners.size(); ++i)
-            {
-              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=winners.at (i).accountName](Matchmaking const& matchmaking){
-                    return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
-                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{winners.at (i).rating,winnersWithNewRating.at (i).rating}));
-                }
-              soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, winnersWithNewRating.at (i));
-            }
-          for (size_t i = 0; i < losers.size(); ++i)
-            {
-              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=losers.at (i).accountName](Matchmaking const& matchmaking){return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
-                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{losers.at (i).rating,losersWithNewRating.at (i).rating}));
-                }
-              soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, losersWithNewRating.at (i));
-            }
+          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, winners, winnersWithNewRating);
+          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, losers, losersWithNewRating);
         }
       else
         {
           auto draw=accountNamesToAccounts (gameOver.draws);
           auto drawNewRating=calcRatingDraw (accountNamesToAccounts (gameOver.draws));
-          for (size_t i = 0; i < draw.size(); ++i)
-            {
-              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=draw.at (i).accountName](Matchmaking const& matchmaking){return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
-                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{draw.at (i).rating,drawNewRating.at (i).rating}));
-                }
-              soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, drawNewRating.at (i));
-            }
+          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, draw, drawNewRating);
         }
     }
-
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
 };
 

@@ -8,8 +8,19 @@
 #include <string>
 
 typedef std::vector<std::pair<std::string, long long int>> UserTimeMilliseconds;
-BOOST_FUSION_DEFINE_STRUCT ((shared_class), DurakTimers, (UserTimeMilliseconds, runningTimeUserTimePointMilliseconds) (UserTimeMilliseconds, pausedTimeUserDurationMilliseconds))
-BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, (durak::GameOption, gameOption) (shared_class::DurakTimers, durakTimers)) // TODO-TEMPLATE add game options
+
+namespace shared_class
+{
+enum struct TimerType
+{
+  noTimer,
+  resetTimeOnNewRound,
+  addTimeOnNewRound
+};
+}
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), DurakTimers, (shared_class::TimerType, timerType) (UserTimeMilliseconds, runningTimeUserTimePointMilliseconds) (UserTimeMilliseconds, pausedTimeUserDurationMilliseconds))
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), TimerOption, (shared_class::TimerType, timerType) (uint64_t, timeAtStartInSeconds) (uint64_t, timeForEachRoundInSeconds))
+BOOST_FUSION_DEFINE_STRUCT ((shared_class), GameOption, (durak::GameOption, gameOption) (shared_class::TimerOption, timerOption)) // TODO-TEMPLATE add game options
 
 std::optional<std::string> inline errorInGameOption (shared_class::GameOption const &)
 {

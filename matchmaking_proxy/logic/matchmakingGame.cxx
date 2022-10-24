@@ -36,27 +36,42 @@ auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, Matchmakin
     {
       if (gameOver.draws.empty ())
         {
-          auto [winners, losers] = calcRatingLoserAndWinner (accountNamesToAccounts (gameOver.losers), accountNamesToAccounts (gameOver.winners));
-          for (auto const &account : winners)
+          auto losers=accountNamesToAccounts (gameOver.losers);
+          auto winners=accountNamesToAccounts (gameOver.winners);
+          auto [winnersWithNewRating, losersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
+          for (size_t i = 0; i < winners.size(); ++i)
             {
+              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=winners.at (i).accountName](Matchmaking const& matchmaking){
+                    return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
+                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{winners.at (i).rating,winnersWithNewRating.at (i).rating}));
+                }
               soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, account);
+              confu_soci::upsertStruct (sql, winnersWithNewRating.at (i));
             }
-          for (auto const &account : losers)
+          for (size_t i = 0; i < losers.size(); ++i)
             {
+              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=losers.at (i).accountName](Matchmaking const& matchmaking){return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
+                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{losers.at (i).rating,losersWithNewRating.at (i).rating}));
+                }
               soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, account);
+              confu_soci::upsertStruct (sql, losersWithNewRating.at (i));
             }
         }
       else
         {
-          for (auto const &account : calcRatingDraw (accountNamesToAccounts (gameOver.draws)))
+          auto draw=accountNamesToAccounts (gameOver.draws);
+          auto drawNewRating=calcRatingDraw (accountNamesToAccounts (gameOver.draws));
+          for (size_t i = 0; i < draw.size(); ++i)
             {
+              if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=draw.at (i).accountName](Matchmaking const& matchmaking){return matchmaking.isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
+                  matchmakingItr->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{draw.at (i).rating,drawNewRating.at (i).rating}));
+                }
               soci::session sql (soci::sqlite3, databaseName);
-              confu_soci::upsertStruct (sql, account);
+              confu_soci::upsertStruct (sql, drawNewRating.at (i));
             }
         }
     }
+
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
 };
 

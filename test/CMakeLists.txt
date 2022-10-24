@@ -8,7 +8,7 @@ add_executable(${TEST_TARGET_NAME}
     startGame.cxx
     server.cxx
     gameOption.cxx
-)
+        matchmakingGame.cpp)
 
 target_link_libraries(${TEST_TARGET_NAME}
     ${TARGET_NAME_LIB}

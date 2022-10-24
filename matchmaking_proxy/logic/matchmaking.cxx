@@ -289,6 +289,8 @@ matchingLobby (std::string const &accountName, GameLobby const &gameLobby, GameL
 }
 
 auto const sendToUser = [] (SendMessageToUser const &sendMessageToUser, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (sendMessageToUser.msg); };
+auto const ratingChanged = [] (user_matchmaking::RatingChanged const &ratingChangedEv, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (ratingChangedEv)); };
+
 auto const leaveGame = [] (MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.close (); };
 
 auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
@@ -978,6 +980,7 @@ public:
 // GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------  
 ,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
+, state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
         // clang-format on
     );
   }

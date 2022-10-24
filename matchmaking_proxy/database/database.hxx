@@ -15,7 +15,7 @@ void createDatabaseIfNotExist ();
 
 void createTables ();
 
-boost::optional<Account> createAccount (std::string const &accountName, std::string const &password);
+boost::optional<Account> createAccount (std::string const &accountName, std::string const &password,size_t startRating=1500);
 }
 
 #endif /* B86FE02F_B7D0_4435_9031_A334C305B294 */

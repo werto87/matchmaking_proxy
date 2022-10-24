@@ -65,12 +65,10 @@ createTables ()
     }
 }
 
-auto constexpr START_RATING = 1500;
-
 boost::optional<Account>
-createAccount (std::string const &accountName, std::string const &password)
+createAccount (std::string const &accountName, std::string const &password,size_t startRating)
 {
   soci::session sql (soci::sqlite3, databaseName);
-  return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, START_RATING }, true));
+  return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));
 }
 }

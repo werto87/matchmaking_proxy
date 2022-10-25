@@ -282,7 +282,7 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
 };
 
 boost::asio::awaitable<void>
-createGame (user_matchmaking::CreateGame createGameEv, auto &&sm, auto &&deps, auto &&subs) {
+createGame (user_matchmaking::CreateGame , auto &&, auto &&deps, auto &&) {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
                                                 [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
@@ -605,7 +605,6 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
             }
           else
             {
-              auto result = std::vector<std::string>{};
               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
               usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
               usersInGameLobby.name = newGameLobby.name.value ();

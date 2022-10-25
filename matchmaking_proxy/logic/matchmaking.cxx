@@ -245,10 +245,98 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
     }
 }
 
+void sendMessageToUsers (std::string const &message, std::vector<std::string> const &accountNames, MatchmakingData &matchmakingData);
+
+auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, MatchmakingData &matchmakingData) {
+  if (gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
+    {
+      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | ranges::to<std::vector<std::string>> (), matchmakingData);
+      gameLobby->readyUsers.push_back (gameLobby->accountNames.at (0));
+    }
+  else
+    {
+      sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), matchmakingData);
+    }
+
+  gameLobby->startTimerToAcceptTheInvite (matchmakingData.ioContext, [gameLobby, &matchmakingData] () {
+    auto notReadyUsers = std::vector<std::string>{};
+    ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
+    sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers, matchmakingData);
+    for (auto const &notReadyUser : notReadyUsers)
+      {
+        if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
+          {
+            gameLobby->removeUser (notReadyUser);
+          }
+      }
+    if (gameLobby->accountNames.empty ())
+      {
+        matchmakingData.gameLobbies.erase (gameLobby);
+      }
+    else
+      {
+        gameLobby->readyUsers.clear ();
+        sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), matchmakingData);
+      }
+  });
+};
+
+boost::asio::awaitable<void>
+createGame (user_matchmaking::CreateGame createGameEv, auto &&sm, auto &&deps, auto &&subs) {
+  auto &matchmakingData = aux::get<MatchmakingData &> (deps);
+  if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
+                                                [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
+                                                  auto const &accountNames = gameLobby.accountNames;
+                                                  return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                });
+      gameLobbyWithUser != matchmakingData.gameLobbies.end ())
+    {
+      if (gameLobbyWithUser->getWaitingForAnswerToStartGame ())
+        {
+          matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
+        }
+      else
+        {
+          if (gameLobbyWithUser->isGameLobbyAdmin (matchmakingData.user.accountName))
+            {
+              if (gameLobbyWithUser->accountNames.size ()+gameLobbyWithUser->gameOption.computerControlledPlayerCount >= 2)
+                {
+                  if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
+                    {
+                      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ gameOptionError.value () }));
+                    }
+                  else
+                    {
+                      if (gameLobbyWithUser->accountNames.size ()>1){
+                          askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
+                        }else{
+                          co_await startGame (*gameLobbyWithUser, matchmakingData);
+                          matchmakingData.gameLobbies.erase (gameLobbyWithUser);
+                        }
+                    }
+                }
+              else
+                {
+                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "You need atleast two user to create a game" }));
+                }
+            }
+          else
+            {
+              matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
+            }
+        }
+    }
+  else
+    {
+      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "Could not find a game lobby for the user" }));
+    }
+};
+
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), printException); };
 auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), printException); };
 auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), printException); };
 auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException); };
+auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs), printException); };
 
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRatingDifference)
@@ -536,85 +624,11 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
     }
 };
 
-void sendMessageToUsers (std::string const &message, std::vector<std::string> const &accountNames, MatchmakingData &matchmakingData);
 
-auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, MatchmakingData &matchmakingData) {
-  if (gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
-    {
-      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | ranges::to<std::vector<std::string>> (), matchmakingData);
-      gameLobby->readyUsers.push_back (gameLobby->accountNames.at (0));
-    }
-  else
-    {
-      sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), matchmakingData);
-    }
 
-  gameLobby->startTimerToAcceptTheInvite (matchmakingData.ioContext, [gameLobby, &matchmakingData] () {
-    auto notReadyUsers = std::vector<std::string>{};
-    ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
-    sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers, matchmakingData);
-    for (auto const &notReadyUser : notReadyUsers)
-      {
-        if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
-          {
-            gameLobby->removeUser (notReadyUser);
-          }
-      }
-    if (gameLobby->accountNames.empty ())
-      {
-        matchmakingData.gameLobbies.erase (gameLobby);
-      }
-    else
-      {
-        gameLobby->readyUsers.clear ();
-        sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), matchmakingData);
-      }
-  });
-};
 
-auto const createGame = [] (MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
-                                                [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
-                                                  auto const &accountNames = gameLobby.accountNames;
-                                                  return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
-                                                });
-      gameLobbyWithUser != matchmakingData.gameLobbies.end ())
-    {
-      if (gameLobbyWithUser->getWaitingForAnswerToStartGame ())
-        {
-          matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "It is not allowed to start a game while ask to start a game is running" }));
-        }
-      else
-        {
-          if (gameLobbyWithUser->isGameLobbyAdmin (matchmakingData.user.accountName))
-            {
-              if (gameLobbyWithUser->accountNames.size () >= 2)
-                {
-                  if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
-                    {
-                      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ gameOptionError.value () }));
-                    }
-                  else
-                    {
-                      askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
-                    }
-                }
-              else
-                {
-                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "You need atleast two user to create a game" }));
-                }
-            }
-          else
-            {
-              matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "you need to be admin in a game lobby to start a game" }));
-            }
-        }
-    }
-  else
-    {
-      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "Could not find a game lobby for the user" }));
-    }
-};
+
+
 
 auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannelObject, MatchmakingData &matchmakingData) {
   if (matchmakingData.user.communicationChannels.erase (leaveChannelObject.channel))
@@ -967,7 +981,7 @@ public:
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking         
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby         
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby         
-, state<LoggedIn>                             + event<u_m::CreateGame>                                                            / createGame         
+, state<LoggedIn>                             + event<u_m::CreateGame>                                                            / createGameWrapper
 , state<LoggedIn>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper          
 , state<LoggedIn>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue          
 , state<LoggedIn>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         

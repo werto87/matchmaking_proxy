@@ -139,7 +139,6 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
     ioContext.run ();
     CHECK (messages.size () == 2);
     CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
-    CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
   }
   SECTION ("JoinGameLobby", "[matchmaking]")
   {

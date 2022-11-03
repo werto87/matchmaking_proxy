@@ -102,17 +102,17 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              matchmakings.emplace_back (Matchmaking{ MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint () } });
-              std::list<Matchmaking>::iterator matchmaking = std::prev (matchmakings.end ());
+              matchmakings.emplace_back (std::make_shared<Matchmaking> (Matchmaking{ MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->sendMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint () } }));
+              std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
-                if (matchmaking->hasProxyToGame ())
+                if (matchmaking->get ()->hasProxyToGame ())
                   {
-                    matchmaking->sendMessageToGame (msg);
+                    matchmaking->get ()->sendMessageToGame (msg);
                   }
                 else
                   {
-                    if (auto const &error = matchmaking->processEvent (msg))
+                    if (auto const &error = matchmaking->get ()->processEvent (msg))
                       {
                         myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, error.value () }));
                       }
@@ -120,6 +120,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               }) && myWebsocket->writeLoop (),
                         [&matchmakings = matchmakings, matchmaking] (auto eptr) {
                           printException (eptr);
+                          matchmaking->get ()->disconnectFromProxy ();
                           matchmakings.erase (matchmaking);
                         });
             }

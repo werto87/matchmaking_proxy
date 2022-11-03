@@ -224,26 +224,32 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           });
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
         }
-      using namespace boost::asio::experimental::awaitable_operators;
-      co_await(matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
-        if ("LeaveGameSuccess|{}" == readResult)
-          {
-            sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
-          }
-        else
-          {
-            matchmakingData.sendMsgToUser (readResult);
-          }
-      }) || matchmakingData.matchmakingGame.writeLoop ());
-      sm.process_event (ConnectionToGameLost{}, deps, subs);
+      if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
+        {
+          auto matchmakingForAccountSharedPtr=*matchmakingForAccount; // shared_ptr so matchmaking survives long enough. Problem is with matchmakings.erase (matchmaking); in server.cxx and this code here. It is possible that the app crashes if matchmaking gets erased and matchmakingData.sendMsgToUser (readResult); gets called
+//        TODO write a test for this. There are other tests creating a matchmaking list and I could remove the actual matmacking from that list and send a message from the mock server to the matchmaking
+          using namespace boost::asio::experimental::awaitable_operators;
+              co_await (matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
+                if ("LeaveGameSuccess|{}" == readResult)
+                  {
+                    sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+                  }
+                else
+                  {
+                    matchmakingData.sendMsgToUser (readResult);
+                  }
+              }) && matchmakingData.matchmakingGame.writeLoop ());
+          sm.process_event (ConnectionToGameLost{}, deps, subs);
+        }
     }
-  catch (std::exception const &e)
-    {
-      std::cout << "exception: " << e.what ();
-      sm.process_event (user_matchmaking::ConnectGameError{ e.what () }, deps, subs);
-      throw e;
-    }
-}
+      catch (std::exception const &e)
+        {
+            std::cout << "exception: " << e.what ()<<std::endl;
+            sm.process_event (user_matchmaking::ConnectGameError{ e.what () }, deps, subs);
+            throw e;
+        }
+       }
+
 
 void sendMessageToUsers (std::string const &message, std::vector<std::string> const &accountNames, MatchmakingData &matchmakingData);
 
@@ -643,9 +649,9 @@ auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannel
 };
 
 auto const broadCastMessage = [] (user_matchmaking::BroadCastMessage const &broadCastMessageObject, MatchmakingData &matchmakingData) {
-  for (Matchmaking &matchmaking : matchmakingData.stateMachines | ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (Matchmaking const &matchmaking) { return matchmaking.isUserInChatChannel (chatChannel); }))
+  for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (auto const &matchmaking) { return matchmaking->isUserInChatChannel (chatChannel); }))
     {
-      processEvent (matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
+      processEvent (*matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
     }
 };
 
@@ -840,7 +846,7 @@ auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingDat
          != matchmakingData.gameLobbies.end ();
 };
 
-auto const alreadyLoggedIn = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = typeWithAccountName.accountName] (const Matchmaking &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
+auto const alreadyLoggedIn = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = typeWithAccountName.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
 
 auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
   auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
@@ -1170,9 +1176,9 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
         {
           for (auto const &accountName : gameLobby.accountNames)
             {
-              if (auto matchmakingItr = ranges::find_if (matchmakingData.stateMachines, [&accountName] (Matchmaking const &matchmaking) { return matchmaking.isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
+              if (auto matchmakingItr = ranges::find_if (matchmakingData.stateMachines, [&accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
                 {
-                  matchmakingItr->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
+                  matchmakingItr->get()->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
                 }
             }
         }
@@ -1196,9 +1202,9 @@ sendMessageToUsers (std::string const &message, std::vector<std::string> const &
 {
   for (auto const &accountToSendMessageTo : accountNames)
     {
-      for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::remove_if ([&accountToSendMessageTo] (Matchmaking const &matchmaking) { return matchmaking.sm->matchmakingData.user.accountName != accountToSendMessageTo; }))
+      for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::remove_if ([&accountToSendMessageTo] (auto const &matchmaking) { return matchmaking->sm->matchmakingData.user.accountName != accountToSendMessageTo; }))
         {
-          matchmaking.sm->impl.process_event (SendMessageToUser{ message });
+          matchmaking->sm->impl.process_event (SendMessageToUser{ message });
         }
     }
 }

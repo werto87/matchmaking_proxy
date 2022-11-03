@@ -20,7 +20,7 @@ class MatchmakingGame
   };
 
 public:
-  MatchmakingGame (std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &)> sendToGame);
+  MatchmakingGame (std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &)> sendToGame);
 
   void process_event (std::string const &event);
 

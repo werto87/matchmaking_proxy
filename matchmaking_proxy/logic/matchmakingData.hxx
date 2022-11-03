@@ -10,7 +10,7 @@
 
 struct MatchmakingData
 {
-  MatchmakingData (boost::asio::io_context &ioContext_, std::list<Matchmaking> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_) : ioContext{ ioContext_ }, stateMachines{ stateMachines_ }, sendMsgToUser{ sendMsgToUser_ }, gameLobbies{ gameLobbies_ }, pool{ pool_ }, matchmakingOption{ matchmakingOption_ }, matchmakingGameEndpoint{ matchmakingGameEndpoint_ }, userGameViaMatchmakingEndpoint{ userGameViaMatchmakingEndpoint_ } { cancelCoroutineTimer->expires_at (std::chrono::system_clock::time_point::max ()); }
+  MatchmakingData (boost::asio::io_context &ioContext_, std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_) : ioContext{ ioContext_ }, stateMachines{ stateMachines_ }, sendMsgToUser{ sendMsgToUser_ }, gameLobbies{ gameLobbies_ }, pool{ pool_ }, matchmakingOption{ matchmakingOption_ }, matchmakingGameEndpoint{ matchmakingGameEndpoint_ }, userGameViaMatchmakingEndpoint{ userGameViaMatchmakingEndpoint_ } { cancelCoroutineTimer->expires_at (std::chrono::system_clock::time_point::max ()); }
 
   boost::asio::awaitable<std::optional<boost::system::system_error>>
   cancelCoroutine ()
@@ -42,7 +42,7 @@ struct MatchmakingData
 
   boost::asio::io_context &ioContext;
   std::unique_ptr<CoroTimer> cancelCoroutineTimer{ std::make_unique<CoroTimer> (CoroTimer{ ioContext }) };
-  std::list<Matchmaking> &stateMachines;
+  std::list<std::shared_ptr<Matchmaking>> &stateMachines;
   std::function<void (std::string const &msg)> sendMsgToUser{};
   User user{};
   std::list<GameLobby> &gameLobbies;

@@ -173,7 +173,7 @@ template <class T>
 inline void
 MyWebsocket<T>::close ()
 {
-  webSocket->close ("User left game");
+  if (webSocket) webSocket->close ("User left game");
 }
 
 #endif /* FDE41782_20C3_436A_B415_E198F593F0AE */

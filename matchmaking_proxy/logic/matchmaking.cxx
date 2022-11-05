@@ -226,10 +226,10 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
         }
       if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
         {
-          auto matchmakingForAccountSharedPtr=*matchmakingForAccount; // shared_ptr so matchmaking survives long enough. Problem is with matchmakings.erase (matchmaking); in server.cxx and this code here. It is possible that the app crashes if matchmaking gets erased and matchmakingData.sendMsgToUser (readResult); gets called
-//        TODO write a test for this. There are other tests creating a matchmaking list and I could remove the actual matmacking from that list and send a message from the mock server to the matchmaking
           using namespace boost::asio::experimental::awaitable_operators;
-              co_await (matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
+              co_await (matchmakingData.matchmakingGame.readLoop ([&,
+                                                               matchmakingForAccountSharedPtr=*matchmakingForAccount // shared_ptr so matchmaking survives long enough. Problem is with matchmakings.erase (matchmaking); in server.cxx and this code here. It is possible that the app crashes if matchmaking gets erased and matchmakingData.sendMsgToUser (readResult); gets called
+          ] (std::string const &readResult) {
                 if ("LeaveGameSuccess|{}" == readResult)
                   {
                     sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
@@ -239,13 +239,12 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                     matchmakingData.sendMsgToUser (readResult);
                   }
               }) && matchmakingData.matchmakingGame.writeLoop ());
-          sm.process_event (ConnectionToGameLost{}, deps, subs);
         }
     }
       catch (std::exception const &e)
         {
+            sm.process_event (ConnectionToGameLost{}, deps, subs);
             std::cout << "exception: " << e.what ()<<std::endl;
-            sm.process_event (user_matchmaking::ConnectGameError{ e.what () }, deps, subs);
             throw e;
         }
        }

@@ -182,6 +182,9 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
+  if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
+    {
+      auto matchmakingForAccountSptr=*matchmakingForAccount;
   try
     {
       co_await ws->next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
@@ -224,12 +227,9 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           });
           if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
         }
-      if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
-        {
+
           using namespace boost::asio::experimental::awaitable_operators;
-              co_await (matchmakingData.matchmakingGame.readLoop ([&,
-                                                               matchmakingForAccountSharedPtr=*matchmakingForAccount // shared_ptr so matchmaking survives long enough. Problem is with matchmakings.erase (matchmaking); in server.cxx and this code here. It is possible that the app crashes if matchmaking gets erased and matchmakingData.sendMsgToUser (readResult); gets called
-          ] (std::string const &readResult) {
+              co_await (matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
                 if ("LeaveGameSuccess|{}" == readResult)
                   {
                     sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
@@ -239,7 +239,6 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                     matchmakingData.sendMsgToUser (readResult);
                   }
               }) && matchmakingData.matchmakingGame.writeLoop ());
-        }
     }
       catch (std::exception const &e)
         {
@@ -247,7 +246,8 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
             std::cout << "exception: " << e.what ()<<std::endl;
             throw e;
         }
-       }
+    }
+}
 
 
 void sendMessageToUsers (std::string const &message, std::vector<std::string> const &accountNames, MatchmakingData &matchmakingData);

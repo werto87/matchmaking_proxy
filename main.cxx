@@ -37,6 +37,7 @@ main (int argc, char **argv)
     .addOption("path-to-dh-file", DEFAULT_PATH_TO_DH_File).setHelp("path-to-dh-file", "path to dh file")
     .addOption("secrets-polling-sleep-time-seconds", DEFAULT_SECRETS_POLLING_SLEEP_TIMER_SECONDS).setHelp("secrets-polling-sleep-time-seconds", "secrets polling sleep time seconds")
     .addOption("address-of-game", DEFAULT_ADDRESS_OF_GAME).setHelp("address-of-game", "address of game")
+    .addBooleanOption("ssl-context-verify-none").setHelp("ssl-context-verify-none", "disable ssl verification for user to matchmaking usefull for debuging with google chrome")
     .setGlobalHelp("durak matchmaking")
     .parse(argc, argv);
   if (sodium_init () < 0)
@@ -65,10 +66,11 @@ main (int argc, char **argv)
       auto const PATH_TO_DH_File =  args.value ("path-to-dh-file");
       auto const SECRETS_POLLING_SLEEP_TIMER_SECONDS =  std::stoul(args.value ("secrets-polling-sleep-time-seconds"));
       std::string ADDRESS_GAME = args.value ("address-of-game");
+      auto const SSL_CONTEXT_VERIFY_NONE= args.isSet("ssl-context-verify-none");
       using namespace boost::asio::experimental::awaitable_operators;
       auto userEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_USER };
       auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), PORT_GAME_TO_MATCHMAKING };
-      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_FILE, PATH_TO_DH_File, std::chrono::seconds{SECRETS_POLLING_SLEEP_TIMER_SECONDS}, MatchmakingOption{}, ADDRESS_GAME,PORT_MATCHMAKING_TO_GAME, PORT_USER_TO_GAME_VIA_MATCHMAKING) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
+      co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_FILE, PATH_TO_DH_File, std::chrono::seconds{SECRETS_POLLING_SLEEP_TIMER_SECONDS}, MatchmakingOption{}, ADDRESS_GAME,PORT_MATCHMAKING_TO_GAME, PORT_USER_TO_GAME_VIA_MATCHMAKING,SSL_CONTEXT_VERIFY_NONE) && server.gameMatchmaking (gameMatchmakingEndpoint), printException);
       ioContext.run ();
     }
   catch (std::exception &e)

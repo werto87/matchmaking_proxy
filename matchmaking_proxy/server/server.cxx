@@ -56,14 +56,21 @@ tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds con
 }
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
 {
   try
     {
       auto executor = co_await this_coro::executor;
       tcp_acceptor acceptor (executor, userEndpoint);
       net::ssl::context ctx (net::ssl::context::tls_server);
-      ctx.set_verify_mode (ssl::context::verify_peer);
+      if (sslContextVerifyNone)
+        {
+          ctx.set_verify_mode (ssl::context::verify_none);
+        }
+      else
+        {
+          ctx.set_verify_mode (ssl::context::verify_peer);
+        }
       ctx.set_default_verify_paths ();
       co_await tryUntilNoException (
           [&pathToChainFile, &ctx] () {

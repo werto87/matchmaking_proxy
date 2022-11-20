@@ -144,7 +144,7 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
 {
   auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
   matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings,
-                                                                [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
+                                                                [&messages, &ioContext, &proxyStartedCalled] (const std::string &msg) {
                                                                   messages.push_back (msg);
                                                                   if (msg == "ProxyStarted|{}")
                                                                     {

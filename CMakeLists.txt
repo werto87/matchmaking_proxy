@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 project(project VERSION 1.0.0
-  DESCRIPTION project
-  LANGUAGES CXX
-)
+        DESCRIPTION project
+        LANGUAGES CXX
+        )
 
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 include(cmake/Cache.cmake)
@@ -16,43 +16,44 @@ target_compile_features(${PROJECT_OPTIONS} INTERFACE cxx_std_20)
 include(cmake/StaticAnalyzers.cmake)
 include(cmake/Sanitizers.cmake)
 enable_sanitizers(${PROJECT_OPTIONS})
-if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-  include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-  conan_basic_setup(TARGETS)
-else()
-  message(WARNING "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
-endif()
+if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+else ()
+    message(WARNING "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
+endif ()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(TARGET_NAME_LIB project_lib)
 add_library(${TARGET_NAME_LIB} INTERFACE)
 add_subdirectory(matchmaking_proxy)
 target_link_libraries(${TARGET_NAME_LIB} INTERFACE
-  ${PROJECT_WARNINGS}
-  ${PROJECT_OPTIONS}
-  CONAN_PKG::range-v3
-  CONAN_PKG::confu_soci
-  CONAN_PKG::confu_json
-  CONAN_PKG::libsodium
-  CONAN_PKG::certify
-  CONAN_PKG::pipes
-  CONAN_PKG::sml
-  CONAN_PKG::fmt
-  CONAN_PKG::corrade
-)
+        ${PROJECT_WARNINGS}
+        ${PROJECT_OPTIONS}
+        CONAN_PKG::range-v3
+        CONAN_PKG::confu_soci
+        CONAN_PKG::confu_json
+        CONAN_PKG::libsodium
+        CONAN_PKG::certify
+        CONAN_PKG::pipes
+        CONAN_PKG::sml
+        CONAN_PKG::fmt
+        CONAN_PKG::corrade
+        CONAN_PKG::modern_durak_shared_type
+        )
 
 # TODO test address sanitizer with -fno-omit-frame-pointer
 target_compile_definitions(${TARGET_NAME_LIB} INTERFACE
-  $<$<CONFIG:DEBUG>:DEBUG>
-  _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+        $<$<CONFIG:DEBUG>:DEBUG>
+        _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 
-  # BOOST_ASIO_ENABLE_HANDLER_TRACKING
-  # LOG_FOR_STATE_MACHINE
-  LOG_CO_SPAWN_PRINT_EXCEPTIONS
-  LOG_MY_WEBSOCKET
-#  LOG_MY_WEBSOCKET_READ_END
+        # BOOST_ASIO_ENABLE_HANDLER_TRACKING
+        # LOG_FOR_STATE_MACHINE
+        LOG_CO_SPAWN_PRINT_EXCEPTIONS
+        LOG_MY_WEBSOCKET
+        #  LOG_MY_WEBSOCKET_READ_END
 
-  # LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
-)
+        # LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
+        )
 
 # create executable
 enable_testing()
@@ -62,19 +63,19 @@ add_subdirectory(test)
 set(TARGET_NAME project)
 add_executable(${TARGET_NAME} main.cxx)
 target_link_libraries(${TARGET_NAME} PRIVATE
-  ${TARGET_NAME_LIB}
-  ${PROJECT_WARNINGS}
-  ${PROJECT_OPTIONS}
-  CONAN_PKG::range-v3
-  CONAN_PKG::confu_soci
-  CONAN_PKG::confu_json
-  CONAN_PKG::libsodium
-  CONAN_PKG::certify
-  CONAN_PKG::pipes
-  CONAN_PKG::sml
-  CONAN_PKG::fmt
-  CONAN_PKG::durak
-)
+        ${TARGET_NAME_LIB}
+        ${PROJECT_WARNINGS}
+        ${PROJECT_OPTIONS}
+        CONAN_PKG::range-v3
+        CONAN_PKG::confu_soci
+        CONAN_PKG::confu_json
+        CONAN_PKG::libsodium
+        CONAN_PKG::certify
+        CONAN_PKG::pipes
+        CONAN_PKG::sml
+        CONAN_PKG::fmt
+        CONAN_PKG::durak
+        )
 
 target_compile_definitions(${TARGET_NAME} PRIVATE PATH_TO_USER_DEFINED_GAME_OPTION="userDefinedGameOption.hxx"
-)
+        )

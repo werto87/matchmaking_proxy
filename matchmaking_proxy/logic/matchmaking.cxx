@@ -5,10 +5,8 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/pw_hash/passwordHash.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
@@ -59,6 +57,8 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
+#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
 #include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>

@@ -1,10 +1,8 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/matchmakingGameSerialization.hxx"
 #include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
-#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "test/mockserver.hxx"
 #include <algorithm> // for max
@@ -25,6 +23,8 @@
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
+#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
+#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>
@@ -59,7 +59,7 @@ connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio:
           static size_t id = 0;
           auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
-          co_await(myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
+          co_await (myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);
             handleMsgFromGame (ioContext, msg, myWebsocket);
           }) && myWebsocket->writeLoop ());
@@ -98,7 +98,7 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
           static size_t id = 0;
           auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
-          co_await(myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
+          co_await (myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
             if (msg == "GameOverSuccess|{}")
               {
                 ioContext.stop ();

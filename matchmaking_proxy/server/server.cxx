@@ -2,7 +2,6 @@
 #include "matchmakingOption.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "myWebsocket.hxx"
 #include "server.hxx"
@@ -20,6 +19,7 @@
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
+#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>

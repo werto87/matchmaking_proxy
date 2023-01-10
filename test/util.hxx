@@ -3,10 +3,10 @@
 
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <iostream> // for operator<<, ostream
-#include <vector>   // for allocator
+#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
+#include <vector> // for allocator
 template <typename T, template <typename ELEM, typename ALLOC = std::allocator<ELEM>> class Container>
 std::ostream &
 operator<< (std::ostream &o, const Container<T> &container)

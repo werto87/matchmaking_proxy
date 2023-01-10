@@ -3,13 +3,13 @@
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx" // for Account
 #include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/matchmakingGameSerialization.hxx"
-#include "matchmaking_proxy/userMatchmakingSerialization.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <boost/sml.hpp>
 #include <confu_json/concept.hxx>
 #include <confu_json/confu_json.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
+#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
+#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/conversion.hpp>

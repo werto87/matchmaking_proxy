@@ -32,13 +32,13 @@ auto const accountNamesToAccounts = [] (std::vector<std::string> const &accountN
 };
 
 void
-sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameDependencies &matchmakingGameDependencies, std::vector<database::Account>const& accounts, const std::vector<database::Account> &accountsWithNewRating)
+sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameDependencies &matchmakingGameDependencies, std::vector<database::Account> const &accounts, const std::vector<database::Account> &accountsWithNewRating)
 {
-  for (size_t i = 0; i < accounts.size(); ++i)
+  for (size_t i = 0; i < accounts.size (); ++i)
     {
-      if(auto matchmakingItr=ranges::find_if(matchmakingGameDependencies.stateMachines,[accountName=accounts.at (i).accountName](auto const& matchmaking){
-            return matchmaking->isLoggedInWithAccountName (accountName);});matchmakingItr!=matchmakingGameDependencies.stateMachines.end()){
-          matchmakingItr->get()->processEvent (objectToStringWithObjectName(user_matchmaking::RatingChanged{accounts.at (i).rating,accountsWithNewRating.at (i).rating}));
+      if (auto matchmakingItr = ranges::find_if (matchmakingGameDependencies.stateMachines, [accountName = accounts.at (i).accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingGameDependencies.stateMachines.end ())
+        {
+          matchmakingItr->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
         }
       soci::session sql (soci::sqlite3, databaseName);
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
@@ -49,16 +49,16 @@ auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, Matchmakin
     {
       if (gameOver.draws.empty ())
         {
-          auto losers=accountNamesToAccounts (gameOver.losers);
-          auto winners=accountNamesToAccounts (gameOver.winners);
+          auto losers = accountNamesToAccounts (gameOver.losers);
+          auto winners = accountNamesToAccounts (gameOver.winners);
           auto [winnersWithNewRating, losersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, winners, winnersWithNewRating);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, losers, losersWithNewRating);
         }
       else
         {
-          auto draw=accountNamesToAccounts (gameOver.draws);
-          auto drawNewRating=calcRatingDraw (accountNamesToAccounts (gameOver.draws));
+          auto draw = accountNamesToAccounts (gameOver.draws);
+          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (gameOver.draws));
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, draw, drawNewRating);
         }
     }
@@ -74,7 +74,7 @@ auto const userLeftGameErrorUserHasNoProxy = [] (matchmaking_game::UserLeftGame 
 auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) {
   if (auto matchmaking = ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmaking == matchmakingGameDependencies.stateMachines.end ())
     {
-      matchmaking->get()->disconnectFromProxy ();
+      matchmaking->get ()->disconnectFromProxy ();
     }
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
 };
@@ -106,7 +106,7 @@ struct my_logger
   void
   log_process_event (const TEvent &event)
   {
-    if constexpr (confu_json::is_adapted_struct<TEvent>::value)
+    if constexpr (boost::fusion::traits::is_sequence<TEvent>::value)
       {
         std::cout << "\n[" << aux::get_type_name<SM> () << "]"
                   << "[process_event] '" << objectToStringWithObjectName (event) << "'" << std::endl;

@@ -82,10 +82,7 @@ using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
 template <typename T>
-concept hasAccountName = requires (T t)
-{
-  t.accountName;
-};
+concept hasAccountName = requires (T t) { t.accountName; };
 
 // work around to print type for debuging
 template <typename> struct Debug;
@@ -148,7 +145,7 @@ doHashPassword (user_matchmaking::CreateAccount createAccountObject, auto &sm, a
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   using namespace boost::asio::experimental::awaitable_operators;
-  std::variant<std::string, std::optional<boost::system::system_error>> hashedPw = co_await(async_hash (matchmakingData.pool, matchmakingData.ioContext, createAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
+  std::variant<std::string, std::optional<boost::system::system_error>> hashedPw = co_await (async_hash (matchmakingData.pool, matchmakingData.ioContext, createAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
   if (std::holds_alternative<std::string> (hashedPw))
     {
       sm.process_event (PasswordHashed{ createAccountObject.accountName, std::get<std::string> (hashedPw) }, deps, subs);
@@ -162,7 +159,7 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
   soci::session sql (soci::sqlite3, databaseName);
   auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName);
   using namespace boost::asio::experimental::awaitable_operators;
-  auto passwordMatches = co_await(async_check_hashed_pw (matchmakingData.pool, matchmakingData.ioContext, account->password, loginAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
+  auto passwordMatches = co_await (async_check_hashed_pw (matchmakingData.pool, matchmakingData.ioContext, account->password, loginAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
   if (std::holds_alternative<bool> (passwordMatches))
     {
       if (std::get<bool> (passwordMatches))
@@ -184,71 +181,70 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
   if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
     {
-      auto matchmakingForAccountSptr=*matchmakingForAccount;
-  try
-    {
-      co_await ws->next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
-      ws->next_layer ().expires_never ();
-      ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-      ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-      co_await ws->async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
-      static size_t id = 0;
-      matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
-      co_await matchmakingData.matchmakingGame.async_write_one_message (objectToStringWithObjectName (connectToGameEv));
-      auto connectToGameResult = co_await matchmakingData.matchmakingGame.async_read_one_message ();
-      std::vector<std::string> splitMesssage{};
-      boost::algorithm::split (splitMesssage, connectToGameResult, boost::is_any_of ("|"));
-      if (splitMesssage.size () == 2)
+      auto matchmakingForAccountSptr = *matchmakingForAccount;
+      try
         {
-          auto const &typeToSearch = splitMesssage.at (0);
-          auto const &objectAsString = splitMesssage.at (1);
-          bool typeFound = false;
-          boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
-            if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-              {
-                typeFound = true;
-                boost::json::error_code ec{};
-                try
+          co_await ws->next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
+          ws->next_layer ().expires_never ();
+          ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+          ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+          co_await ws->async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
+          static size_t id = 0;
+          matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
+          co_await matchmakingData.matchmakingGame.async_write_one_message (objectToStringWithObjectName (connectToGameEv));
+          auto connectToGameResult = co_await matchmakingData.matchmakingGame.async_read_one_message ();
+          std::vector<std::string> splitMesssage{};
+          boost::algorithm::split (splitMesssage, connectToGameResult, boost::is_any_of ("|"));
+          if (splitMesssage.size () == 2)
+            {
+              auto const &typeToSearch = splitMesssage.at (0);
+              auto const &objectAsString = splitMesssage.at (1);
+              bool typeFound = false;
+              boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
+                if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
                   {
-                    sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
-                  }
-                catch (std::exception const &e)
-                  {
-                    auto errorHandleMessageFromGame = std::stringstream{};
-                    errorHandleMessageFromGame << "exception: " << e.what () << '\n';
-                    errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
-                    errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
-                    std::cout << errorHandleMessageFromGame.str () << std::endl;
-                    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
-                  }
+                    typeFound = true;
+                    boost::json::error_code ec{};
+                    try
+                      {
+                        sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
+                      }
+                    catch (std::exception const &e)
+                      {
+                        auto errorHandleMessageFromGame = std::stringstream{};
+                        errorHandleMessageFromGame << "exception: " << e.what () << '\n';
+                        errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
+                        errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
+                        std::cout << errorHandleMessageFromGame.str () << std::endl;
+                        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
+                      }
 
-                if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
-              }
-          });
-          if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
-        }
+                    if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+                  }
+              });
+              if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+            }
 
           using namespace boost::asio::experimental::awaitable_operators;
-              co_await (matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
-                if ("LeaveGameSuccess|{}" == readResult)
-                  {
-                    sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
-                  }
-                else
-                  {
-                    matchmakingData.sendMsgToUser (readResult);
-                  }
-              }) && matchmakingData.matchmakingGame.writeLoop ());
-    }
+          co_await (matchmakingData.matchmakingGame.readLoop ([&] (std::string const &readResult) {
+            if ("LeaveGameSuccess|{}" == readResult)
+              {
+                sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+              }
+            else
+              {
+                matchmakingData.sendMsgToUser (readResult);
+              }
+          }) && matchmakingData.matchmakingGame.writeLoop ());
+        }
       catch (std::exception const &e)
         {
-            sm.process_event (ConnectionToGameLost{}, deps, subs);
-            std::cout << "exception: " << e.what ()<<std::endl;
-            throw e;
+          sm.process_event (ConnectionToGameLost{}, deps, subs);
+          std::cout << "exception: " << e.what () << std::endl;
+          throw e;
         }
     }
 }
-
 
 void sendMessageToUsers (std::string const &message, std::vector<std::string> const &accountNames, MatchmakingData &matchmakingData);
 
@@ -287,7 +283,8 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
 };
 
 boost::asio::awaitable<void>
-createGame (user_matchmaking::CreateGame , auto &&, auto &&deps, auto &&) {
+createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
+{
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
                                                 [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
@@ -304,7 +301,7 @@ createGame (user_matchmaking::CreateGame , auto &&, auto &&deps, auto &&) {
         {
           if (gameLobbyWithUser->isGameLobbyAdmin (matchmakingData.user.accountName))
             {
-              if (gameLobbyWithUser->accountNames.size ()+gameLobbyWithUser->gameOption.computerControlledPlayerCount >= 2)
+              if (gameLobbyWithUser->accountNames.size () + gameLobbyWithUser->gameOption.computerControlledPlayerCount >= 2)
                 {
                   if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
                     {
@@ -312,9 +309,12 @@ createGame (user_matchmaking::CreateGame , auto &&, auto &&deps, auto &&) {
                     }
                   else
                     {
-                      if (gameLobbyWithUser->accountNames.size ()>1){
+                      if (gameLobbyWithUser->accountNames.size () > 1)
+                        {
                           askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
-                        }else{
+                        }
+                      else
+                        {
                           co_await startGame (*gameLobbyWithUser, matchmakingData);
                           matchmakingData.gameLobbies.erase (gameLobbyWithUser);
                         }
@@ -627,12 +627,6 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
       return;
     }
 };
-
-
-
-
-
-
 
 auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannelObject, MatchmakingData &matchmakingData) {
   if (matchmakingData.user.communicationChannels.erase (leaveChannelObject.channel))
@@ -1016,7 +1010,7 @@ struct my_logger
   void
   log_process_event (const TEvent &event)
   {
-    if constexpr (confu_json::is_adapted_struct<TEvent>::value)
+    if constexpr (boost::fusion::traits::is_sequence<TEvent>::value)
       {
         std::cout << "\n[" << aux::get_type_name<SM> () << "]"
                   << "[process_event] '" << objectToStringWithObjectName (event) << "'" << std::endl;
@@ -1177,7 +1171,7 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
             {
               if (auto matchmakingItr = ranges::find_if (matchmakingData.stateMachines, [&accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
                 {
-                  matchmakingItr->get()->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
+                  matchmakingItr->get ()->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
                 }
             }
         }

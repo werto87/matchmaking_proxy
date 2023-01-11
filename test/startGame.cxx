@@ -9,8 +9,8 @@
 #include <boost/asio/thread_pool.hpp>
 #include <catch2/catch.hpp> // for Ass...
 #include <chrono>
-#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
-#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
+#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
 using namespace user_matchmaking;
 
 TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")

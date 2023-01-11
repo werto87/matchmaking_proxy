@@ -55,10 +55,10 @@
 #include <functional> // for __base
 #include <iostream>   // for string
 #include <iostream>
+#include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
+#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
 #include <map>
 #include <memory>
-#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
-#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
 #include <range/v3/algorithm/copy_if.hpp>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>

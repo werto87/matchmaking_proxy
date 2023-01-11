@@ -38,7 +38,7 @@ target_link_libraries(${TARGET_NAME_LIB} INTERFACE
         CONAN_PKG::sml
         CONAN_PKG::fmt
         CONAN_PKG::corrade
-        CONAN_PKG::modern_durak_shared_type
+        CONAN_PKG::login_matchmaking_game_shared_type
         )
 
 # TODO test address sanitizer with -fno-omit-frame-pointer

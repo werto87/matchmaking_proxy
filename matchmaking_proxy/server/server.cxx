@@ -19,7 +19,7 @@
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
-#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>

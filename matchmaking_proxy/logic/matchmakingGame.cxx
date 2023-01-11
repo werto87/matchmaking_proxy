@@ -8,8 +8,8 @@
 #include <confu_json/concept.hxx>
 #include <confu_json/confu_json.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
-#include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
-#include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
+#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/conversion.hpp>

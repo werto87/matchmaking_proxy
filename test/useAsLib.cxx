@@ -1,10 +1,10 @@
 // #include "matchmaking_proxy/database/database.hxx"
 // #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-// #include <modern_durak_shared_type/matchmakingGameSerialization.hxx>
+// #include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
 // #include "matchmaking_proxy/server/matchmakingOption.hxx"
 // #include "matchmaking_proxy/server/myWebsocket.hxx"
 // #include "matchmaking_proxy/server/server.hxx"
-// #include <modern_durak_shared_type/userMatchmakingSerialization.hxx>
+// #include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
 // #include "matchmaking_proxy/util.hxx"
 // #include "test/mockserver.hxx"
 // #include <algorithm> // for max

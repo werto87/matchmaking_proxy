@@ -75,7 +75,9 @@ target_link_libraries(${TARGET_NAME} PRIVATE
         CONAN_PKG::sml
         CONAN_PKG::fmt
         CONAN_PKG::durak
+        CONAN_PKG::modern_durak_game_option
         )
 
-target_compile_definitions(${TARGET_NAME} PRIVATE PATH_TO_USER_DEFINED_GAME_OPTION="userDefinedGameOption.hxx"
+target_compile_definitions(${TARGET_NAME} PRIVATE
+        PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/gameOption.hxx"
         )

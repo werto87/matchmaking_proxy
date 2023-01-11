@@ -36,8 +36,8 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   ioContext.run ();
   ioContext.stop ();
   ioContext.reset ();
-  auto matchmakingGame = MatchmakingGame{ matchmakings, [] (auto) {} };
-  matchmakingGame.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
+  auto matchmakingGameTmp = MatchmakingGame{ matchmakings, [] (auto) {} };
+  matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
   REQUIRE (messages.at (2) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1490}");
   REQUIRE (messages.at (3) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1510}");
 }

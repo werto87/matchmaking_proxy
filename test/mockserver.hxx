@@ -1,9 +1,9 @@
 #ifndef FB5474CE_322D_4D7A_B298_185229E7B05A
 #define FB5474CE_322D_4D7A_B298_185229E7B05A
 
-#include "server/myWebsocket.hxx"
-#include "util.hxx"
-#include "util.hxx"
+#include "matchmaking_proxy/server/myWebsocket.hxx"
+#include "matchmaking_proxy/util.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>

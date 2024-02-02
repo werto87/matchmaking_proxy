@@ -49,6 +49,7 @@ target_link_libraries(matchmaking_proxy PUBLIC
         modern_durak_game_option::modern_durak_game_option
         )
 target_compile_definitions(matchmaking_proxy PUBLIC
+        _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
         PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/userDefinedGameOption.hxx"
         )
 
@@ -62,7 +63,7 @@ set_target_properties(
 
 target_include_directories(matchmaking_proxy
         PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
         )
 
 

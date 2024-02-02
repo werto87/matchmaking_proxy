@@ -20,7 +20,7 @@ target_link_libraries(_test
 # TODO test address sanitizer with -fno-omit-frame-pointer
 target_compile_definitions(_test INTERFACE
         $<$<CONFIG:DEBUG>:DEBUG>
-        _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+        _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS // TODO remove pipes and remove this than
 
         # BOOST_ASIO_ENABLE_HANDLER_TRACKING
         # LOG_FOR_STATE_MACHINE
@@ -33,14 +33,8 @@ target_compile_definitions(_test INTERFACE
 target_compile_definitions(_test PUBLIC
         PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/userDefinedGameOption.hxx"
         )
-add_custom_command(
-        TARGET _test POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/database/combination.db
-        ${CMAKE_CURRENT_BINARY_DIR}/test_database/combination.db
-)
 
-target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR})
+target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME _test
         COMMAND _test -r junit)
 

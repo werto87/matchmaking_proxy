@@ -1,9 +1,9 @@
-#include "matchmakingGame.hxx"
-#include "matchmaking.hxx"
-#include "database/constant.hxx"
-#include "database/database.hxx" // for Account
-#include "logic/rating.hxx"
-#include "util.hxx"
+#include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/logic/matchmaking.hxx"
+#include "matchmaking_proxy/database/constant.hxx"
+#include "matchmaking_proxy/database/database.hxx" // for Account
+#include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/sml.hpp>
 #include <confu_json/concept.hxx>
 #include <confu_json/confu_json.hxx>
@@ -44,21 +44,21 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameDependencies &m
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
     }
 }
-auto const gameOver = [] (matchmaking_game::GameOver const &gameOver, MatchmakingGameDependencies &matchmakingGameDependencies) {
-  if (gameOver.ratedGame)
+auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, MatchmakingGameDependencies &matchmakingGameDependencies) {
+  if (_gameOver.ratedGame)
     {
-      if (gameOver.draws.empty ())
+      if (_gameOver.draws.empty ())
         {
-          auto losers = accountNamesToAccounts (gameOver.losers);
-          auto winners = accountNamesToAccounts (gameOver.winners);
+          auto losers = accountNamesToAccounts (_gameOver.losers);
+          auto winners = accountNamesToAccounts (_gameOver.winners);
           auto [winnersWithNewRating, losersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, winners, winnersWithNewRating);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, losers, losersWithNewRating);
         }
       else
         {
-          auto draw = accountNamesToAccounts (gameOver.draws);
-          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (gameOver.draws));
+          auto draw = accountNamesToAccounts (_gameOver.draws);
+          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (_gameOver.draws));
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, draw, drawNewRating);
         }
     }
@@ -72,7 +72,7 @@ auto const userLeftGameErrorNotLoggedIn = [] (matchmaking_game::UserLeftGame con
 auto const userLeftGameErrorUserHasNoProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) { matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not in proxy state" })); };
 
 auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameDependencies &matchmakingGameDependencies) {
-  if (auto matchmaking = ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmaking == matchmakingGameDependencies.stateMachines.end ())
+  if (auto matchmaking = ranges::find (matchmakingGameDependencies.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &_matchmaking) { return _matchmaking->isLoggedInWithAccountName (accountName); }); matchmaking == matchmakingGameDependencies.stateMachines.end ())
     {
       matchmaking->get ()->disconnectFromProxy ();
     }

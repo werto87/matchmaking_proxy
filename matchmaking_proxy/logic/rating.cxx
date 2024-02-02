@@ -1,6 +1,6 @@
-#include "rating.hxx"
-#include "database/constant.hxx"   // for databaseName
-#include "database/database.hxx"   // for Account
+#include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
+#include "matchmaking_proxy/database/database.hxx"   // for Account
 #include <algorithm>                                 // for copy
 #include <boost/core/addressof.hpp>                  // for addressof
 #include <boost/function/function_base.hpp>          // for has_empty_target

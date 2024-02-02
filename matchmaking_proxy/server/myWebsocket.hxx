@@ -1,7 +1,7 @@
 #ifndef FDE41782_20C3_436A_B415_E198F593F0AE
 #define FDE41782_20C3_436A_B415_E198F593F0AE
 
-#include "util.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/io_context.hpp>

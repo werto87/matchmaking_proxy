@@ -1,10 +1,9 @@
-#include "server.hxx"
-#include "matchmakingOption.hxx"
-#include "logic/matchmakingData.hxx"
-#include "logic/matchmakingGame.hxx"
-#include "util.hxx"
-#include "myWebsocket.hxx"
-#include "server.hxx"
+#include "matchmaking_proxy/server/server.hxx"
+#include "matchmaking_proxy/server/matchmakingOption.hxx"
+#include "matchmaking_proxy/logic/matchmakingData.hxx"
+#include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/util.hxx"
+#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include <algorithm> // for max
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>

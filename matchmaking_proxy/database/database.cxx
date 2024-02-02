@@ -1,5 +1,5 @@
-#include "database.hxx"
-#include "database/constant.hxx"   // for databaseName
+#include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
 #include <confu_soci/convenienceFunctionForSoci.hxx> // for createTableForS...
 #include <filesystem>                                // for create_directory
 #include <iostream>                                  // for endl, basic_ost...

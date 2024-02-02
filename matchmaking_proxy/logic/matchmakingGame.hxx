@@ -4,6 +4,7 @@
 #include <deque>
 #include <list>
 #include <memory>
+#include <functional>
 namespace boost::asio
 {
 class io_context;

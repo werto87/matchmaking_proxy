@@ -1,8 +1,8 @@
 #ifndef F913C042_CAFF_4558_AE02_952AE3C4F17A
 #define F913C042_CAFF_4558_AE02_952AE3C4F17A
 
-#include "logic/matchmaking.hxx"
-#include "server/gameLobby.hxx"
+#include "matchmaking_proxy/logic/matchmaking.hxx"
+#include "matchmaking_proxy/server/gameLobby.hxx"
 #include "util.hxx"
 #include <iostream> // for operator<<, ostream
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>

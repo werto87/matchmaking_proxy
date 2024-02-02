@@ -1,6 +1,6 @@
-#include "gameLobby.hxx"
-#include "server/user.hxx" // for User
-#include "util.hxx"        // for object...
+#include "matchmaking_proxy/server/gameLobby.hxx"
+#include "matchmaking_proxy/server/user.hxx" // for User
+#include "matchmaking_proxy/util.hxx"        // for object...
 #include <algorithm>                         // for remove_if
 #include <chrono>                            // for seconds
 #include <exception>

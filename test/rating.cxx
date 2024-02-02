@@ -1,5 +1,5 @@
-#include "logic/rating.hxx"
-#include "database/database.hxx" // for Account
+#include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/database/database.hxx" // for Account
 #include <catch2/catch.hpp>                        // for AssertionHandler
 #include <type_traits>                             // for add_const<>::type
 

@@ -1,10 +1,10 @@
-#include "server/server.hxx"
-#include "database/database.hxx"
-#include "logic/matchmakingGame.hxx"
-#include "server/matchmakingOption.hxx"
-#include "server/myWebsocket.hxx"
+#include "matchmaking_proxy/server/server.hxx"
+#include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/server/matchmakingOption.hxx"
+#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "util.hxx"
-#include "test/mockserver.hxx"
+#include "mockserver.hxx"
 #include <algorithm> // for max
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>

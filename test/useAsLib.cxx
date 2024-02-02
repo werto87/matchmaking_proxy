@@ -1,11 +1,11 @@
-// #include "matchmaking_proxy/database/database.hxx"
-// #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-// #include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
-// #include "matchmaking_proxy/server/matchmakingOption.hxx"
-// #include "matchmaking_proxy/server/myWebsocket.hxx"
-// #include "matchmaking_proxy/server/server.hxx"
-// #include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
-// #include "matchmaking_proxy/util.hxx"
+// #include "database/database.hxx"
+// #include "logic/matchmakingGame.hxx"
+// #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
+// #include "server/matchmakingOption.hxx"
+// #include "server/myWebsocket.hxx"
+// #include "server/server.hxx"
+// #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+// #include "util.hxx"
 // #include "test/mockserver.hxx"
 // #include <algorithm> // for max
 // #include <boost/algorithm/string/predicate.hpp>

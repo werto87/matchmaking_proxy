@@ -1,9 +1,9 @@
-#include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
-#include "matchmaking_proxy/server/myWebsocket.hxx"
-#include "matchmaking_proxy/server/server.hxx"
-#include "matchmaking_proxy/util.hxx"
+#include "database/database.hxx"
+#include "logic/matchmakingGame.hxx"
+#include "server/matchmakingOption.hxx"
+#include "server/myWebsocket.hxx"
+#include "server/server.hxx"
+#include "util.hxx"
 #include <Corrade/Utility/Arguments.h>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/json/src.hpp>

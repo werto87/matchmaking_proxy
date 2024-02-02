@@ -1,6 +1,6 @@
 #include "rating.hxx"
-#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
-#include "matchmaking_proxy/database/database.hxx"   // for Account
+#include "database/constant.hxx"   // for databaseName
+#include "database/database.hxx"   // for Account
 #include <algorithm>                                 // for copy
 #include <boost/core/addressof.hpp>                  // for addressof
 #include <boost/function/function_base.hpp>          // for has_empty_target
@@ -24,7 +24,6 @@
 #include <soci/session.h>                            // for session
 #include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
 #include <stdlib.h>                                  // for abort
-// In the losing team the user with the most rating loses the most points
 
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)

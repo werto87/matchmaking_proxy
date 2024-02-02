@@ -1,13 +1,13 @@
 #include "matchmaking.hxx"
 #include "../server/myWebsocket.hxx"
 #include "confu_json/confu_json.hxx"
-#include "matchmaking_proxy/database/constant.hxx"
-#include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/logic/matchmakingData.hxx"
-#include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/pw_hash/passwordHash.hxx"
-#include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/util.hxx"
+#include "database/constant.hxx"
+#include "database/database.hxx"
+#include "logic/matchmakingData.hxx"
+#include "logic/rating.hxx"
+#include "pw_hash/passwordHash.hxx"
+#include "server/gameLobby.hxx"
+#include "util.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -55,8 +55,8 @@
 #include <functional> // for __base
 #include <iostream>   // for string
 #include <iostream>
-#include <login_matchmaking_game_shared_type/matchmakingGameSerialization.hxx>
-#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
+#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <map>
 #include <memory>
 #include <range/v3/algorithm/copy_if.hpp>

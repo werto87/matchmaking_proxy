@@ -1,11 +1,11 @@
 #ifndef C774F1C4_44FA_4B2F_9526_46C43EFDB937
 #define C774F1C4_44FA_4B2F_9526_46C43EFDB937
 
-#include "matchmaking_proxy/logic/matchmaking.hxx"
-#include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
-#include "matchmaking_proxy/server/myWebsocket.hxx"
-#include "matchmaking_proxy/server/user.hxx"
+#include "logic/matchmaking.hxx"
+#include "server/gameLobby.hxx"
+#include "server/matchmakingOption.hxx"
+#include "server/myWebsocket.hxx"
+#include "server/user.hxx"
 #include <boost/asio/ip/tcp.hpp>
 
 struct MatchmakingData

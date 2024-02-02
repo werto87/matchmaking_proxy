@@ -1,5 +1,5 @@
- target_sources(${TARGET_NAME_LIB} INTERFACE 
-    server.cxx
-    gameLobby.cxx
+ target_sources(matchmaking_proxy PUBLIC
+         gameLobby.cxx
+         server.cxx
   )
 

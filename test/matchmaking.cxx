@@ -1,13 +1,13 @@
-#include "../matchmaking_proxy/logic/matchmaking.hxx"
-#include "matchmaking_proxy/database/database.hxx" // for cre...
-#include "matchmaking_proxy/logic/matchmakingData.hxx"
-#include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/util.hxx"
+#include "logic/matchmaking.hxx"
+#include "database/database.hxx" // for cre...
+#include "logic/matchmakingData.hxx"
+#include "server/gameLobby.hxx"
+#include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/sml.hpp>
 #include <catch2/catch.hpp> // for Ass...
-#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")

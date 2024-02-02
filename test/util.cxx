@@ -1,8 +1,8 @@
 #include "util.hxx"
-#include "matchmaking_proxy/logic/matchmakingData.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
+#include "logic/matchmakingData.hxx"
+#include "server/matchmakingOption.hxx"
 #include <boost/asio/ip/tcp.hpp>
-#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 std::shared_ptr<Matchmaking>
 createAccountAndJoinMatchmakingGame (const std::string &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, const user_matchmaking::JoinMatchMakingQueue &joinMatchMakingQueue, int &proxyStartedCalled)
 {

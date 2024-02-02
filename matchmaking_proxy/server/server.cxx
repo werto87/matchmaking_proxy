@@ -1,8 +1,8 @@
 #include "server.hxx"
 #include "matchmakingOption.hxx"
-#include "matchmaking_proxy/logic/matchmakingData.hxx"
-#include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/util.hxx"
+#include "logic/matchmakingData.hxx"
+#include "logic/matchmakingGame.hxx"
+#include "util.hxx"
 #include "myWebsocket.hxx"
 #include "server.hxx"
 #include <algorithm> // for max
@@ -19,7 +19,7 @@
 #include <functional>
 #include <iostream>
 #include <iterator> // for next
-#include <login_matchmaking_game_shared_type/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/view.hpp>

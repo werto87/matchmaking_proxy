@@ -32,7 +32,7 @@ FROM archlinux:base
 
 # RUN pacman -S libc++ --noconfirm
 
-COPY --from=0 /matchmaking_proxy/build/bin/project /matchmaking_proxy/project
+COPY --from=0 /build/bin/project /project
 COPY --from=0 /usr/lib/libc++.a /usr/lib/libc++.a
 COPY --from=0 /usr/lib/libc++.so /usr/lib/libc++.so
 COPY --from=0 /usr/lib/libc++.so.1 /usr/lib/libc++.so.1
@@ -44,4 +44,4 @@ COPY --from=0 /usr/lib/libc++abi.so.1.0 /usr/lib/libc++abi.so.1.0
 
 
 
-CMD [ "/matchmaking_proxy/project"]
+CMD [ "/project"]

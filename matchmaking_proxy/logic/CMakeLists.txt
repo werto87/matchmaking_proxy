@@ -1,6 +1,5 @@
- target_sources(${TARGET_NAME_LIB} INTERFACE 
-    rating.cxx
-    matchmaking.cxx
-    matchmakingGame.cxx
+ target_sources(matchmaking_proxy PUBLIC
+         matchmaking.cxx
+         matchmakingGame.cxx
+         rating.cxx
  )
-

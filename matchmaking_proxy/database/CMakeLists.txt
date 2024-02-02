@@ -1,3 +1,3 @@
- target_sources(${TARGET_NAME_LIB} INTERFACE 
-    database.cxx
- )
+target_sources(matchmaking_proxy PUBLIC
+        database.cxx
+        )

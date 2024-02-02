@@ -17,17 +17,14 @@ target_link_libraries(_test
         Catch2::Catch2WithMain
         )
 
-# TODO test address sanitizer with -fno-omit-frame-pointer
 target_compile_definitions(_test INTERFACE
         $<$<CONFIG:DEBUG>:DEBUG>
         _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS // TODO remove pipes and remove this than
-
         # BOOST_ASIO_ENABLE_HANDLER_TRACKING
         # LOG_FOR_STATE_MACHINE
         LOG_CO_SPAWN_PRINT_EXCEPTIONS
         LOG_MY_WEBSOCKET
         #  LOG_MY_WEBSOCKET_READ_END
-
         # LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
         )
 target_compile_definitions(_test PUBLIC

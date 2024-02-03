@@ -38,7 +38,7 @@ using namespace boost::asio;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 boost::asio::awaitable<void>
-connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::vector<std::string> &messagesFromGame)
+connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint endpoint, std::vector<std::string> &messagesFromGame)
 {
   try
     {

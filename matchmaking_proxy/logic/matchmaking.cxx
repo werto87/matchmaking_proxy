@@ -169,7 +169,6 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
       else
         {
           sm.process_event (PasswordDoesNotMatch{ loginAccountObject.accountName }, deps, subs);
-          co_return; //TODO why is here a co_return and not in the other if branch???
         }
     }
 }

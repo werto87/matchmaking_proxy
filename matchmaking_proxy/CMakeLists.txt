@@ -16,7 +16,6 @@ add_library(myproject::matchmaking_proxy ALIAS matchmaking_proxy)
 find_package(confu_soci)
 find_package(certify)
 find_package(libsodium)
-find_package(pipes)
 find_package(sml)
 find_package(Corrade)
 find_package(login_matchmaking_game_shared)
@@ -36,7 +35,6 @@ target_link_libraries(matchmaking_proxy PUBLIC
         confu_soci::confu_soci
         certify::core
         libsodium::libsodium
-        pipes::pipes
         sml::sml
         Corrade::Corrade
         login_matchmaking_game_shared::login_matchmaking_game_shared
@@ -49,7 +47,6 @@ target_link_libraries(matchmaking_proxy PUBLIC
         modern_durak_game_option::modern_durak_game_option
         )
 target_compile_definitions(matchmaking_proxy PUBLIC
-        _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
         PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/userDefinedGameOption.hxx"
         )
 

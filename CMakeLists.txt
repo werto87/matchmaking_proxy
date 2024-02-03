@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15.7)
 if (NOT DEFINED CMAKE_CXX_STANDARD) # Only set the cxx_standard if it is not set by someone else
-    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD 23)
 endif ()
 project(
         matchmaking_proxy
@@ -21,9 +21,9 @@ IF (BUILD_TESTS)
 ENDIF (BUILD_TESTS)
 add_executable(run_server main.cxx)
 target_link_libraries(run_server matchmaking_proxy)
+
 target_compile_definitions(run_server PRIVATE
         # BOOST_ASIO_DISABLE_THREADS
-        # _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
         # LOG_CO_SPAWN_PRINT_EXCEPTIONS
         # LOG_COMPUTER_CONTROLLED_OPPONENT_MASSAGE_RECEIVED
         # LOG_FOR_STATE_MACHINE

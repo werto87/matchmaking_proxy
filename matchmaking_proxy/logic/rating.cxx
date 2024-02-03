@@ -13,17 +13,13 @@
 #include <iosfwd>                                    // for ostream
 #include <iostream>                                  // for operator<<, cout
 #include <math.h>                                    // for rintl, lrintl
-#include <pipes/for_each.hpp>                        // for for_each_pipeline
-#include <pipes/impl/pipes_assembly.hpp>             // for generic_pipeline
-#include <pipes/operator.hpp>                        // for operator>>=
-#include <pipes/push_back.hpp>                       // for push_back_pipeline
-#include <pipes/transform.hpp>                       // for transform_pipe
 #include <range/v3/algorithm/find_if.hpp>            // for find_if, find_i...
 #include <range/v3/functional/identity.hpp>          // for identity
 #include <range/v3/numeric/accumulate.hpp>           // for accumulate, acc...
 #include <soci/session.h>                            // for session
 #include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
 #include <stdlib.h>                                  // for abort
+#include <numeric>
 
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
@@ -69,9 +65,7 @@ ratingChange (size_t userRating, size_t otherUserRating, long double score, size
 size_t
 averageRating (std::vector<size_t> const &ratings)
 {
-  auto accountsRatingSum = size_t{ 0 };
-  ratings >>= pipes::for_each ([&accountsRatingSum] (auto rating) { accountsRatingSum += rating; });
-  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (accountsRatingSum) / ratings.size ()));
+  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (std::accumulate (ratings.begin (), ratings.end (),0ul)) / ratings.size ()));
 }
 
 size_t
@@ -86,10 +80,10 @@ std::pair<std::vector<database::Account>, std::vector<database::Account>>
 calcRatingLoserAndWinner (std::vector<database::Account> losers, std::vector<database::Account> winners)
 {
   auto losersRatings = std::vector<size_t>{};
-  losers >>= pipes::transform ([] (database::Account const &account) { return account.rating; }) >>= pipes::push_back (losersRatings);
+  std::ranges::transform(losers,std::back_inserter (losersRatings),[] (database::Account const &account) { return account.rating; });
   auto const averageRatingLosers = averageRating (losersRatings);
   auto winnersRatings = std::vector<size_t>{};
-  winners >>= pipes::transform ([] (database::Account const &account) { return account.rating; }) >>= pipes::push_back (winnersRatings);
+  std::ranges::transform(winners,std::back_inserter (winnersRatings),[] (database::Account const &account) { return account.rating; });
   auto const averageRatingWinners = averageRating (winnersRatings);
   auto totalRatingWon = ratingChange (averageRatingWinners, averageRatingLosers, SCORE_WON, RATING_CHANGE_FACTOR);
   for (auto &winner : winners)
@@ -124,9 +118,9 @@ calcRatingDraw (std::vector<database::Account> accounts)
         }
     }
   auto losersRatings = std::vector<size_t>{};
-  losers >>= pipes::transform ([] (database::Account const &account) { return account.rating; }) >>= pipes::push_back (losersRatings);
+  std::ranges::transform(losers,std::back_inserter (losersRatings),[] (database::Account const &account) { return account.rating; });
   auto winnersRatings = std::vector<size_t>{};
-  winners >>= pipes::transform ([] (database::Account const &account) { return account.rating; }) >>= pipes::push_back (winnersRatings);
+  std::ranges::transform(winners,std::back_inserter (winnersRatings),[] (database::Account const &account) { return account.rating; });
   for (auto &winner : winners)
     {
       if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = winner.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())

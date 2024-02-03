@@ -128,7 +128,7 @@ struct GlobalState
 {
 };
 
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, )
+BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
 
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
@@ -168,8 +168,8 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
         }
       else
         {
-          sm.process_event (PasswordDoesNotMatch{}, deps, subs);
-          co_return;
+          sm.process_event (PasswordDoesNotMatch{ loginAccountObject.accountName }, deps, subs);
+          co_return; //TODO why is here a co_return and not in the other if branch???
         }
     }
 }
@@ -851,7 +851,7 @@ auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, Mat
   return userGameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
 };
 
-auto const loginAccountErrorPasswordAccountName = [] (user_matchmaking::LoginAccount const &loginAccount, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccount.accountName, "Incorrect Username or Password" })); };
+auto const loginAccountErrorPasswordAccountName = [] (auto const &objectWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ objectWithAccountName.accountName, "Incorrect Username or Password" })); };
 auto const loginAccountSuccess = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) {
   matchmakingData.user.accountName = typeWithAccountName.accountName;
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ matchmakingData.user.accountName }));
@@ -859,7 +859,7 @@ auto const loginAccountSuccess = [] (auto const &typeWithAccountName, Matchmakin
 auto const createAccountErrorAccountAlreadyCreated = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ typeWithAccountName.accountName, "Account already Created" })); };
 auto const proxyStarted = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStarted{})); };
 auto const proxyStopped = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::ProxyStopped{})); };
-auto const loginAccountErrorAccountAlreadyLoggedIn = [] (user_matchmaking::LoginAccount const &loginAccount, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ loginAccount.accountName, "Account already logged in" })); };
+auto const loginAccountErrorAccountAlreadyLoggedIn = [] (PasswordMatches const &passwordMatches, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ passwordMatches.accountName, "Account already logged in" })); };
 auto const wantsToRelogToGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::WantToRelog{ typeWithAccountName.accountName, "Create Game Lobby" })); };
 auto const connectToGameError = [] (user_matchmaking::ConnectGameError const &connectGameError, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (connectGameError)); };
 auto const leaveGameLobbyErrorUserNotInGameLobby = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "could not remove user from lobby user not found in lobby" })); };

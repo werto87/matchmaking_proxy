@@ -41,6 +41,7 @@ function(
     if ("${CLANG_WARNINGS}" STREQUAL "")
         set(CLANG_WARNINGS
                 -Wall
+                -Wfatal-errors # stop after first error
                 -Wextra # reasonable and standard
                 -Wshadow # warn the user if a variable declaration shadows one from a parent context
                 -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor. This helps
@@ -62,6 +63,7 @@ function(
     if ("${GCC_WARNINGS}" STREQUAL "")
         set(GCC_WARNINGS
                 ${CLANG_WARNINGS}
+                -Wfatal-errors # stop after first error
                 -Wmisleading-indentation # warn if indentation implies blocks where blocks do not exist
                 -Wduplicated-cond # warn if if / else chain has duplicated conditions
                 -Wduplicated-branches # warn if if / else branches have duplicated code

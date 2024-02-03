@@ -159,7 +159,7 @@ MyWebsocket<T>::writeLoop ()
     {
       webSocket.reset ();
       if (timer) timer->cancel ();
-      throw e;
+      throw;
     }
 }
 template <class T>

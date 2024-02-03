@@ -158,7 +158,7 @@ struct MatchmakingGame::StateMachineWrapper
 };
 
 void // has to be after YourClass::StateMachineWrapper definition
-MatchmakingGame::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
+MatchmakingGame::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)const
 {
   delete p;
 }

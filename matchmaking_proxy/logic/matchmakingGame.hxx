@@ -17,7 +17,7 @@ class MatchmakingGame
   struct StateMachineWrapper;
   struct StateMachineWrapperDeleter
   {
-    void operator() (StateMachineWrapper *p);
+    void operator() (StateMachineWrapper *p)const;
   };
 
 public:

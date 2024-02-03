@@ -109,7 +109,7 @@ GameLobby::removeUser (std::string const &accountNameToRemove)
 }
 
 size_t
-GameLobby::accountCount ()
+GameLobby::accountCount () const
 {
   return accountNames.size ();
 }

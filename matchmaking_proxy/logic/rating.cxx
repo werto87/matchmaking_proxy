@@ -121,14 +121,14 @@ calcRatingDraw (std::vector<database::Account> accounts)
   std::ranges::transform(losers,std::back_inserter (losersRatings),[] (database::Account const &account) { return account.rating; });
   auto winnersRatings = std::vector<size_t>{};
   std::ranges::transform(winners,std::back_inserter (winnersRatings),[] (database::Account const &account) { return account.rating; });
-  for (auto &winner : winners)
+  for (auto const&winner : winners)
     {
       if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = winner.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {
           accountToUpdateRating->rating = winner.rating + ratingShareWinningTeam (winner.rating, winnersRatings, boost::numeric_cast<size_t> (totalRatingWon));
         }
     }
-  for (auto &loser : losers)
+  for (auto const&loser : losers)
     {
       if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = loser.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {

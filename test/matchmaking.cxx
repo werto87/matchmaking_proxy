@@ -98,24 +98,24 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" }));
     ioContext.run ();
-    CHECK (messages.size () == 2);
-    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
-    CHECK (R"foo(CreateAccountError|{"accountName":"newAcc","error":"Account already Created"})foo" == messages.at (1));
+    CHECK (messages.size () == 2);// cppcheck-suppress knownConditionTrueFalse //false positive
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
+    CHECK (R"foo(CreateAccountError|{"accountName":"newAcc","error":"Account already Created"})foo" == messages.at (1));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("LoginAccount", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (LoginAccount{ "newAcc", "abc" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
-    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
-    CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (1));
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
+    CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (1));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("JoinChannel", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (JoinChannel{ "my channel" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
+    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("BroadCastMessage", "[matchmaking]")
   {
@@ -123,78 +123,78 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
     matchmaking->processEvent (objectToStringWithObjectName (BroadCastMessage{ "my channel", "Hello World!" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
-    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));
-    CHECK (R"foo(Message|{"fromAccount":"newAcc","channel":"my channel","message":"Hello World!"})foo" == messages.at (1));
+    CHECK (R"foo(JoinChannelSuccess|{"channel":"my channel"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
+    CHECK (R"foo(Message|{"fromAccount":"newAcc","channel":"my channel","message":"Hello World!"})foo" == messages.at (1));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("LeaveChannel", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (LeaveChannel{ "my channel" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(LeaveChannelError|{"channel":"my channel","error":"channel not found"})foo" == messages.at (0));
+    CHECK (R"foo(LeaveChannelError|{"channel":"my channel","error":"channel not found"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("CreateGameLobby", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (CreateGameLobby{ "my channel", "" }));
     ioContext.run ();
     CHECK (messages.size () == 2);
-    CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));
+    CHECK (R"foo(JoinGameLobbySuccess|{})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("JoinGameLobby", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (JoinGameLobby{ "my channel", "" }));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(JoinGameLobbyError|{"name":"my channel","error":"wrong password name combination or lobby does not exists"})foo" == messages.at (0));
+    CHECK (R"foo(JoinGameLobbyError|{"name":"my channel","error":"wrong password name combination or lobby does not exists"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("SetMaxUserSizeInCreateGameLobby", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (SetMaxUserSizeInCreateGameLobby{ 42 }));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(SetMaxUserSizeInCreateGameLobbyError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
+    CHECK (R"foo(SetMaxUserSizeInCreateGameLobbyError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("GameOption", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (shared_class::GameOption{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));
+    CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("LeaveGameLobby", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (LeaveGameLobby{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0));
+    CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("CreateGame", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (CreateGame{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(CreateGameError|{"error":"Could not find a game lobby for the user"})foo" == messages.at (0));
+    CHECK (R"foo(CreateGameError|{"error":"Could not find a game lobby for the user"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("WantsToJoinGame", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (WantsToJoinGame{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messages.at (0));
+    CHECK (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("LeaveQuickGameQueue", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (LeaveQuickGameQueue{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(LeaveQuickGameQueueError|{"error":"User is not in queue"})foo" == messages.at (0));
+    CHECK (R"foo(LeaveQuickGameQueueError|{"error":"User is not in queue"})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("JoinMatchMakingQueue", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (JoinMatchMakingQueue{}));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0));
+    CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -221,8 +221,8 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   {
     matchmaking->processEvent (objectToStringWithObjectName (LogoutAccount{}));
     ioContext.run ();
-    CHECK (messages.size () == 1);
-    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));
+    CHECK (messages.size () == 1);// cppcheck-suppress knownConditionTrueFalse //false positive
+    CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0));// cppcheck-suppress containerOutOfBounds //false positive
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -237,7 +237,7 @@ TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
-  REQUIRE (matchmaking.currentStatesAsString ().size () == 2);
+  REQUIRE (matchmaking.currentStatesAsString ().size () == 2);// cppcheck-suppress danglingTemporaryLifetime //false positive
 }
 
 TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
@@ -249,7 +249,7 @@ TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
-  matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));
+  matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetMatchmakingLogic{}));// cppcheck-suppress danglingTemporaryLifetime //false positive
   REQUIRE (not messages.empty ());
 }
 
@@ -262,7 +262,7 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
-  auto error = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::JoinChannel{}));
+  auto error = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::JoinChannel{}));// cppcheck-suppress danglingTemporaryLifetime //false positive
   REQUIRE (error);
   REQUIRE (error.value () == "No transition found");
 }

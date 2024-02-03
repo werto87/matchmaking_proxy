@@ -147,7 +147,7 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
 {
   try
     {
-      auto executor = co_await this_coro::executor;
+      auto executor = co_await this_coro::executor; // NOLINT(clang-analyzer-core.CallAndMessage)
       tcp_acceptor acceptor (executor, endpoint);
       for (;;)
         {

@@ -22,7 +22,7 @@ class Matchmaking
   };
 
 public:
-  Matchmaking (MatchmakingData &&matchmakingData);
+  explicit Matchmaking (MatchmakingData &&matchmakingData);
 
   std::optional<std::string> processEvent (std::string const &event);
 

@@ -149,7 +149,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     size_t gameOver = 0;
-    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
+    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
           myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
@@ -163,7 +163,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
           gameOver++;
           if (gameOver == 2)
             {
-              ioContext.stop ();
+              _ioContext.stop ();
             }
         }
     };

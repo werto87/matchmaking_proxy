@@ -164,7 +164,7 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
               auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection, "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
-                auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &msg) { myWebsocket->sendMessage (msg); } };
+                auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->sendMessage (_msg); } };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop (),
                         printException);

@@ -839,7 +839,7 @@ auto const accountInDatabase2 = [] (PasswordHashed const &typeWithAccountName) -
   soci::session sql (soci::sqlite3, databaseName);
   return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();;
 };
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
   return ranges::find_if (matchmakingData.gameLobbies,
                           [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {

@@ -5,7 +5,10 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 #include <boost/asio/system_timer.hpp>
+#pragma GCC diagnostic pop
 #include <boost/asio/use_awaitable.hpp>
 #include <cstddef>    // for size_t
 #include <functional> // for function

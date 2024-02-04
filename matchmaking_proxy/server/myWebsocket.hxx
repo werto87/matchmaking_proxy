@@ -2,7 +2,10 @@
 #define FDE41782_20C3_436A_B415_E198F593F0AE
 
 #include "matchmaking_proxy/util.hxx"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 #include <boost/asio.hpp>
+#pragma GCC diagnostic pop
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl.hpp>

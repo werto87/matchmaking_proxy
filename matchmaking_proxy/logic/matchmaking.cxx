@@ -830,7 +830,16 @@ getAccountName (auto const &typeWithAccountName, MatchmakingData &matchmakingDat
       return matchmakingData.user.accountName;
     }
 }
-
+//using auto instead of the type and making accountInDatabase1 and accountInDatabase2 into one lambda results in stack smash when build with clang debug and run the tests. Also found by address sanitizer
+auto const accountInDatabase1 = [] (user_matchmaking::LoginAccount const &typeWithAccountName) -> bool {
+  soci::session sql (soci::sqlite3, databaseName);
+  return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();;
+};
+auto const accountInDatabase2 = [] (PasswordHashed const &typeWithAccountName) -> bool {
+  soci::session sql (soci::sqlite3, databaseName);
+  return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();;
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
   return ranges::find_if (matchmakingData.gameLobbies,
                           [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
@@ -949,10 +958,10 @@ public:
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 * state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
 , state<NotLoggedIn>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<LoggedIn>
-, state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName 
+, state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase1 ]              / loginAccountErrorPasswordAccountName
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
 // WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
+, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase2 ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / createAccount                           = state<LoggedIn>
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / cancelCreateAccount                     = state<NotLoggedIn>
 // WaitingForPasswordCheck-----------------------------------------------------------------------------------------------------------------------------------------------------------

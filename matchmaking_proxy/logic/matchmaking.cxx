@@ -830,15 +830,6 @@ getAccountName (auto const &typeWithAccountName, MatchmakingData &matchmakingDat
       return matchmakingData.user.accountName;
     }
 }
-//using auto instead of the type and making accountInDatabase1 and accountInDatabase2 into one lambda results in stack smash when build with clang debug and run the tests. Also found by address sanitizer
-auto const accountInDatabase1 = [] (user_matchmaking::LoginAccount const &typeWithAccountName) -> bool {
-  soci::session sql (soci::sqlite3, databaseName);
-  return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();;
-};
-auto const accountInDatabase2 = [] (PasswordHashed const &typeWithAccountName) -> bool {
-  soci::session sql (soci::sqlite3, databaseName);
-  return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();;
-};
 
 auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
   return ranges::find_if (matchmakingData.gameLobbies,
@@ -944,7 +935,7 @@ std::string dumpStateMachine ();
 
 auto const matchmakingLogic = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::MatchmakingLogic{ dumpStateMachine () })); };
 
-class StateMachineImpl
+class MatchmakingStateMachine
 {
 public:
   auto
@@ -958,10 +949,10 @@ public:
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 * state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
 , state<NotLoggedIn>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<LoggedIn>
-, state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase1 ]              / loginAccountErrorPasswordAccountName
+, state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
 // WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase2 ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
+, state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / createAccount                           = state<LoggedIn>
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / cancelCreateAccount                     = state<NotLoggedIn>
 // WaitingForPasswordCheck-----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1010,7 +1001,7 @@ public:
 std::string
 dumpStateMachine ()
 {
-  return dump<boost::sml::sm<StateMachineImpl>> ();
+  return dump<boost::sml::sm<MatchmakingStateMachine>> ();
 }
 
 struct my_logger
@@ -1065,9 +1056,9 @@ struct Matchmaking::StateMachineWrapper
 
 #ifdef LOG_FOR_STATE_MACHINE
   my_logger logger;
-  boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
+  boost::sml::sm<MatchmakingStateMachine, boost::sml::logger<my_logger>> impl;
 #else
-  boost::sml::sm<StateMachineImpl> impl;
+  boost::sml::sm<MatchmakingStateMachine> impl;
 #endif
 };
 

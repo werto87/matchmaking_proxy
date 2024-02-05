@@ -7,7 +7,6 @@ macro(myproject_setup_options)
     option(myproject_ENABLE_FORTIFY_SOURCE_AND_SET_OPTIMAZATION_TO_O0 "Enable fortify source and set optimization to -O0" OFF)
     option(myproject_ENABLE_COVERAGE "Enable coverage reporting" OFF)
     option(myproject_WARNINGS_AS_ERRORS "Treat Warnings As Errors" ON)
-    option(myproject_ENABLE_USER_LINKER "Enable user-selected linker" ON)
     option(myproject_ENABLE_SANITIZER_ADDRESS "Enable address sanitizer" OFF)
     option(myproject_ENABLE_SANITIZER_LEAK "Enable leak sanitizer" OFF)
     option(myproject_ENABLE_SANITIZER_UNDEFINED "Enable undefined sanitizer" OFF)
@@ -32,10 +31,6 @@ macro(myproject_local_options)
             ""
             ""
             "")
-    if (myproject_ENABLE_USER_LINKER)
-        include(cmake/Linker.cmake)
-        myproject_configure_linker(myproject_options)
-    endif ()
 
     include(cmake/Sanitizers.cmake)
     myproject_enable_sanitizers(

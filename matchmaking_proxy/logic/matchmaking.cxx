@@ -935,7 +935,7 @@ std::string dumpStateMachine ();
 
 auto const matchmakingLogic = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::MatchmakingLogic{ dumpStateMachine () })); };
 
-class StateMachineImpl
+class MatchmakingStateMachine
 {
 public:
   auto
@@ -1001,7 +1001,7 @@ public:
 std::string
 dumpStateMachine ()
 {
-  return dump<boost::sml::sm<StateMachineImpl>> ();
+  return dump<boost::sml::sm<MatchmakingStateMachine>> ();
 }
 
 struct my_logger
@@ -1056,9 +1056,9 @@ struct Matchmaking::StateMachineWrapper
 
 #ifdef LOG_FOR_STATE_MACHINE
   my_logger logger;
-  boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
+  boost::sml::sm<MatchmakingStateMachine, boost::sml::logger<my_logger>> impl;
 #else
-  boost::sml::sm<StateMachineImpl> impl;
+  boost::sml::sm<MatchmakingStateMachine> impl;
 #endif
 };
 

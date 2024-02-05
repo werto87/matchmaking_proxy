@@ -935,7 +935,7 @@ std::string dumpStateMachine ();
 
 auto const matchmakingLogic = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::MatchmakingLogic{ dumpStateMachine () })); };
 
-class MatchmakingStateMachine
+class StateMachineImpl
 {
 public:
   auto
@@ -967,29 +967,29 @@ public:
 // LoggedIn---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<LoggedIn>                             + event<u_m::CreateAccount>                                                         / (logoutAccount,hashPassword)            = state<WaitingForPasswordHashed>
 , state<LoggedIn>                             + event<u_m::LoginAccount>                                                          / (logoutAccount,checkPassword)           = state<WaitingForPasswordCheck>
-, state<LoggedIn>                             + event<u_m::JoinChannel>                                                           / joinChannel         
-, state<LoggedIn>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage         
-, state<LoggedIn>                             + event<u_m::Message>                                                               / sendMessageToUser         
-, state<LoggedIn>                             + event<u_m::LeaveChannel>                                                          / leaveChannel         
-, state<LoggedIn>                             + event<u_m::LogoutAccount>                                                         / logoutAccount                           = state<NotLoggedIn>          
-, state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby          
-, state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby          
-, state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby          
-, state<LoggedIn>                             + event<s_c::GameOption>                                                            / setGameOption         
-, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking         
-, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby         
-, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby         
+, state<LoggedIn>                             + event<u_m::JoinChannel>                                                           / joinChannel
+, state<LoggedIn>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage
+, state<LoggedIn>                             + event<u_m::Message>                                                               / sendMessageToUser
+, state<LoggedIn>                             + event<u_m::LeaveChannel>                                                          / leaveChannel
+, state<LoggedIn>                             + event<u_m::LogoutAccount>                                                         / logoutAccount                           = state<NotLoggedIn>
+, state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby
+, state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
+, state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby
+, state<LoggedIn>                             + event<s_c::GameOption>                                                            / setGameOption
+, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
+, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby
+, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby
 , state<LoggedIn>                             + event<u_m::CreateGame>                                                            / createGameWrapper
-, state<LoggedIn>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper          
-, state<LoggedIn>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue          
-, state<LoggedIn>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue         
+, state<LoggedIn>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper
+, state<LoggedIn>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue
+, state<LoggedIn>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue
 , state<LoggedIn>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame
-, state<LoggedIn>                             + event<u_m::ConnectGameError>                                                      / connectToGameError                      
+, state<LoggedIn>                             + event<u_m::ConnectGameError>                                                      / connectToGameError
 , state<LoggedIn>                             + event<m_g::ConnectToGameSuccess>                                                  / proxyStarted                            = state<ProxyToGame>
-// ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------  
-, state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>     
-, state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame                               
-// GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------  
+// ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------
+, state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>
+, state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame
+// GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
@@ -1001,7 +1001,7 @@ public:
 std::string
 dumpStateMachine ()
 {
-  return dump<boost::sml::sm<MatchmakingStateMachine>> ();
+  return dump<boost::sml::sm<StateMachineImpl>> ();
 }
 
 struct my_logger
@@ -1056,9 +1056,9 @@ struct Matchmaking::StateMachineWrapper
 
 #ifdef LOG_FOR_STATE_MACHINE
   my_logger logger;
-  boost::sml::sm<MatchmakingStateMachine, boost::sml::logger<my_logger>> impl;
+  boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
 #else
-  boost::sml::sm<MatchmakingStateMachine> impl;
+  boost::sml::sm<StateMachineImpl> impl;
 #endif
 };
 

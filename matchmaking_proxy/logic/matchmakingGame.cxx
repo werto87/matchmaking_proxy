@@ -79,7 +79,7 @@ auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLef
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
 };
 
-class MatchmakingGameStateMachine
+class StateMachineImpl
 {
 public:
   auto
@@ -153,7 +153,7 @@ struct MatchmakingGame::StateMachineWrapper
   my_logger logger;
   boost::sml::sm<StateMachineImpl, boost::sml::logger<my_logger>> impl;
 #else
-  boost::sml::sm<MatchmakingGameStateMachine> impl;
+  boost::sml::sm<StateMachineImpl> impl;
 #endif
 };
 

@@ -52,17 +52,10 @@ target_compile_definitions(matchmaking_proxy PUBLIC
 
 target_compile_features(matchmaking_proxy PUBLIC cxx_std_20)
 
-set_target_properties(
-        matchmaking_proxy
-        PROPERTIES VERSION ${PROJECT_VERSION}
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES)
-
 target_include_directories(matchmaking_proxy
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
         )
-
 
 add_subdirectory(database)
 add_subdirectory(server)

@@ -1,4 +1,4 @@
-FROM conanio/gcc13-ubuntu16.04
+FROM conanio/gcc13-ubuntu16.04 as CONAN
 
 COPY cmake /home/conan/matchmaking_proxy/cmake
 COPY matchmaking_proxy /home/conan/matchmaking_proxy/matchmaking_proxy
@@ -19,8 +19,8 @@ RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DBUILD_TESTS=True -D 
 
 RUN cmake --build .
 
-FROM conanio/gcc13-ubuntu16.04
+FROM archlinux:latest
 
-COPY --from=0 /home/conan/matchmaking_proxy/build/run_server /home/conan/matchmacking_proxy/matchmaking_proxy
+COPY --from=CONAN /home/conan/matchmaking_proxy/build/run_server /home/conan/matchmacking_proxy/matchmaking_proxy
 
 CMD [ "/home/conan/matchmacking_proxy/matchmaking_proxy"]

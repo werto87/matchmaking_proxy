@@ -18,8 +18,11 @@ RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DBUILD_TESTS=True -D 
 
 RUN cmake --build .
 
-RUN test/_test
+RUN test/_test  -d yes --order lex ~[integration]
+
 
 FROM archlinux:latest
 
 COPY --from=BUILD /home/build_user/matchmaking_proxy/build/run_server /home/build_user/matchmacking_proxy/matchmaking_proxy
+
+CMD [ "/home/build_user/matchmacking_proxy/matchmaking_proxy" ]

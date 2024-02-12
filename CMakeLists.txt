@@ -23,11 +23,11 @@ add_executable(run_server main.cxx)
 target_link_libraries(run_server matchmaking_proxy)
 
 target_compile_definitions(run_server PRIVATE
-        # BOOST_ASIO_DISABLE_THREADS
-        # LOG_CO_SPAWN_PRINT_EXCEPTIONS
-        # LOG_COMPUTER_CONTROLLED_OPPONENT_MASSAGE_RECEIVED
-        # LOG_FOR_STATE_MACHINE
-        # LOG_MY_WEBSOCKET
-        # BOOST_ASIO_ENABLE_HANDLER_TRACKING
+#         BOOST_ASIO_DISABLE_THREADS
+         LOG_CO_SPAWN_PRINT_EXCEPTIONS
+         LOG_COMPUTER_CONTROLLED_OPPONENT_MASSAGE_RECEIVED
+         LOG_FOR_STATE_MACHINE
+         LOG_MY_WEBSOCKET
+         BOOST_ASIO_ENABLE_HANDLER_TRACKING
         CURRENT_BINARY_DIR="${CMAKE_BINARY_DIR}"
         )

@@ -15,7 +15,7 @@ auto const DEFAULT_PORT_USER_TO_GAME_VIA_MATCHMAKING = std::string{ "3232" };
 auto const DEFAULT_PORT_GAME_TO_MATCHMAKING = std::string{ "12312" };
 auto const DEFAULT_PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
 auto const DEFAULT_PATH_TO_PRIVATE_FILE = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
-auto const DEFAULT_PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
+auto const DEFAULT_PATH_TO_DH_File = std::string{ "/etc/letsencrypt/live/test-name/dhparams.pem" };
 auto const DEFAULT_SECRETS_POLLING_SLEEP_TIMER_SECONDS = std::string{ "2" };
 auto const DEFAULT_ADDRESS_OF_GAME = std::string{ "localhost" };
 

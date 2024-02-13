@@ -23,6 +23,6 @@ RUN test/_test  -d yes --order lex ~[integration]
 
 FROM archlinux:latest
 
-COPY --from=BUILD /home/build_user/matchmaking_proxy/build/run_server /home/build_user/matchmacking_proxy/matchmaking_proxy
+COPY --from=BUILD /home/build_user/matchmaking_proxy/build/run_server /home/build_user/matchmaking_proxy/matchmaking_proxy
 
-CMD [ "/home/build_user/matchmacking_proxy/matchmaking_proxy" ]
+CMD [ "/home/build_user/matchmaking_proxy/matchmaking_proxy" ]

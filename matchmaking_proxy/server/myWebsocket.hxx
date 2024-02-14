@@ -46,7 +46,11 @@ public:
   boost::asio::awaitable<void> writeLoop ();
 
   void sendMessage (std::string message);
+
   void close ();
+
+  boost::asio::awaitable<void> sendPingToEndpoint ();
+
 
 private:
   std::shared_ptr<T> webSocket{};
@@ -177,6 +181,30 @@ inline void
 MyWebsocket<T>::close ()
 {
   if (webSocket) webSocket->close ("User left game");
+}
+
+template <class T>
+boost::asio::awaitable<void>
+MyWebsocket<T>::sendPingToEndpoint ()
+{
+  auto connection = std::weak_ptr<T>{ webSocket };
+  auto pingTimer = CoroTimer{ co_await boost::asio::this_coro::executor };
+  try
+    {
+      while (not connection.expired()){
+          pingTimer.expires_after (std::chrono::seconds{10});
+          co_await pingTimer.async_wait ();
+          if (not connection.expired()){
+              co_await webSocket->async_ping ({},boost::asio::use_awaitable);
+            }
+        }
+    }
+  catch (boost::system::system_error &e)
+    {
+      using namespace boost::system::errc;
+      std::cout << "error in timer boost::system::errc: " << e.code () << std::endl;
+    }
+  co_return;
 }
 
 #endif /* FDE41782_20C3_436A_B415_E198F593F0AE */

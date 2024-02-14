@@ -105,6 +105,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               co_await connection->async_accept (use_awaitable);
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ connection, "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
+              co_spawn (ioContext,myWebsocket->sendPingToEndpoint(),printException);
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
@@ -180,3 +181,4 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
       std::cout << "exception: " << e.what () << std::endl;
     }
 }
+

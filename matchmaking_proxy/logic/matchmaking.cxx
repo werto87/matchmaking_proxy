@@ -275,8 +275,8 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
       }
     else
       {
+        sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), gameLobby->readyUsers, matchmakingData);
         gameLobby->readyUsers.clear ();
-        sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), matchmakingData);
       }
   });
 };
@@ -1156,6 +1156,7 @@ Matchmaking::currentStatesAsString () const
   return results;
 }
 
+
 boost::asio::awaitable<void>
 startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
@@ -1206,7 +1207,9 @@ sendMessageToUsers (std::string const &message, std::vector<std::string> const &
 void
 sendToAllAccountsInUsersCreateGameLobby (std::string const &message, MatchmakingData &matchmakingData)
 {
-  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [&accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) { return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())
+  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [&accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) {
+        return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
+      }); userGameLobby != matchmakingData.gameLobbies.end ())
     {
       sendMessageToUsers (message, userGameLobby->accountNames, matchmakingData);
     }

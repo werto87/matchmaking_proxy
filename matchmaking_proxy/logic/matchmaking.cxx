@@ -966,6 +966,7 @@ public:
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                                                               / removeUserFromGameLobby                 = state<LoggedIn>
 // LoggedIn---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<LoggedIn>                             + event<u_m::CreateAccount>                                                         / (logoutAccount,hashPassword)            = state<WaitingForPasswordHashed>
+, state<LoggedIn>                             + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
 , state<LoggedIn>                             + event<u_m::LoginAccount>                                                          / (logoutAccount,checkPassword)           = state<WaitingForPasswordCheck>
 , state<LoggedIn>                             + event<u_m::JoinChannel>                                                           / joinChannel
 , state<LoggedIn>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage

@@ -4,19 +4,19 @@
 #include <algorithm>                         // for remove_if
 #include <chrono>                            // for seconds
 #include <exception>
-#include <iostream>                                                            // for string
+#include <iostream>                                                       // for string
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx> // for UsersI...
-#include <new>                                                                 // for operat...
-#include <range/v3/algorithm/find_if.hpp>                                      // for find_if
-#include <range/v3/algorithm/none_of.hpp>                                      // for none_of
-#include <range/v3/algorithm/transform.hpp>                                    // for transform
-#include <range/v3/functional/identity.hpp>                                    // for identity
-#include <range/v3/iterator/insert_iterators.hpp>                              // for back_i...
-#include <ratio>                                                               // for ratio
-#include <stdlib.h>                                                            // for abort
-#include <string>                                                              // for operat...
-#include <type_traits>                                                         // for move
-#include <utility>                                                             // for pair
+#include <new>                                                            // for operat...
+#include <range/v3/algorithm/find_if.hpp>                                 // for find_if
+#include <range/v3/algorithm/none_of.hpp>                                 // for none_of
+#include <range/v3/algorithm/transform.hpp>                               // for transform
+#include <range/v3/functional/identity.hpp>                               // for identity
+#include <range/v3/iterator/insert_iterators.hpp>                         // for back_i...
+#include <ratio>                                                          // for ratio
+#include <stdlib.h>                                                       // for abort
+#include <string>                                                         // for operat...
+#include <type_traits>                                                    // for move
+#include <utility>                                                        // for pair
 
 GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::move (name_) }, password (std::move (password_)) {}
 
@@ -143,14 +143,12 @@ GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::func
     }
 }
 
-auto constexpr TIME_TO_ACCEPT_THE_INVITE = std::chrono::seconds{ 10 };
-
 void
-GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver)
+GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver, std::chrono::milliseconds const &timeToAcceptInvite)
 {
   waitingForAnswerToStartGame = true;
   _timer = std::make_shared<boost::asio::system_timer> (io_context);
-  _timer->expires_after (TIME_TO_ACCEPT_THE_INVITE);
+  _timer->expires_after (timeToAcceptInvite);
   co_spawn (
       _timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, printException);
 }

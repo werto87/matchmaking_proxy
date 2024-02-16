@@ -3,8 +3,8 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
-#include "util.hxx"
 #include "mockserver.hxx"
+#include "util.hxx"
 #include <algorithm> // for max
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -170,7 +170,7 @@ TEST_CASE ("user,matchmaking, game", "[integration]")
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), printException);
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer2), printException);
-    ioContext.run ();
+    ioContext.run_for (std::chrono::seconds{ 5 });
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");

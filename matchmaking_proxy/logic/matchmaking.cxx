@@ -257,7 +257,6 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
     {
       sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), matchmakingData);
     }
-
   gameLobby->startTimerToAcceptTheInvite (matchmakingData.ioContext, [gameLobby, &matchmakingData] () {
     auto notReadyUsers = std::vector<std::string>{};
     ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
@@ -278,7 +277,7 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
         sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), gameLobby->readyUsers, matchmakingData);
         gameLobby->readyUsers.clear ();
       }
-  });
+  },matchmakingData.matchmakingOption.timeToAcceptInvite);
 };
 
 boost::asio::awaitable<void>

@@ -46,11 +46,11 @@ struct GameLobby
 
   void removeUser (std::string const &accountNameToRemove);
 
-  size_t accountCount ()const;
+  size_t accountCount () const;
 
   boost::asio::awaitable<void> runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::function<void ()> gameInviteOver);
 
-  void startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver);
+  void startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std::function<void ()> gameInviteOver, std::chrono::milliseconds const &timeToAcceptInvite = std::chrono::milliseconds{ 10'000 });
 
   void cancelTimer ();
   bool getWaitingForAnswerToStartGame () const;

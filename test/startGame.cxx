@@ -48,8 +48,9 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE ("ProxyStarted|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (messagesPlayer2.size () == 1);                // cppcheck-suppress knownConditionTrueFalse //false positive
     REQUIRE ("ProxyStarted|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.empty ());
   }
-  SECTION ("one player accept one player declined", "[matchmaking]")
+  SECTION ("playerOne accept playerTwo declined", "[matchmaking]")
   {
     matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
     matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
@@ -58,8 +59,53 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (messagesPlayer2.size () == 1);
     REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player1");
   }
-  SECTION ("one player declined one player accept", "[matchmaking]")
+  SECTION ("playerTwo accept playerOne declined", "[matchmaking]")
+  {
+    matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
+    ioContext.run_for (std::chrono::seconds{ 5 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player2");
+  }
+  SECTION ("playerOne accept playerTwo does not answer", "[matchmaking]")
+  {
+    matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    ioContext.run_for (std::chrono::seconds{ 1 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player1");
+  }
+  SECTION ("playerTwo accept playerOne does not answer", "[matchmaking]")
+  {
+    matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    ioContext.run_for (std::chrono::seconds{ 1 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player2");
+  }
+  SECTION ("playerTwo and playerOne does not answer", "[matchmaking]")
+  {
+    ioContext.run_for (std::chrono::seconds{ 1 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.empty ());
+  }
+  SECTION ("playerOne declines playerTwo still tries to join", "[matchmaking]")
   {
     matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
     matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
@@ -69,6 +115,21 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE (messagesPlayer2.size () == 2);
     REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0));                                      // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messagesPlayer2.at (1)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player2");
+  }
+  SECTION ("playerTwo declines playerOne still tries to join", "[matchmaking]")
+  {
+    matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
+    matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
+    ioContext.run_for (std::chrono::seconds{ 5 });
+    REQUIRE (messagesPlayer1.size () == 2);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0));                                      // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (R"foo(WantsToJoinGameError|{"error":"No game to join"})foo" == messagesPlayer1.at (1)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.size () == 1);
+    REQUIRE (gameLobbies.front ().accountNames.front () == "player1");
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -109,33 +170,6 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     REQUIRE ("ProxyStarted|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (messagesPlayer2.size () == 1);                // cppcheck-suppress knownConditionTrueFalse //false positive
     REQUIRE ("ProxyStarted|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
-  }
-  SECTION ("one declines", "[matchmaking]")
-  {
-    matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false }));
-    ioContext.run_for (std::chrono::seconds{ 5 });
-    REQUIRE (messagesPlayer1.size () == 1);                                     // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0));                 // cppcheck-suppress containerOutOfBounds //false positive
-    REQUIRE (messagesPlayer2.size () == 1);                                     // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
-  }
-  SECTION ("player one accepts player two does not answer", "[matchmaking]")
-  {
-    matchmakingPlayer1->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run_for (std::chrono::seconds{ 15 });                           // 10 sec is the timeout for answer
-    REQUIRE (messagesPlayer1.size () == 1);                                   // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0));               // cppcheck-suppress containerOutOfBounds //false positive
-    REQUIRE (messagesPlayer2.size () == 1);                                   // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
-  }
-  SECTION ("player two accepts player one does not answer", "[matchmaking]")
-  {
-    matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true }));
-    ioContext.run_for (std::chrono::seconds{ 15 });                           // 10 sec is the timeout for answer
-    REQUIRE (messagesPlayer1.size () == 1);                                   // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("AskIfUserWantsToJoinGameTimeOut|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
-    REQUIRE (messagesPlayer2.size () == 1);                                   // cppcheck-suppress knownConditionTrueFalse //false positive
-    REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0));               // cppcheck-suppress containerOutOfBounds //false positive
   }
   ioContext.stop ();
   ioContext.reset ();

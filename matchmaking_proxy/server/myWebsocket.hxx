@@ -51,7 +51,6 @@ public:
 
   boost::asio::awaitable<void> sendPingToEndpoint ();
 
-
 private:
   std::shared_ptr<T> webSocket{};
   std::string loggingName{};
@@ -180,7 +179,22 @@ template <class T>
 inline void
 MyWebsocket<T>::close ()
 {
-  if (webSocket) webSocket->close ("User left game");
+  try
+    {
+      if (webSocket) webSocket->close ("User left game");
+    }
+  catch (boost::system::system_error &e)
+    {
+      if (boost::asio::error::misc_errors::eof == e.code ())
+        {
+          // swallow eof
+        }
+      else
+        {
+          std::cout << "MyWebsocket::close () Exception : " << e.what () << std::endl;
+          abort ();
+        }
+    }
 }
 
 template <class T>
@@ -191,11 +205,13 @@ MyWebsocket<T>::sendPingToEndpoint ()
   auto pingTimer = CoroTimer{ co_await boost::asio::this_coro::executor };
   try
     {
-      while (not connection.expired()){
-          pingTimer.expires_after (std::chrono::seconds{10});
+      while (not connection.expired ())
+        {
+          pingTimer.expires_after (std::chrono::seconds{ 10 });
           co_await pingTimer.async_wait ();
-          if (not connection.expired()){
-              co_await webSocket->async_ping ({},boost::asio::use_awaitable);
+          if (not connection.expired ())
+            {
+              co_await webSocket->async_ping ({}, boost::asio::use_awaitable);
             }
         }
     }

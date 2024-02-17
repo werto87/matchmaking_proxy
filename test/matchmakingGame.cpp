@@ -3,8 +3,8 @@
 //
 
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/database/database.hxx" // for cre...
+#include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/util.hxx"

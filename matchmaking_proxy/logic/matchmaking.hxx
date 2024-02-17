@@ -24,7 +24,7 @@ class Matchmaking
 public:
   explicit Matchmaking (MatchmakingData &&matchmakingData);
 
-  std::optional<std::string> processEvent (std::string const &event);
+    std::optional<std::string> processEvent (std::string const &event);
 
   void sendMessageToGame (std::string const &message);
 
@@ -32,9 +32,13 @@ public:
 
   bool isUserInChatChannel (std::string const &channelName) const;
 
+  void disconnectFromProxy ();
+
   bool hasProxyToGame () const;
 
-  void disconnectFromProxy ();
+  void cleanUp ();
+
+
 
   std::vector<std::string> currentStatesAsString () const;
 

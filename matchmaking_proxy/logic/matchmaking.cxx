@@ -98,6 +98,7 @@ struct NotLoggedIn
 {
 };
 
+
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
 
 BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, (std::string, accountName))
@@ -391,15 +392,8 @@ auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
     {
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
       userGameLobby->removeUser (matchmakingData.user.accountName);
+      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,matchmakingData);
       userGameLobby->cancelTimer ();
-      if (userGameLobby->accountNames.empty ())
-        {
-          matchmakingData.gameLobbies.erase (userGameLobby);
-        }
-      else
-        {
-          sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), matchmakingData);
-        }
     }
   else
     {
@@ -716,17 +710,14 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
         }
       else
         {
-          userGameLobby->cancelTimer ();
           if (userGameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName);
-              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
-              if (userGameLobby->accountNames.empty ())
-                {
-                  matchmakingData.gameLobbies.erase (userGameLobby);
-                }
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,matchmakingData);
+              userGameLobby->readyUsers.clear();
             }
+          userGameLobby->cancelTimer ();
         }
     }
   else
@@ -993,6 +984,8 @@ public:
 ,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
+
+
         // clang-format on
     );
   }
@@ -1211,5 +1204,18 @@ sendToAllAccountsInUsersCreateGameLobby (std::string const &message, Matchmaking
       }); userGameLobby != matchmakingData.gameLobbies.end ())
     {
       sendMessageToUsers (message, userGameLobby->accountNames, matchmakingData);
+    }
+}
+
+void
+Matchmaking::cleanUp (){
+  disconnectFromProxy();
+  if (auto userGameLobby = ranges::find_if (sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) {
+        return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
+      }); userGameLobby != sm->matchmakingData.gameLobbies.end ())
+    {
+      userGameLobby->removeUser (sm->matchmakingData.user.accountName);
+      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,sm->matchmakingData);
+      userGameLobby->cancelTimer ();
     }
 }

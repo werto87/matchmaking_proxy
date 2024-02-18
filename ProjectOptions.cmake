@@ -14,7 +14,8 @@ macro(myproject_setup_options)
     option(myproject_ENABLE_SANITIZER_MEMORY "Enable memory sanitizer" OFF)
     option(myproject_ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
     option(myproject_ENABLE_CPPCHECK "Enable cpp-check analysis" OFF)
-    option(myproject_ENABLE_CACHE "Enable ccache" ON)
+    option(myproject_ENABLE_INCLUDE_WHAT_YOU_USE "Enable include what you use" OFF)
+    option(myproject_ENABLE_CACHE "Enable ccache" OFF)
 endmacro()
 
 
@@ -53,6 +54,10 @@ macro(myproject_local_options)
     if (myproject_ENABLE_CPPCHECK)
         myproject_enable_cppcheck(${myproject_WARNINGS_AS_ERRORS} "" # override cppcheck options
                 )
+    endif ()
+
+    if (myproject_ENABLE_INCLUDE_WHAT_YOU_USE)
+        myproject_enable_include_what_you_use()
     endif ()
 
     if (myproject_ENABLE_COVERAGE)

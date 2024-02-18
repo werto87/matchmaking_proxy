@@ -1,23 +1,29 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include PATH_TO_USER_DEFINED_GAME_OPTION
+#include <bits/chrono.h>
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 #include <boost/asio/system_timer.hpp>
 #pragma GCC diagnostic pop
-#include <boost/asio/use_awaitable.hpp>
-#include <cstddef>    // for size_t
-#include <functional> // for function
-#include <iosfwd>     // for string
-#include <memory>     // for shared_ptr
-#include <optional>   // for optional
-#include <vector>     // for vector
+#include "modern_durak_game_option/userDefinedGameOption.hxx"
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 struct User;
+
+namespace boost
+{
+namespace asio
+{
+class io_context;
+}
+}
 
 struct GameLobby
 {

@@ -1,25 +1,24 @@
 #include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
-#include "matchmaking_proxy/database/database.hxx"   // for Account
-#include <algorithm>                                 // for copy
-#include <boost/core/addressof.hpp>                  // for addressof
-#include <boost/function/function_base.hpp>          // for has_empty_target
-#include <boost/iterator/iterator_facade.hpp>        // for operator!=
-#include <boost/move/utility_core.hpp>               // for move, forward
-#include <boost/numeric/conversion/cast.hpp>         // for numeric_cast
-#include <boost/optional/optional.hpp>               // for optional
-#include <boost/type_index/type_index_facade.hpp>    // for operator==
-#include <confu_soci/convenienceFunctionForSoci.hxx> // for findStruct
-#include <iosfwd>                                    // for ostream
-#include <iostream>                                  // for operator<<, cout
-#include <math.h>                                    // for rintl, lrintl
-#include <range/v3/algorithm/find_if.hpp>            // for find_if, find_i...
-#include <range/v3/functional/identity.hpp>          // for identity
-#include <range/v3/numeric/accumulate.hpp>           // for accumulate, acc...
-#include <soci/session.h>                            // for session
-#include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
-#include <stdlib.h>                                  // for abort
+#include "matchmaking_proxy/database/constant.hxx"
+#include "matchmaking_proxy/database/database.hxx"
+#include <algorithm>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/numeric/conversion/cast.hpp>
+#include <boost/numeric/conversion/converter_policies.hpp>
+#include <boost/optional/optional.hpp>
+#include <cmath>
+#include <confu_soci/convenienceFunctionForSoci.hxx>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <limits>
 #include <numeric>
+#include <range/v3/algorithm/find_if.hpp>
+#include <range/v3/functional/identity.hpp>
+#include <range/v3/numeric/accumulate.hpp>
+#include <soci/session.h>
+#include <soci/sqlite3/soci-sqlite3.h>
+#include <stdlib.h>
 
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
@@ -65,7 +64,7 @@ ratingChange (size_t userRating, size_t otherUserRating, long double score, size
 size_t
 averageRating (std::vector<size_t> const &ratings)
 {
-  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (std::accumulate (ratings.begin (), ratings.end (),0ul)) / ratings.size ()));
+  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (std::accumulate (ratings.begin (), ratings.end (), 0ul)) / ratings.size ()));
 }
 
 size_t
@@ -80,10 +79,10 @@ std::pair<std::vector<database::Account>, std::vector<database::Account>>
 calcRatingLoserAndWinner (std::vector<database::Account> losers, std::vector<database::Account> winners)
 {
   auto losersRatings = std::vector<size_t>{};
-  std::ranges::transform(losers,std::back_inserter (losersRatings),[] (database::Account const &account) { return account.rating; });
+  std::ranges::transform (losers, std::back_inserter (losersRatings), [] (database::Account const &account) { return account.rating; });
   auto const averageRatingLosers = averageRating (losersRatings);
   auto winnersRatings = std::vector<size_t>{};
-  std::ranges::transform(winners,std::back_inserter (winnersRatings),[] (database::Account const &account) { return account.rating; });
+  std::ranges::transform (winners, std::back_inserter (winnersRatings), [] (database::Account const &account) { return account.rating; });
   auto const averageRatingWinners = averageRating (winnersRatings);
   auto totalRatingWon = ratingChange (averageRatingWinners, averageRatingLosers, SCORE_WON, RATING_CHANGE_FACTOR);
   for (auto &winner : winners)
@@ -118,17 +117,17 @@ calcRatingDraw (std::vector<database::Account> accounts)
         }
     }
   auto losersRatings = std::vector<size_t>{};
-  std::ranges::transform(losers,std::back_inserter (losersRatings),[] (database::Account const &account) { return account.rating; });
+  std::ranges::transform (losers, std::back_inserter (losersRatings), [] (database::Account const &account) { return account.rating; });
   auto winnersRatings = std::vector<size_t>{};
-  std::ranges::transform(winners,std::back_inserter (winnersRatings),[] (database::Account const &account) { return account.rating; });
-  for (auto const&winner : winners)
+  std::ranges::transform (winners, std::back_inserter (winnersRatings), [] (database::Account const &account) { return account.rating; });
+  for (auto const &winner : winners)
     {
       if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = winner.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {
           accountToUpdateRating->rating = winner.rating + ratingShareWinningTeam (winner.rating, winnersRatings, boost::numeric_cast<size_t> (totalRatingWon));
         }
     }
-  for (auto const&loser : losers)
+  for (auto const &loser : losers)
     {
       if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = loser.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {

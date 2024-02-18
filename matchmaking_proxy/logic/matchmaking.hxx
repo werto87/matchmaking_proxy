@@ -1,15 +1,10 @@
 #ifndef AB446319_39F6_4D7F_9EC5_860337CA5001
 #define AB446319_39F6_4D7F_9EC5_860337CA5001
 
-#include <functional>
-#include <list>
 #include <memory>
 #include <optional>
-namespace boost::asio
-{
-class io_context;
-class thread_pool;
-}
+#include <string>
+#include <vector>
 
 struct MatchmakingData;
 
@@ -24,7 +19,7 @@ class Matchmaking
 public:
   explicit Matchmaking (MatchmakingData &&matchmakingData);
 
-    std::optional<std::string> processEvent (std::string const &event);
+  std::optional<std::string> processEvent (std::string const &event);
 
   void sendMessageToGame (std::string const &message);
 
@@ -37,8 +32,6 @@ public:
   bool hasProxyToGame () const;
 
   void cleanUp ();
-
-
 
   std::vector<std::string> currentStatesAsString () const;
 

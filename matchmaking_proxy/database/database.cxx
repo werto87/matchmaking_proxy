@@ -1,14 +1,14 @@
 #include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/database/constant.hxx"   // for databaseName
-#include <confu_soci/convenienceFunctionForSoci.hxx> // for createTableForS...
-#include <filesystem>                                // for create_directory
-#include <iostream>                                  // for endl, basic_ost...
-#include <soci/error.h>                              // for soci_error
-#include <soci/session.h>                            // for session
-#include <soci/sqlite3/soci-sqlite3.h>               // for sqlite3, sqlite...
-#include <sqlite3.h>                                 // for sqlite3_close
-#include <stdio.h>                                   // for fprintf, stderr
-#include <vector>                                    // for vector
+#include "matchmaking_proxy/database/constant.hxx"
+#include <boost/iterator/iterator_facade.hpp>
+#include <confu_soci/convenienceFunctionForSoci.hxx>
+#include <filesystem>
+#include <iostream>
+#include <soci/error.h>
+#include <soci/session.h>
+#include <soci/sqlite3/soci-sqlite3.h>
+#include <sqlite3.h>
+#include <stdio.h>
 
 namespace database
 {
@@ -66,7 +66,7 @@ createTables ()
 }
 
 boost::optional<Account>
-createAccount (std::string const &accountName, std::string const &password,size_t startRating)
+createAccount (std::string const &accountName, std::string const &password, size_t startRating)
 {
   soci::session sql (soci::sqlite3, databaseName);
   return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));

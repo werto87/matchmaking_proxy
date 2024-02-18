@@ -1,20 +1,35 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
-#include "matchmaking_proxy/database/database.hxx" // for Account
-#include "matchmaking_proxy/logic/rating.hxx"
+#include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/util.hxx"
+#include "rating.hxx"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/fusion/support/is_sequence.hpp>
+#include <boost/hana/fwd/for_each.hpp>
+#include <boost/json/system_error.hpp>
+#include <boost/optional/optional.hpp>
 #include <boost/sml.hpp>
-#include <confu_json/concept.hxx>
-#include <confu_json/confu_json.hxx>
+#include <confu_json/to_object.hxx>
+#include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
+#include <iostream>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
-#include <range/v3/algorithm/find.hpp>
-#include <range/v3/algorithm/transform.hpp>
-#include <range/v3/range/conversion.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/functional.hpp>
+#include <range/v3/range.hpp>
+#include <range/v3/view.hpp>
+#include <soci/session.h>
+#include <soci/sqlite3/soci-sqlite3.h>
+#include <type_traits>
+#include <utility>
+#include <vector>
+namespace meta
+{
+template <typename T> struct id;
+}
 using namespace boost::sml;
 
 struct MatchmakingGameDependencies

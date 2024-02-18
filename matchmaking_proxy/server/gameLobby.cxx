@@ -1,22 +1,24 @@
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/server/user.hxx" // for User
-#include "matchmaking_proxy/util.hxx"        // for object...
-#include <algorithm>                         // for remove_if
-#include <chrono>                            // for seconds
+#include "matchmaking_proxy/server/user.hxx"
+#include "matchmaking_proxy/util.hxx"
+#include <algorithm>
+#include <boost/asio/basic_waitable_timer.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/system/system_error.hpp>
+#include <cstdlib>
 #include <exception>
-#include <iostream>                                                       // for string
-#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx> // for UsersI...
-#include <new>                                                            // for operat...
-#include <range/v3/algorithm/find_if.hpp>                                 // for find_if
-#include <range/v3/algorithm/none_of.hpp>                                 // for none_of
-#include <range/v3/algorithm/transform.hpp>                               // for transform
-#include <range/v3/functional/identity.hpp>                               // for identity
-#include <range/v3/iterator/insert_iterators.hpp>                         // for back_i...
-#include <ratio>                                                          // for ratio
-#include <stdlib.h>                                                       // for abort
-#include <string>                                                         // for operat...
-#include <type_traits>                                                    // for move
-#include <utility>                                                        // for pair
+#include <iostream>
+#include <range/v3/algorithm/find_if.hpp>
+#include <range/v3/algorithm/none_of.hpp>
+#include <string>
+namespace boost
+{
+namespace asio
+{
+class io_context;
+}
+}
 
 GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::move (name_) }, password (std::move (password_)) {}
 

@@ -30,11 +30,22 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
   REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player1" + std::string{ "\"}" } == messagesPlayer1.at (0));
   REQUIRE (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messagesPlayer1.at (1));
   messagesPlayer1.clear ();
-  matchmakingPlayer1->processEvent (objectToStringWithObjectName (LeaveQuickGameQueue{}));
-  ioContext.run_for (std::chrono::seconds{ 5 });
-  REQUIRE (messagesPlayer1.size () == 1);                              // cppcheck-suppress knownConditionTrueFalse //false positive
-  REQUIRE ("LeaveQuickGameQueueSuccess|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
-  REQUIRE (gameLobbies.empty ());
+  SECTION ("join queue and leave queue")
+  {
+    matchmakingPlayer1->processEvent (objectToStringWithObjectName (LeaveQuickGameQueue{}));
+    ioContext.run_for (std::chrono::seconds{ 5 });
+    REQUIRE (messagesPlayer1.size () == 1);                              // cppcheck-suppress knownConditionTrueFalse //false positive
+    REQUIRE ("LeaveQuickGameQueueSuccess|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.empty ());
+  }
+  SECTION ("join queue and disconnect")
+  {
+    matchmakingPlayer1->cleanUp ();
+    matchmakingPlayer1.reset ();
+    ioContext.run_for (std::chrono::seconds{ 5 });
+    REQUIRE (messagesPlayer1.size () == 0); // cppcheck-suppress knownConditionTrueFalse //false positive
+    REQUIRE (gameLobbies.empty ());
+  }
 }
 
 TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")

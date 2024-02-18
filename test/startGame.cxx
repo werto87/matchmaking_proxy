@@ -13,6 +13,30 @@
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 using namespace user_matchmaking;
 
+TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  boost::asio::thread_pool pool{};
+  std::list<GameLobby> gameLobbies{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  auto messagesPlayer1 = std::vector<std::string>{};
+  auto matchmakingPlayer1 = createAccountAndJoinMatchmakingQueue ("player1", ioContext, messagesPlayer1, gameLobbies, matchmakings, pool, JoinMatchMakingQueue{ false });
+  REQUIRE (messagesPlayer1.size () == 2);
+  REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player1" + std::string{ "\"}" } == messagesPlayer1.at (0));
+  REQUIRE (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messagesPlayer1.at (1));
+  messagesPlayer1.clear ();
+  matchmakingPlayer1->processEvent (objectToStringWithObjectName (LeaveQuickGameQueue{}));
+  ioContext.run_for (std::chrono::seconds{ 5 });
+  REQUIRE (messagesPlayer1.size () == 1);                              // cppcheck-suppress knownConditionTrueFalse //false positive
+  REQUIRE ("LeaveQuickGameQueueSuccess|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+  REQUIRE (gameLobbies.empty ());
+}
+
 TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
 {
   database::createEmptyDatabase ();
@@ -176,6 +200,18 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (gameLobbies.size () == 1);
     REQUIRE (gameLobbies.front ().accountNames.front () == "player2");
+  }
+  SECTION ("playerOne disconnects playerTow disconnects", "[matchmaking]")
+  {
+    matchmakingPlayer1->cleanUp ();
+    matchmakingPlayer1.reset ();
+    matchmakingPlayer2->cleanUp ();
+    matchmakingPlayer2.reset ();
+    ioContext.run_for (std::chrono::seconds{ 15 });
+    REQUIRE (messagesPlayer1.empty ());
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (gameLobbies.empty ());
   }
   ioContext.stop ();
   ioContext.reset ();

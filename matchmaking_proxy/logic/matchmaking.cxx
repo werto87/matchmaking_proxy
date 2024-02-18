@@ -392,8 +392,15 @@ auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
     {
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
       userGameLobby->removeUser (matchmakingData.user.accountName);
-      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,matchmakingData);
-      userGameLobby->cancelTimer ();
+      if (userGameLobby->accountNames.empty ())
+        {
+          matchmakingData.gameLobbies.erase (userGameLobby);
+        }
+      else
+        {
+          sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
+          userGameLobby->cancelTimer ();
+        }
     }
   else
     {
@@ -714,10 +721,16 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName);
-              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,matchmakingData);
-              userGameLobby->readyUsers.clear();
+              if (userGameLobby->accountNames.empty ())
+                {
+                  matchmakingData.gameLobbies.erase (userGameLobby);
+                }
+              else
+                {
+                  sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
+                  userGameLobby->cancelTimer ();
+                }
             }
-          userGameLobby->cancelTimer ();
         }
     }
   else
@@ -1215,7 +1228,14 @@ Matchmaking::cleanUp (){
       }); userGameLobby != sm->matchmakingData.gameLobbies.end ())
     {
       userGameLobby->removeUser (sm->matchmakingData.user.accountName);
-      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,sm->matchmakingData);
-      userGameLobby->cancelTimer ();
+      if (userGameLobby->accountNames.empty ())
+        {
+          sm->matchmakingData.gameLobbies.erase (userGameLobby);
+        }
+      else
+        {
+          sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}),userGameLobby->accountNames,sm->matchmakingData);
+          userGameLobby->cancelTimer ();
+        }
     }
 }

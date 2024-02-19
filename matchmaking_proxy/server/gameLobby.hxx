@@ -1,7 +1,6 @@
 #ifndef DBE82937_D6AB_4777_A3C8_A62B68300AA3
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
-#include <bits/chrono.h>
 #include <boost/asio/awaitable.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnull-dereference"

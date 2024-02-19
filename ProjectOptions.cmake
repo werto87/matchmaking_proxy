@@ -15,7 +15,7 @@ macro(myproject_setup_options)
     option(myproject_ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
     option(myproject_ENABLE_CPPCHECK "Enable cpp-check analysis" OFF)
     option(myproject_ENABLE_INCLUDE_WHAT_YOU_USE "Enable include what you use" OFF)
-    option(myproject_ENABLE_CACHE "Enable ccache" OFF)
+    option(myproject_ENABLE_CACHE "Enable ccache" ON)
 endmacro()
 
 

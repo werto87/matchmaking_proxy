@@ -20,8 +20,6 @@
 #include <iterator> // for next
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
-#include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/view.hpp>
 #include <stdexcept>
 #include <string>
 #include <type_traits>

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "confu_json/confu_json.hxx"
@@ -10,6 +11,7 @@
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
+#include <ranges>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -27,6 +29,7 @@
 #include <boost/fusion/sequence/intrinsic_fwd.hpp>
 #include <boost/hana/assert.hpp>
 #include <boost/hana/at_key.hpp>
+#include <range/v3/view/remove_if.hpp>
 #include <boost/hana/equal.hpp>
 #include <boost/hana/find.hpp>
 #include <boost/hana/for_each.hpp>
@@ -40,6 +43,7 @@
 #include <boost/mpl/for_each.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/range_c.hpp>
+#include <range/v3/to_container.hpp>
 #include <boost/sml.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -59,14 +63,6 @@
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <map>
 #include <memory>
-#include <range/v3/algorithm/copy_if.hpp>
-#include <range/v3/algorithm/find.hpp>
-#include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/algorithm/transform.hpp>
-#include <range/v3/iterator/insert_iterators.hpp>
-#include <range/v3/view.hpp>
-#include <range/v3/view/drop.hpp>
-#include <range/v3/view/remove_if.hpp>
 #include <set>
 #include <sstream> // for basic_...
 #include <sstream>
@@ -179,7 +175,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
-  if (auto matchmakingForAccount = ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
+  if (auto matchmakingForAccount = std::ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
     {
       auto matchmakingForAccountSptr = *matchmakingForAccount;
       try
@@ -251,7 +247,7 @@ void sendMessageToUsers (std::string const &message, std::vector<std::string> co
 auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, MatchmakingData &matchmakingData) {
   if (gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
     {
-      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | ranges::to<std::vector<std::string>> (), matchmakingData);
+      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | std::ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | ranges::to<std::vector<std::string>> (), matchmakingData);
       gameLobby->readyUsers.push_back (gameLobby->accountNames.at (0));
     }
   else
@@ -260,7 +256,7 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
     }
   gameLobby->startTimerToAcceptTheInvite (matchmakingData.ioContext, [gameLobby, &matchmakingData] () {
     auto notReadyUsers = std::vector<std::string>{};
-    ranges::copy_if (gameLobby->accountNames, ranges::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
+    std::ranges::copy_if (gameLobby->accountNames, std::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return std::ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
     sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers, matchmakingData);
     for (auto const &notReadyUser : notReadyUsers)
       {
@@ -285,10 +281,10 @@ boost::asio::awaitable<void>
 createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
-  if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithUser = std::ranges::find_if (matchmakingData.gameLobbies,
                                                 [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                   auto const &accountNames = gameLobby.accountNames;
-                                                  return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                  return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                 });
       gameLobbyWithUser != matchmakingData.gameLobbies.end ())
     {
@@ -388,7 +384,7 @@ auto const ratingChanged = [] (user_matchmaking::RatingChanged const &ratingChan
 auto const leaveGame = [] (MatchmakingData &matchmakingData) { matchmakingData.matchmakingGame.close (); };
 
 auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
-  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())
+  if (auto userGameLobby = std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())
     {
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveQuickGameQueueSuccess{}));
       userGameLobby->removeUser (matchmakingData.user.accountName);
@@ -409,10 +405,10 @@ auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
 };
 
 auto const logoutAccount = [] (MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
-                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
@@ -425,7 +421,7 @@ auto const logoutAccount = [] (MatchmakingData &matchmakingData) {
               usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
               usersInGameLobby.name = gameLobbyWithAccount->name.value ();
               usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-              ranges::transform (gameLobbyWithAccount->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+              std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
               sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
             }
           else
@@ -453,7 +449,7 @@ auto const joinChannel = [] (user_matchmaking::JoinChannel const &joinChannelObj
 };
 
 auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLobbyObject, MatchmakingData &matchmakingData) {
-  if (auto gameLobby = ranges::find_if (matchmakingData.gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != matchmakingData.gameLobbies.end ())
+  if (auto gameLobby = std::ranges::find_if (matchmakingData.gameLobbies, [gameLobbyName = joinGameLobbyObject.name, lobbyPassword = joinGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName && _gameLobby.password == lobbyPassword; }); gameLobby != matchmakingData.gameLobbies.end ())
     {
       if (auto error = gameLobby->tryToAddUser (matchmakingData.user))
         {
@@ -467,7 +463,7 @@ auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLo
           usersInGameLobby.maxUserSize = gameLobby->maxUserCount ();
           usersInGameLobby.name = gameLobby->name.value ();
           usersInGameLobby.durakGameOption = gameLobby->gameOption;
-          ranges::transform (gameLobby->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+          std::ranges::transform (gameLobby->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
           return;
         }
@@ -480,10 +476,10 @@ auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLo
 };
 
 auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
-                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
@@ -492,7 +488,7 @@ auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
       usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
       usersInGameLobby.name = gameLobbyWithAccount->name.value ();
       usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-      ranges::transform (gameLobbyWithAccount->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+      std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
     }
   else
@@ -502,9 +498,9 @@ auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
 };
 
 auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
-  auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
+  auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
     auto const &accountNames = gameLobby.accountNames;
-    return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+    return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
   });
   gameLobbyWithAccount->removeUser (matchmakingData.user.accountName);
   if (gameLobbyWithAccount->accountCount () == 0)
@@ -515,10 +511,10 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
 };
 
 auto const setGameOption = [] (shared_class::GameOption const &gameOption, MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
-                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
@@ -549,10 +545,10 @@ auto const setGameOption = [] (shared_class::GameOption const &gameOption, Match
 };
 
 auto const setMaxUserSizeInCreateGameLobby = [] (user_matchmaking::SetMaxUserSizeInCreateGameLobby const &setMaxUserSizeInCreateGameLobbyObject, MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
-                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
@@ -590,12 +586,12 @@ auto const setMaxUserSizeInCreateGameLobby = [] (user_matchmaking::SetMaxUserSiz
 };
 
 auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &createGameLobbyObject, MatchmakingData &matchmakingData) {
-  if (ranges::find_if (matchmakingData.gameLobbies, [gameLobbyName = createGameLobbyObject.name, lobbyPassword = createGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName; }) == matchmakingData.gameLobbies.end ())
+  if (std::ranges::find_if (matchmakingData.gameLobbies, [gameLobbyName = createGameLobbyObject.name, lobbyPassword = createGameLobbyObject.password] (auto const &_gameLobby) { return _gameLobby.name && _gameLobby.name == gameLobbyName; }) == matchmakingData.gameLobbies.end ())
     {
-      if (auto gameLobbyWithUser = ranges::find_if (matchmakingData.gameLobbies,
+      if (auto gameLobbyWithUser = std::ranges::find_if (matchmakingData.gameLobbies,
                                                     [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                       auto const &accountNames = gameLobby.accountNames;
-                                                      return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                      return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                     });
           gameLobbyWithUser != matchmakingData.gameLobbies.end ())
         {
@@ -615,7 +611,7 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
               usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
               usersInGameLobby.name = newGameLobby.name.value ();
               usersInGameLobby.durakGameOption = newGameLobby.gameOption;
-              ranges::transform (newGameLobby.accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+              std::ranges::transform (newGameLobby.accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
               return;
@@ -643,7 +639,7 @@ auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannel
 };
 
 auto const broadCastMessage = [] (user_matchmaking::BroadCastMessage const &broadCastMessageObject, MatchmakingData &matchmakingData) {
-  for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (auto const &matchmaking) { return matchmaking->isUserInChatChannel (chatChannel); }))
+  for (auto &matchmaking : matchmakingData.stateMachines | std::ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (auto const &matchmaking) { return matchmaking->isUserInChatChannel (chatChannel); }))
     {
       processEvent (*matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
     }
@@ -683,16 +679,16 @@ sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingD
 boost::asio::awaitable<void>
 wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, MatchmakingData &matchmakingData)
 {
-  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto userGameLobby = std::ranges::find_if (matchmakingData.gameLobbies,
                                             [accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) {
                                               auto const &accountNames = gameLobby.accountNames;
-                                              return gameLobby.getWaitingForAnswerToStartGame () && ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                              return gameLobby.getWaitingForAnswerToStartGame () && std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                             });
       userGameLobby != matchmakingData.gameLobbies.end ())
     {
       if (wantsToJoinGameEv.answer)
         {
-          if (ranges::find_if (userGameLobby->readyUsers, [accountName = matchmakingData.user.accountName] (std::string const &readyUserAccountName) { return readyUserAccountName == accountName; }) == userGameLobby->readyUsers.end ())
+          if (std::ranges::find_if (userGameLobby->readyUsers, [accountName = matchmakingData.user.accountName] (std::string const &readyUserAccountName) { return readyUserAccountName == accountName; }) == userGameLobby->readyUsers.end ())
             {
               userGameLobby->readyUsers.push_back (matchmakingData.user.accountName);
               if (userGameLobby->readyUsers.size () == userGameLobby->accountNames.size ())
@@ -740,10 +736,10 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
 }
 
 auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
-  if (auto gameLobbyWithAccount = ranges::find_if (matchmakingData.gameLobbies,
+  if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                    [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                      auto const &accountNames = gameLobby.accountNames;
-                                                     return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                                                     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                                                    });
       gameLobbyWithAccount != matchmakingData.gameLobbies.end ())
     {
@@ -758,7 +754,7 @@ auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
           usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
           usersInGameLobby.name = gameLobbyWithAccount->name.value ();
           usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
-          ranges::transform (gameLobbyWithAccount->accountNames, ranges::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
+          std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
         }
     }
@@ -770,9 +766,9 @@ auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
 
 auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueueEv, MatchmakingData &matchmakingData) {
   auto lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked;
-  if (ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == matchmakingData.gameLobbies.end ())
+  if (std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == matchmakingData.gameLobbies.end ())
     {
-      if (auto gameLobbyToAddUser = ranges::find_if (matchmakingData.gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = matchmakingData.user.accountName, &matchmakingData] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType, matchmakingData.matchmakingOption.allowedRatingDifference); }); gameLobbyToAddUser != matchmakingData.gameLobbies.end ())
+      if (auto gameLobbyToAddUser = std::ranges::find_if (matchmakingData.gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = matchmakingData.user.accountName, &matchmakingData] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType, matchmakingData.matchmakingOption.allowedRatingDifference); }); gameLobbyToAddUser != matchmakingData.gameLobbies.end ())
         {
           if (auto error = gameLobbyToAddUser->tryToAddUser (matchmakingData.user))
             {
@@ -835,20 +831,20 @@ getAccountName (auto const &typeWithAccountName, MatchmakingData &matchmakingDat
 }
 
 auto const userInGameLobby = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
-  return ranges::find_if (matchmakingData.gameLobbies,
+  return std::ranges::find_if (matchmakingData.gameLobbies,
                           [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
                             auto const &accountNames = gameLobby.accountNames;
-                            return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+                            return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
                           })
          != matchmakingData.gameLobbies.end ();
 };
 
-auto const alreadyLoggedIn = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool { return ranges::find (matchmakingData.stateMachines, true, [accountName = typeWithAccountName.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
+auto const alreadyLoggedIn = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool { return std::ranges::find (matchmakingData.stateMachines, true, [accountName = typeWithAccountName.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }) != matchmakingData.stateMachines.end (); };
 
 auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
-  auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
+  auto userGameLobby = std::ranges::find_if (matchmakingData.gameLobbies, [accountName = getAccountName (typeWithAccountName, matchmakingData)] (auto const &gameLobby) {
     auto const &accountNames = gameLobby.accountNames;
-    return ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
+    return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
   });
   return userGameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
 };
@@ -1176,7 +1172,7 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
         {
           for (auto const &accountName : gameLobby.accountNames)
             {
-              if (auto matchmakingItr = ranges::find_if (matchmakingData.stateMachines, [&accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
+              if (auto matchmakingItr = std::ranges::find_if (matchmakingData.stateMachines, [&accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
                 {
                   matchmakingItr->get ()->sm->impl.process_event (matchmaking_game::ConnectToGame{ accountName, std::move (stringToObject<matchmaking_game::StartGameSuccess> (objectAsString).gameName) });
                 }
@@ -1212,8 +1208,8 @@ sendMessageToUsers (std::string const &message, std::vector<std::string> const &
 void
 sendToAllAccountsInUsersCreateGameLobby (std::string const &message, MatchmakingData &matchmakingData)
 {
-  if (auto userGameLobby = ranges::find_if (matchmakingData.gameLobbies, [&accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) {
-        return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
+  if (auto userGameLobby = std::ranges::find_if (matchmakingData.gameLobbies, [&accountName = matchmakingData.user.accountName] (GameLobby const &gameLobby) {
+        return std::ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
       }); userGameLobby != matchmakingData.gameLobbies.end ())
     {
       sendMessageToUsers (message, userGameLobby->accountNames, matchmakingData);
@@ -1223,8 +1219,8 @@ sendToAllAccountsInUsersCreateGameLobby (std::string const &message, Matchmaking
 void
 Matchmaking::cleanUp (){
   disconnectFromProxy();
-  if (auto userGameLobby = ranges::find_if (sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) {
-        return ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
+  if (auto userGameLobby = std::ranges::find_if (sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) {
+        return std::ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end ();
       }); userGameLobby != sm->matchmakingData.gameLobbies.end ())
     {
       userGameLobby->removeUser (sm->matchmakingData.user.accountName);

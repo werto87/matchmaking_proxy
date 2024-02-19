@@ -13,9 +13,6 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
-#include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/functional/identity.hpp>
-#include <range/v3/numeric/accumulate.hpp>
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <stdlib.h>
@@ -23,7 +20,7 @@
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
-  auto const sum = ranges::accumulate (userRatings, boost::numeric_cast<long double> (0), [] (size_t sum_, size_t value) { return sum_ + value; });
+  auto const sum = std::accumulate (userRatings.begin (), userRatings.end (), boost::numeric_cast<long double> (0), [] (size_t sum_, size_t value) { return sum_ + value; });
   return boost::numeric_cast<size_t> (std::rintl ((userRating / sum) * ratingChange));
 }
 size_t
@@ -31,7 +28,7 @@ averageRating (std::vector<std::string> const &accountNames)
 {
 
   soci::session sql (soci::sqlite3, databaseName);
-  auto sumOfRatingInTheLobby = ranges::accumulate (accountNames, size_t{}, [&] (auto x, std::string const &accountToCheck) {
+  auto sumOfRatingInTheLobby = std::accumulate (accountNames.begin (), accountNames.end (), size_t{}, [&] (auto x, std::string const &accountToCheck) {
     if (auto userInDatabase = confu_soci::findStruct<database::Account> (sql, "accountName", accountToCheck))
       {
         return x + userInDatabase->rating;
@@ -50,7 +47,7 @@ averageRating (std::vector<std::string> const &accountNames)
 size_t
 ratingShareWinningTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
-  auto const inverseSum = ranges::accumulate (userRatings, boost::numeric_cast<long double> (0), [] (long double sum, long double value) { return sum + (boost::numeric_cast<long double> (1) / value); });
+  auto const inverseSum = std::accumulate (userRatings.begin (), userRatings.end (), boost::numeric_cast<long double> (0), [] (long double sum, long double value) { return sum + (boost::numeric_cast<long double> (1) / value); });
   return boost::numeric_cast<size_t> (std::rintl ((boost::numeric_cast<long double> (1) / (boost::numeric_cast<long double> (userRating)) / inverseSum) * ratingChange));
 }
 
@@ -100,7 +97,7 @@ calcRatingLoserAndWinner (std::vector<database::Account> losers, std::vector<dat
 std::vector<database::Account>
 calcRatingDraw (std::vector<database::Account> accounts)
 {
-  auto ratingSum = ranges::accumulate (accounts, size_t{}, [] (size_t sum, database::Account const &account) { return sum + account.rating; });
+  auto ratingSum = std::accumulate (accounts.begin (), accounts.end (), size_t{}, [] (size_t sum, database::Account const &account) { return sum + account.rating; });
   long double totalRatingWon = 0;
   auto losers = std::vector<database::Account>{};
   auto winners = std::vector<database::Account>{};
@@ -122,14 +119,14 @@ calcRatingDraw (std::vector<database::Account> accounts)
   std::ranges::transform (winners, std::back_inserter (winnersRatings), [] (database::Account const &account) { return account.rating; });
   for (auto const &winner : winners)
     {
-      if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = winner.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
+      if (auto accountToUpdateRating = std::ranges::find_if (accounts, [accountName = winner.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {
           accountToUpdateRating->rating = winner.rating + ratingShareWinningTeam (winner.rating, winnersRatings, boost::numeric_cast<size_t> (totalRatingWon));
         }
     }
   for (auto const &loser : losers)
     {
-      if (auto accountToUpdateRating = ranges::find_if (accounts, [accountName = loser.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
+      if (auto accountToUpdateRating = std::ranges::find_if (accounts, [accountName = loser.accountName] (auto const &account) { return account.accountName == accountName; }); accountToUpdateRating != accounts.end ())
         {
           auto const newRating = loser.rating - ratingShareLosingTeam (loser.rating, losersRatings, boost::numeric_cast<size_t> (totalRatingWon));
           accountToUpdateRating->rating = (newRating <= 0) ? 1 : newRating;

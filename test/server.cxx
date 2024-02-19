@@ -26,8 +26,6 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
-#include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/view.hpp>
 #include <sodium/core.h>
 #include <stdexcept>
 #include <string>

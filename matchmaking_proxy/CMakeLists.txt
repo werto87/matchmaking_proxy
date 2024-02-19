@@ -25,6 +25,7 @@ find_package(confu_json)
 find_package(Boost)
 find_package(magic_enum)
 find_package(modern_durak_game_option)
+find_package(range-v3)
 
 
 target_link_libraries(matchmaking_proxy PUBLIC
@@ -32,6 +33,7 @@ target_link_libraries(matchmaking_proxy PUBLIC
         certify::core
         libsodium::libsodium
         sml::sml
+        range-v3::range-v3
         Corrade::Corrade
         login_matchmaking_game_shared::login_matchmaking_game_shared
         modern_durak_game_shared::modern_durak_game_shared

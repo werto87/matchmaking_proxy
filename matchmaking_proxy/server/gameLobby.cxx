@@ -9,8 +9,6 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
-#include <range/v3/algorithm/find_if.hpp>
-#include <range/v3/algorithm/none_of.hpp>
 #include <string>
 namespace boost
 {
@@ -60,7 +58,7 @@ GameLobby::tryToAddUser (User const &user)
 {
   if (_maxUserCount > accountNames.size ())
     {
-      if (ranges::none_of (accountNames, [&accountName = user.accountName] (std::string const &accountInGameLobby) { return accountInGameLobby == accountName; }))
+      if (std::ranges::none_of (accountNames, [&accountName = user.accountName] (std::string const &accountInGameLobby) { return accountInGameLobby == accountName; }))
         {
           accountNames.push_back (user.accountName);
           return {};
@@ -81,7 +79,7 @@ GameLobby::tryToRemoveUser (std::string const &userWhoTriesToRemove, std::string
 {
   if (isGameLobbyAdmin (userWhoTriesToRemove) && userWhoTriesToRemove != userToRemoveName)
     {
-      if (auto userToRemoveFromLobby = ranges::find_if (accountNames, [&userToRemoveName] (auto const &accountName) { return userToRemoveName == accountName; }); userToRemoveFromLobby != accountNames.end ())
+      if (auto userToRemoveFromLobby = std::ranges::find_if (accountNames, [&userToRemoveName] (auto const &accountName) { return userToRemoveName == accountName; }); userToRemoveFromLobby != accountNames.end ())
         {
           accountNames.erase (userToRemoveFromLobby);
           return true;

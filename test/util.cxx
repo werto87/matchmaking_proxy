@@ -1,6 +1,5 @@
 #include "matchmaking_proxy/util.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include <boost/asio/ip/tcp.hpp>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 std::shared_ptr<Matchmaking>

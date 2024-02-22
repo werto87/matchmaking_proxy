@@ -24,7 +24,6 @@ find_package(durak)
 find_package(confu_json)
 find_package(Boost)
 find_package(magic_enum)
-find_package(modern_durak_game_option)
 find_package(range-v3)
 
 

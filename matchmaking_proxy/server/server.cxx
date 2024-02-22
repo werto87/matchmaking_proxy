@@ -1,7 +1,6 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <algorithm> // for max

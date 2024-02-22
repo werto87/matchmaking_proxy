@@ -1,7 +1,6 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/server/matchmakingOption.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "mockserver.hxx"
 #include "util.hxx"
@@ -25,13 +24,13 @@
 #include <iterator> // for next
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <matchmaking_proxy/server/matchmakingOption.hxx>
 #include <openssl/ssl3.h>
 #include <sodium/core.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility> // for pair
-
 using namespace boost::asio;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;

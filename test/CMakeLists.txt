@@ -25,9 +25,7 @@ target_compile_definitions(_test PUBLIC
         #  LOG_MY_WEBSOCKET_READ_END
         # LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
         )
-target_compile_definitions(_test PUBLIC
-        PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/userDefinedGameOption.hxx"
-        )
+
 
 target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME _test

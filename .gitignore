@@ -7,3 +7,5 @@ project-cppcheck-build-dir/*
 *.db
 database/*
 compile_commands.json
+CMakeUserPresets.json
+.editorconfig

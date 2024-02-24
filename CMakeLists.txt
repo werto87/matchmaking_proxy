@@ -31,3 +31,8 @@ target_compile_definitions(run_server PRIVATE
          BOOST_ASIO_ENABLE_HANDLER_TRACKING
         CURRENT_BINARY_DIR="${CMAKE_BINARY_DIR}"
         )
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/compile_commands.json
+        ${CMAKE_SOURCE_DIR}/compile_commands.json
+)        

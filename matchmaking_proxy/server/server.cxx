@@ -122,10 +122,10 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                        [&matchmakings = matchmakings, matchmaking] (auto eptr) {
+                        [&_matchmakings = matchmakings, matchmaking] (auto eptr) {
                           printException (eptr);
                           matchmaking->get ()->cleanUp ();
-                          matchmakings.erase (matchmaking);
+                          _matchmakings.erase (matchmaking);
                         });
             }
           catch (std::exception const &e)
@@ -161,8 +161,8 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
               static size_t id = 0;
               auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ connection, "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &matchmakings = matchmakings] (const std::string &msg) {
-                auto matchmakingGame = MatchmakingGame{ matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->sendMessage (_msg); } };
+              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings] (const std::string &msg) {
+                auto matchmakingGame = MatchmakingGame{ _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->sendMessage (_msg); } };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop (),
                         printException);

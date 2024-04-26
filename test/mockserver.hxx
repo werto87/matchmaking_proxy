@@ -3,7 +3,6 @@
 
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -53,15 +52,15 @@ struct Mockserver
         try
           {
             using namespace boost::asio::experimental::awaitable_operators;
-            auto socket = co_await(acceptor.async_accept ());
+            auto socket = co_await (acceptor.async_accept ());
             auto connection = std::make_shared<Websocket> (Websocket{ std::move (socket) });
             connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
             connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
             co_await connection->async_accept ();
             websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), loggingName_, loggingTextStyleForName_, id_ });
             std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
-            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &mockserverOption = mockserverOption, &ioContext = ioContext] (const std::string &msg) mutable {
-              for (auto const &[startsWith, callback] : mockserverOption.callOnMessageStartsWith)
+            boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &_mockserverOption = mockserverOption, &_ioContext = ioContext] (const std::string &msg) mutable {
+              for (auto const &[startsWith, callback] : _mockserverOption.callOnMessageStartsWith)
                 {
                   if (boost::starts_with (msg, startsWith))
                     {
@@ -69,16 +68,16 @@ struct Mockserver
                       break;
                     }
                 }
-              if (mockserverOption.disconnectOnMessage && mockserverOption.disconnectOnMessage.value () == msg)
+              if (_mockserverOption.disconnectOnMessage && _mockserverOption.disconnectOnMessage.value () == msg)
                 {
-                  ioContext.stop ();
+                  _ioContext.stop ();
                 }
-              else if (mockserverOption.requestResponse.count (msg))
-                websocket->sendMessage (mockserverOption.requestResponse.at (msg));
+              else if (_mockserverOption.requestResponse.count (msg))
+                websocket->sendMessage (_mockserverOption.requestResponse.at (msg));
               else
                 {
                   auto msgFound = false;
-                  for (auto const &[startsWith, response] : mockserverOption.requestStartsWithResponse)
+                  for (auto const &[startsWith, response] : _mockserverOption.requestStartsWithResponse)
                     {
                       if (boost::starts_with (msg, startsWith))
                         {
@@ -93,9 +92,9 @@ struct Mockserver
                     }
                 }
             }) && websocket->writeLoop (),
-                                   [&websockets = websockets, websocket] (auto eptr) {
+                                   [&_websockets = websockets, websocket] (auto eptr) {
                                      printException (eptr);
-                                     websockets.erase (websocket);
+                                     _websockets.erase (websocket);
                                    });
           }
         catch (std::exception const &e)

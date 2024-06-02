@@ -1,6 +1,7 @@
 #ifndef B5E08F8D_3CB1_4FDC_BCF6_F4AEEBFBD52B
 #define B5E08F8D_3CB1_4FDC_BCF6_F4AEEBFBD52B
 
+#include <chrono>
 #include <cstddef>
 struct MatchmakingOption
 {

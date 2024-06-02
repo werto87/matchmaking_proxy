@@ -29,7 +29,7 @@ class Project(ConanFile):
         self.requires("certify/cci.20201114")
         self.requires("libsodium/1.0.18")
         self.requires("confu_json/1.0.1", force=True)
-        self.requires("sml/1.1.5")
+        self.requires("sml/1.1.11")
         self.requires("range-v3/0.12.0")
         self.requires("corrade/2020.06")
         self.requires("login_matchmaking_game_shared/latest")

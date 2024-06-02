@@ -36,11 +36,7 @@ target_link_libraries(
          boost::boost
          magic_enum::magic_enum
          )
-target_compile_definitions(
-  matchmaking_proxy
-  PUBLIC
-    PATH_TO_USER_DEFINED_GAME_OPTION="modern_durak_game_option/userDefinedGameOption.hxx"
-)
+
 
 target_compile_features(matchmaking_proxy PUBLIC cxx_std_20)
 

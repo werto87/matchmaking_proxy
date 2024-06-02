@@ -2,6 +2,7 @@
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmaking.hxx"
+#include "matchmaking_proxy/logic/matchmakingGameAllowedTypes.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "rating.hxx"
 #include <boost/algorithm/string/classification.hpp>
@@ -15,7 +16,6 @@
 #include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <iostream>
-#include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <range/v3/to_container.hpp>
 #include <ranges>
@@ -179,33 +179,34 @@ MatchmakingGame::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
 
 MatchmakingGame::MatchmakingGame(std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &)> sendToGame): sm{ new StateMachineWrapper{this, MatchmakingGameDependencies{stateMachines_,sendToGame}} } {}
 
+// clang-format on
 
-
-void MatchmakingGame::process_event (std::string const &event) {
+void
+MatchmakingGame::process_event (std::string const &event)
 {
-  std::vector<std::string> splitMesssage{};
-  boost::algorithm::split (splitMesssage, event, boost::is_any_of ("|"));
-  if (splitMesssage.size () == 2)
-    {
-      auto const &typeToSearch = splitMesssage.at (0);
-      auto const &objectAsString = splitMesssage.at (1);
-      bool typeFound = false;
-      boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
-            if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-              {
-                typeFound = true;
-                boost::json::error_code ec{};
-                sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-                if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
-                return;
-              }
-          });
-          if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
-    }
-  else
-    {
-      std::cout << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
-    }
-}
-
+  {
+    std::vector<std::string> splitMesssage{};
+    boost::algorithm::split (splitMesssage, event, boost::is_any_of ("|"));
+    if (splitMesssage.size () == 2)
+      {
+        auto const &typeToSearch = splitMesssage.at (0);
+        auto const &objectAsString = splitMesssage.at (1);
+        bool typeFound = false;
+        boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
+          if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+            {
+              typeFound = true;
+              boost::json::error_code ec{};
+              sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+              if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+              return;
+            }
+        });
+        if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+      }
+    else
+      {
+        std::cout << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
+      }
+  }
 }

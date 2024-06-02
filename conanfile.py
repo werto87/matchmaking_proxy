@@ -33,4 +33,4 @@ class Project(ConanFile):
         self.requires("range-v3/0.12.0")
         self.requires("corrade/2020.06")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("modern_durak_game_shared/latest")
+

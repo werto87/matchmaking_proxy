@@ -35,7 +35,7 @@ target_link_libraries(
          confu_json::confu_json
          boost::boost
          magic_enum::magic_enum
-         modern_durak_game_option::modern_durak_game_option)
+         )
 target_compile_definitions(
   matchmaking_proxy
   PUBLIC

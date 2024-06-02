@@ -114,7 +114,7 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
     }
 }
 
-TEST_CASE ("user,matchmaking, game", "[integration]")
+TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
 {
   if (sodium_init () < 0)
     {

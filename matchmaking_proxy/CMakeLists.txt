@@ -14,7 +14,6 @@ find_package(libsodium)
 find_package(sml)
 find_package(Corrade)
 find_package(login_matchmaking_game_shared)
-find_package(modern_durak_game_shared)
 find_package(durak)
 find_package(confu_json)
 find_package(Boost)
@@ -30,7 +29,6 @@ target_link_libraries(
          range-v3::range-v3
          Corrade::Corrade
          login_matchmaking_game_shared::login_matchmaking_game_shared
-         modern_durak_game_shared::modern_durak_game_shared
          durak::durak
          confu_json::confu_json
          boost::boost

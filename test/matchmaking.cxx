@@ -8,6 +8,7 @@
 #include <boost/sml.hpp>
 #include <catch2/catch.hpp> // for Ass...
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <modern_durak_game_option/userDefinedGameOption.hxx>
 using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")

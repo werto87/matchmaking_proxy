@@ -6,9 +6,9 @@
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 #include <boost/asio/system_timer.hpp>
 #pragma GCC diagnostic pop
-#include "modern_durak_game_option/userDefinedGameOption.hxx"
 #include <cstddef>
 #include <functional>
+#include <login_matchmaking_game_shared/gameOptionBase.hxx>
 #include <memory>
 #include <optional>
 #include <string>
@@ -61,7 +61,7 @@ struct GameLobby
   bool getWaitingForAnswerToStartGame () const;
 
   std::vector<std::string> accountNames{};
-  shared_class::GameOption gameOption{};
+  user_matchmaking_game::GameOptionWrapper gameOptionWrapper{};
   std::vector<std::string> readyUsers{};
   LobbyType lobbyAdminType = LobbyType::FirstUserInLobbyUsers;
   std::optional<std::string> name{};

@@ -196,8 +196,15 @@ MatchmakingGame::process_event (std::string const &event)
           if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
             {
               typeFound = true;
-              boost::json::error_code ec{};
-              sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+              boost::system::error_code ec{};
+              if constexpr (std::is_same_v<std::decay_t<decltype (x)>, user_matchmaking_game::GameOptionBase>)
+                {
+                  throw "BANANE";
+                }
+              else
+                {
+                  sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+                }
               if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
               return;
             }

@@ -1,5 +1,4 @@
 from conan import ConanFile
-from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 from conan.tools.files import collect_libs, rmdir
 
@@ -21,18 +20,19 @@ class Project(ConanFile):
         # soci:with_sqlite3=True
 
     def requirements(self):
-        self.requires("boost/1.84.0", force=True)
+        self.requires("boost/1.85.0", force=True)
         self.requires("catch2/2.13.9")
         self.requires("durak/1.0.5", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/[>=0.9.5 <10]")
         self.requires("certify/cci.20201114")
         self.requires("libsodium/1.0.18")
-        self.requires("confu_json/1.0.1", force=True)
+        self.requires("confu_json/1.1.0", force=True)
         self.requires("sml/1.1.11")
         self.requires("range-v3/0.12.0")
         self.requires("corrade/2020.06")
         self.requires("login_matchmaking_game_shared/latest")
+
 
 
 

@@ -202,7 +202,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                 if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
                   {
                     typeFound = true;
-                    boost::json::error_code ec{};
+                    boost::system::error_code ec{};
                     try
                       {
                         sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
@@ -425,7 +425,8 @@ auto const logoutAccount = [] (MatchmakingData &matchmakingData) {
               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
               usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
               usersInGameLobby.name = gameLobbyWithAccount->name.value ();
-              usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
+              // TODO use GameOptionBase impl instead of GameOptionBase
+              usersInGameLobby.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameLobbyWithAccount->gameOptionWrapper.gameOption.get ());
               std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
               sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
             }
@@ -467,7 +468,7 @@ auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLo
           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
           usersInGameLobby.maxUserSize = gameLobby->maxUserCount ();
           usersInGameLobby.name = gameLobby->name.value ();
-          usersInGameLobby.durakGameOption = gameLobby->gameOption;
+          usersInGameLobby.gameOption = std::move (gameLobby->gameOption);
           std::ranges::transform (gameLobby->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
           return;
@@ -492,7 +493,7 @@ auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
       auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
       usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
       usersInGameLobby.name = gameLobbyWithAccount->name.value ();
-      usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
+      usersInGameLobby.gameOption = std::move (gameLobbyWithAccount->gameOption);
       std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
     }
@@ -515,7 +516,7 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
 };
 
-auto const setGameOption = [] (shared_class::GameOption const &gameOption, MatchmakingData &matchmakingData) {
+auto const setGameOption = [] (std::unique_ptr<user_matchmaking_game::GameOptionBase> const &gameOption, MatchmakingData &matchmakingData) {
   if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                         [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                           auto const &accountNames = gameLobby.accountNames;
@@ -531,8 +532,9 @@ auto const setGameOption = [] (shared_class::GameOption const &gameOption, Match
         {
           if (gameLobbyWithAccount->isGameLobbyAdmin (matchmakingData.user.accountName))
             {
-              gameLobbyWithAccount->gameOption = gameOption;
-              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameOption), matchmakingData);
+              // TODO this should be the derived class from GameOptionBase and not GameOptionBase
+              gameLobbyWithAccount->gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameOption.get ());
+              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameLobbyWithAccount->gameOption), matchmakingData);
               return;
             }
           else
@@ -615,7 +617,7 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
               usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
               usersInGameLobby.name = newGameLobby.name.value ();
-              usersInGameLobby.durakGameOption = newGameLobby.gameOption;
+              usersInGameLobby.gameOption = std::move (newGameLobby.gameOption);
               std::ranges::transform (newGameLobby.accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
@@ -674,7 +676,10 @@ sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingD
   auto myWebsocket = MyWebsocket<Websocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
-  startGame.gameOption = gameLobby.gameOption;
+  // TODO replace GameOptionBase with derived class or we slice here probably
+  startGame.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (gameLobby.gameOption.get ());
+  // TODO remove assert
+  assert (gameLobby.gameOption.get () != startGame.gameOption.get ());
   startGame.ratedGame = gameLobby.lobbyAdminType == GameLobby::LobbyType::MatchMakingSystemRanked;
   co_await myWebsocket.async_write_one_message (objectToStringWithObjectName (startGame));
   auto msg = co_await myWebsocket.async_read_one_message ();
@@ -758,7 +763,7 @@ auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
           usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
           usersInGameLobby.name = gameLobbyWithAccount->name.value ();
-          usersInGameLobby.durakGameOption = gameLobbyWithAccount->gameOption;
+          usersInGameLobby.gameOption = std::move (gameLobbyWithAccount->gameOption);
           std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
         }
@@ -947,7 +952,7 @@ public:
   {
     namespace u_m = user_matchmaking;
     namespace m_g = matchmaking_game;
-    namespace s_c = shared_class;
+    namespace u_m_g = user_matchmaking_game;
     // clang-format off
   return make_transition_table(
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -980,7 +985,7 @@ public:
 , state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby
 , state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
 , state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby
-, state<LoggedIn>                             + event<s_c::GameOption>                                                            / setGameOption
+, state<LoggedIn>                             + event<std::unique_ptr<u_m_g::GameOptionBase>>                                     / setGameOption
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby
@@ -1091,7 +1096,7 @@ Matchmaking::processEvent (std::string const &event)
         if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
           {
             typeFound = true;
-            boost::json::error_code ec{};
+            boost::system::error_code ec{};
             auto messageAsObject = confu_json::read_json (objectAsString, ec);
             if (ec) result = "read_json error: " + ec.message ();
             else

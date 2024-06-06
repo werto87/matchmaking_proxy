@@ -10,7 +10,10 @@ add_executable(
   useAsLib.cxx
   util.cxx)
 find_package(Catch2)
+find_package(modern_durak_game_option)
+
 target_link_libraries(_test myproject_options myproject_warnings
+                      modern_durak_game_option::modern_durak_game_option
                       matchmaking_proxy Catch2::Catch2WithMain)
 target_compile_definitions(
   _test

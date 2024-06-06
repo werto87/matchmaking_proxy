@@ -21,7 +21,6 @@ class Project(ConanFile):
 
     def requirements(self):
         self.requires("boost/1.85.0", force=True)
-        self.requires("catch2/2.13.9")
         self.requires("durak/1.0.5", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/[>=0.9.5 <10]")
@@ -33,6 +32,11 @@ class Project(ConanFile):
         self.requires("corrade/2020.06")
         self.requires("login_matchmaking_game_shared/latest")
 
+
+        ### only for testing please do not put this in the package build recept ###
+        self.requires("modern_durak_game_option/latest")
+        self.requires("catch2/2.13.9")
+        ###########################################################################
 
 
 

@@ -58,6 +58,7 @@
 #include <functional> // for __base
 #include <iostream>   // for string
 #include <iostream>
+#include <login_matchmaking_game_shared/gameOptionBase.hxx>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <map>
@@ -301,28 +302,21 @@ createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
         {
           if (gameLobbyWithUser->isGameLobbyAdmin (matchmakingData.user.accountName))
             {
-              if (gameLobbyWithUser->accountNames.size () + gameLobbyWithUser->gameOption.computerControlledPlayerCount >= 2)
+              if (auto errorInGameOptionResult = user_matchmaking_game::errorInGameOption (*dynamic_cast<user_matchmaking_game::GameOptionBase *> (gameLobbyWithUser->gameOptionWrapper.gameOption.get ())))
                 {
-                  if (auto gameOptionError = errorInGameOption (gameLobbyWithUser->gameOption))
-                    {
-                      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ gameOptionError.value () }));
-                    }
-                  else
-                    {
-                      if (gameLobbyWithUser->accountNames.size () > 1)
-                        {
-                          askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
-                        }
-                      else
-                        {
-                          co_await startGame (*gameLobbyWithUser, matchmakingData);
-                          matchmakingData.gameLobbies.erase (gameLobbyWithUser);
-                        }
-                    }
+                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ errorInGameOptionResult.error () }));
                 }
               else
                 {
-                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateGameError{ "You need atleast two user to create a game" }));
+                  if (gameLobbyWithUser->accountNames.size () > 1)
+                    {
+                      askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
+                    }
+                  else
+                    {
+                      co_await startGame (*gameLobbyWithUser, matchmakingData);
+                      matchmakingData.gameLobbies.erase (gameLobbyWithUser);
+                    }
                 }
             }
           else
@@ -468,7 +462,7 @@ auto const joinGameLobby = [] (user_matchmaking::JoinGameLobby const &joinGameLo
           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
           usersInGameLobby.maxUserSize = gameLobby->maxUserCount ();
           usersInGameLobby.name = gameLobby->name.value ();
-          usersInGameLobby.gameOption = std::move (gameLobby->gameOption);
+          usersInGameLobby.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameLobby->gameOptionWrapper.gameOption.get ());
           std::ranges::transform (gameLobby->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
           return;
@@ -493,7 +487,7 @@ auto const relogToGameLobby = [] (MatchmakingData &matchmakingData) {
       auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
       usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
       usersInGameLobby.name = gameLobbyWithAccount->name.value ();
-      usersInGameLobby.gameOption = std::move (gameLobbyWithAccount->gameOption);
+      usersInGameLobby.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameLobbyWithAccount->gameOptionWrapper.gameOption.get ());
       std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
       matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
     }
@@ -533,8 +527,8 @@ auto const setGameOption = [] (std::unique_ptr<user_matchmaking_game::GameOption
           if (gameLobbyWithAccount->isGameLobbyAdmin (matchmakingData.user.accountName))
             {
               // TODO this should be the derived class from GameOptionBase and not GameOptionBase
-              gameLobbyWithAccount->gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameOption.get ());
-              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameLobbyWithAccount->gameOption), matchmakingData);
+              gameLobbyWithAccount->gameOptionWrapper.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameOption.get ());
+              sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameLobbyWithAccount->gameOptionWrapper), matchmakingData);
               return;
             }
           else
@@ -607,7 +601,7 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
         }
       else
         {
-          auto &newGameLobby = matchmakingData.gameLobbies.emplace_back (GameLobby{ createGameLobbyObject.name, createGameLobbyObject.password });
+          auto &newGameLobby = matchmakingData.gameLobbies.emplace_back (createGameLobbyObject.name, createGameLobbyObject.password);
           if (newGameLobby.tryToAddUser (matchmakingData.user))
             {
               throw std::logic_error{ "user can not join lobby which he created" };
@@ -617,7 +611,7 @@ auto const createGameLobby = [] (user_matchmaking::CreateGameLobby const &create
               auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
               usersInGameLobby.maxUserSize = newGameLobby.maxUserCount ();
               usersInGameLobby.name = newGameLobby.name.value ();
-              usersInGameLobby.gameOption = std::move (newGameLobby.gameOption);
+              usersInGameLobby.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*newGameLobby.gameOptionWrapper.gameOption.get ());
               std::ranges::transform (newGameLobby.accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbySuccess{}));
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (usersInGameLobby));
@@ -677,9 +671,7 @@ sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingD
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
   // TODO replace GameOptionBase with derived class or we slice here probably
-  startGame.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (gameLobby.gameOption.get ());
-  // TODO remove assert
-  assert (gameLobby.gameOption.get () != startGame.gameOption.get ());
+  startGame.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameLobby.gameOptionWrapper.gameOption.get ());
   startGame.ratedGame = gameLobby.lobbyAdminType == GameLobby::LobbyType::MatchMakingSystemRanked;
   co_await myWebsocket.async_write_one_message (objectToStringWithObjectName (startGame));
   auto msg = co_await myWebsocket.async_read_one_message ();
@@ -763,7 +755,7 @@ auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
           auto usersInGameLobby = user_matchmaking::UsersInGameLobby{};
           usersInGameLobby.maxUserSize = gameLobbyWithAccount->maxUserCount ();
           usersInGameLobby.name = gameLobbyWithAccount->name.value ();
-          usersInGameLobby.gameOption = std::move (gameLobbyWithAccount->gameOption);
+          usersInGameLobby.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameLobbyWithAccount->gameOptionWrapper.gameOption.get ());
           std::ranges::transform (gameLobbyWithAccount->accountNames, std::back_inserter (usersInGameLobby.users), [] (auto const &accountName) { return user_matchmaking::UserInGameLobby{ accountName }; });
           sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (usersInGameLobby), matchmakingData);
         }
@@ -795,7 +787,7 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
         }
       else
         {
-          auto gameLobby = GameLobby{};
+          auto &gameLobby = matchmakingData.gameLobbies.emplace_back ();
           if (auto error = gameLobby.setMaxUserCount ((lobbyType == GameLobby::LobbyType::MatchMakingSystemUnranked) ? matchmakingData.matchmakingOption.usersNeededToStartQuickGame : matchmakingData.matchmakingOption.usersNeededToStartRankedGame))
             {
               throw std::logic_error{ "Configuration Error. Please check MatchmakingOption. Error: " + error.value () };
@@ -805,7 +797,6 @@ auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue con
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinGameLobbyError{ matchmakingData.user.accountName, error.value () }));
             }
-          matchmakingData.gameLobbies.emplace_back (gameLobby);
           matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueueSuccess{}));
         }
     }

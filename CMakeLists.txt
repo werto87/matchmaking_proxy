@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.15.7)
-if(NOT DEFINED CMAKE_CXX_STANDARD) # Only set the cxx_standard if it is not set
-                                   # by someone else
-  set(CMAKE_CXX_STANDARD 23)
-endif()
+set(CMAKE_CXX_STANDARD 23)
 project(
   matchmaking_proxy
   VERSION 0.0.1
@@ -22,7 +19,8 @@ if(BUILD_TESTS)
   add_subdirectory(test)
 endif(BUILD_TESTS)
 add_executable(run_server main.cxx)
-target_link_libraries(run_server matchmaking_proxy)
+find_package(modern_durak_game_option)
+target_link_libraries(run_server matchmaking_proxy modern_durak_game_option::modern_durak_game_option)
 
 target_compile_definitions(
   run_server

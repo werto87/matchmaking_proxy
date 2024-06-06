@@ -1,6 +1,5 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/util.hxx"
@@ -8,6 +7,7 @@
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/json/src.hpp>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <modern_durak_game_option/userDefinedGameOption.hxx>
 #include <sodium/core.h>
 auto const DEFAULT_PORT_USER = std::string{ "55555" };
 auto const DEFAULT_PORT_MATCHMAKING_TO_GAME = std::string{ "4242" };

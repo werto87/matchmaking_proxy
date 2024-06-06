@@ -80,7 +80,6 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();
   database::createTables ();
-
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};

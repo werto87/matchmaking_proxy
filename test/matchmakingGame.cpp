@@ -31,8 +31,8 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   auto messages = std::vector<std::string>{};
   auto &matchmaking1 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
   auto &matchmaking2 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
-  matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" }));
-  matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" }));
+  REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" })));
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
   ioContext.run ();
   ioContext.stop ();
   ioContext.reset ();

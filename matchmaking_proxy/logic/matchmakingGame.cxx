@@ -50,8 +50,8 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameDependencies &m
   for (size_t i = 0; i < accounts.size (); ++i)
     {
       if (auto matchmakingItr = std::ranges::find_if (matchmakingGameDependencies.stateMachines, [accountName = accounts.at (i).accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingGameDependencies.stateMachines.end ())
-        {
-          matchmakingItr->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
+        { // TODO handle error
+          std::ignore = matchmakingItr->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
         }
       soci::session sql (soci::sqlite3, databaseName);
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));

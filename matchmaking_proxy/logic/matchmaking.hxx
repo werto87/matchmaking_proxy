@@ -1,8 +1,8 @@
 #ifndef AB446319_39F6_4D7F_9EC5_860337CA5001
 #define AB446319_39F6_4D7F_9EC5_860337CA5001
 
+#include <expected>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,7 +19,7 @@ class Matchmaking
 public:
   explicit Matchmaking (MatchmakingData &&matchmakingData);
 
-  std::optional<std::string> processEvent (std::string const &event);
+  [[nodiscard]] std::expected<void, std::string> processEvent (std::string const &event);
 
   void sendMessageToGame (std::string const &message);
 

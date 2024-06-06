@@ -116,9 +116,10 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
                   }
                 else
                   {
-                    if (auto const &error = matchmaking->get ()->processEvent (msg))
+                    auto const &processEventResult = matchmaking->get ()->processEvent (msg);
+                    if (not processEventResult)
                       {
-                        myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, error.value () }));
+                        myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, processEventResult.error () }));
                       }
                   }
               }) && myWebsocket->writeLoop (),

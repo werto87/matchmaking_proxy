@@ -10,6 +10,7 @@
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
+#include <__expected/unexpected.h>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
@@ -642,7 +643,8 @@ auto const leaveChannel = [] (user_matchmaking::LeaveChannel const &leaveChannel
 auto const broadCastMessage = [] (user_matchmaking::BroadCastMessage const &broadCastMessageObject, MatchmakingData &matchmakingData) {
   for (auto &matchmaking : matchmakingData.stateMachines | std::ranges::views::filter ([&chatChannel = broadCastMessageObject.channel] (auto const &matchmaking) { return matchmaking->isUserInChatChannel (chatChannel); }))
     {
-      processEvent (*matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
+      // TODO handle error
+      std::ignore = processEvent (*matchmaking, user_matchmaking::Message{ matchmakingData.user.accountName, broadCastMessageObject.channel, broadCastMessageObject.message });
     }
 };
 
@@ -1072,12 +1074,12 @@ Matchmaking::StateMachineWrapperDeleter::operator() (StateMachineWrapper *p)
 
 Matchmaking::Matchmaking (MatchmakingData &&matchmakingData) : sm{ new StateMachineWrapper{ this, std::move (matchmakingData) } } {}
 
-std::optional<std::string>
+std::expected<void, std::string>
 Matchmaking::processEvent (std::string const &event)
 {
   std::vector<std::string> splitMesssage{};
   boost::algorithm::split (splitMesssage, event, boost::is_any_of ("|"));
-  auto result = std::optional<std::string>{};
+  auto result = std::expected<void, std::string>{};
   if (splitMesssage.size () == 2)
     {
       auto const &typeToSearch = splitMesssage.at (0);
@@ -1089,14 +1091,14 @@ Matchmaking::processEvent (std::string const &event)
             typeFound = true;
             boost::system::error_code ec{};
             auto messageAsObject = confu_json::read_json (objectAsString, ec);
-            if (ec) result = "read_json error: " + ec.message ();
+            if (ec) result = std::unexpected ("read_json error: " + ec.message ());
             else
               {
                 try
                   {
                     if (not sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (messageAsObject)))
                       {
-                        result = "No transition found";
+                        result = std::unexpected ("No transition found");
                       }
                   }
                 catch (std::exception const &e)
@@ -1105,16 +1107,16 @@ Matchmaking::processEvent (std::string const &event)
                     messageForUser << "exception: " << e.what () << '\n';
                     messageForUser << "messageAsObject: " << messageAsObject << '\n';
                     messageForUser << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << " : '" << confu_json::to_json<> (x) << "'" << '\n';
-                    result = messageForUser.str ();
+                    result = std::unexpected (messageForUser.str ());
                   }
               }
           }
       });
-      if (not typeFound) result = "could not find a match for typeToSearch in shared_class::gameTypes '" + typeToSearch + "'";
+      if (not typeFound) result = std::unexpected ("could not find a match for typeToSearch in shared_class::gameTypes '" + typeToSearch + "'");
     }
   else
     {
-      result = "Not supported event. event syntax: EventName|JsonObject";
+      result = std::unexpected ("Not supported event. event syntax: EventName|JsonObject");
     }
   return result;
 }

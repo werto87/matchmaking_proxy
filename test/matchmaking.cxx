@@ -155,7 +155,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("GameOption", "[matchmaking]")
   {
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking_game::GameOptionWrapper{ std::make_unique<shared_class::GameOption> () })));
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking_game::GameOptionAsString{})));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive

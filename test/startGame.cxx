@@ -334,13 +334,13 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   REQUIRE (messagesPlayer1.size () == 3);
   REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player1" + std::string{ "\"}" } == messagesPlayer1.at (0));
   REQUIRE (R"foo(JoinGameLobbySuccess|{})foo" == messagesPlayer1.at (1));
-  REQUIRE (R"foo(UsersInGameLobby|{"name":"name","users":[{"UserInGameLobby":{"accountName":"player1"}}],"maxUserSize":2,"gameOptionAsString":{"gameOptionAsString":""}})foo" == messagesPlayer1.at (2));
+  REQUIRE (R"foo(UsersInGameLobby|{"name":"name","users":[{"UserInGameLobby":{"accountName":"player1"}}],"maxUserSize":2,"gameOptionAsString":{"gameOptionAsString":"{\"gameOption\":{\"maxCardValue\":9,\"typeCount\":4,\"numberOfCardsPlayerShouldHave\":6,\"roundToStart\":1,\"trump\":null,\"customCardDeck\":null,\"cardsInHands\":null},\"timerOption\":{\"timerType\":\"noTimer\",\"timeAtStartInSeconds\":0,\"timeForEachRoundInSeconds\":0},\"computerControlledPlayerCount\":0,\"opponentCards\":\"showNumberOfOpponentCards\"}"}})foo" == messagesPlayer1.at (2));
   auto messagesPlayer2 = std::vector<std::string>{};
   auto matchmakingPlayer2 = createAccountJoinGameLobby ("player2", ioContext, messagesPlayer2, gameLobbies, matchmakings, pool, JoinGameLobby{ "name", "" }, proxyStartedCalled);
   REQUIRE (messagesPlayer2.size () == 3);
   REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player2" + std::string{ "\"}" } == messagesPlayer2.at (0));
   REQUIRE (R"foo(JoinGameLobbySuccess|{})foo" == messagesPlayer2.at (1));
-  REQUIRE (R"foo(UsersInGameLobby|{"name":"name","users":[{"UserInGameLobby":{"accountName":"player1"}},{"UserInGameLobby":{"accountName":"player2"}}],"maxUserSize":2,"gameOptionAsString":{"gameOptionAsString":""}})foo" == messagesPlayer2.at (2));
+  REQUIRE (R"foo(UsersInGameLobby|{"name":"name","users":[{"UserInGameLobby":{"accountName":"player1"}},{"UserInGameLobby":{"accountName":"player2"}}],"maxUserSize":2,"gameOptionAsString":{"gameOptionAsString":"{\"gameOption\":{\"maxCardValue\":9,\"typeCount\":4,\"numberOfCardsPlayerShouldHave\":6,\"roundToStart\":1,\"trump\":null,\"customCardDeck\":null,\"cardsInHands\":null},\"timerOption\":{\"timerType\":\"noTimer\",\"timeAtStartInSeconds\":0,\"timeForEachRoundInSeconds\":0},\"computerControlledPlayerCount\":0,\"opponentCards\":\"showNumberOfOpponentCards\"}"}})foo" == messagesPlayer2.at (2));
   REQUIRE (gameLobbies.size () == 1);
   messagesPlayer1.clear ();
   messagesPlayer2.clear ();

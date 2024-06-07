@@ -7,7 +7,9 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/sml.hpp>
 #include <catch2/catch.hpp> // for Ass...
+#include <confu_json/to_json.hxx>
 #include <modern_durak_game_option/userDefinedGameOption.hxx>
+#include <sstream>
 using namespace user_matchmaking;
 
 TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
@@ -155,7 +157,9 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   }
   SECTION ("GameOption", "[matchmaking]")
   {
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking_game::GameOptionAsString{})));
+    auto ss = std::stringstream{};
+    ss << confu_json::to_json (shared_class::GameOption{});
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking_game::GameOptionAsString{ ss.str () })));
     ioContext.run ();
     CHECK (messages.size () == 1);
     CHECK (R"foo(GameOptionError|{"error":"could not find a game lobby for account"})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive

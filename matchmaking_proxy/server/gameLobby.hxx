@@ -8,7 +8,7 @@
 #pragma GCC diagnostic pop
 #include <cstddef>
 #include <functional>
-#include <login_matchmaking_game_shared/gameOptionBase.hxx>
+#include <login_matchmaking_game_shared/gameOptionAsString.hxx>
 #include <memory>
 #include <optional>
 #include <string>
@@ -61,7 +61,7 @@ struct GameLobby
   bool getWaitingForAnswerToStartGame () const;
 
   std::vector<std::string> accountNames{};
-  user_matchmaking_game::GameOptionAsString gameOptionAsString{};
+  user_matchmaking_game::GameOptionAsString gameOptionAsString{ user_matchmaking_game::gameOptionDefaultValues () };
   std::vector<std::string> readyUsers{};
   LobbyType lobbyAdminType = LobbyType::FirstUserInLobbyUsers;
   std::optional<std::string> name{};

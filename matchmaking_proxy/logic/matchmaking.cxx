@@ -59,7 +59,7 @@
 #include <functional> // for __base
 #include <iostream>   // for string
 #include <iostream>
-#include <login_matchmaking_game_shared/gameOptionBase.hxx>
+#include <login_matchmaking_game_shared/gameOptionAsString.hxx>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <map>

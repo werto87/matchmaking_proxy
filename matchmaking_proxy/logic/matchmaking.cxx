@@ -511,7 +511,7 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
 };
 
-auto const setGameOption = [] (std::unique_ptr<user_matchmaking_game::GameOptionBase> const &gameOption, MatchmakingData &matchmakingData) {
+auto const setGameOption = [] (user_matchmaking_game::GameOptionWrapper const &gameOptionWrapper, MatchmakingData &matchmakingData) {
   if (auto gameLobbyWithAccount = std::ranges::find_if (matchmakingData.gameLobbies,
                                                         [accountName = matchmakingData.user.accountName] (auto const &gameLobby) {
                                                           auto const &accountNames = gameLobby.accountNames;
@@ -528,7 +528,7 @@ auto const setGameOption = [] (std::unique_ptr<user_matchmaking_game::GameOption
           if (gameLobbyWithAccount->isGameLobbyAdmin (matchmakingData.user.accountName))
             {
               // TODO this should be the derived class from GameOptionBase and not GameOptionBase
-              gameLobbyWithAccount->gameOptionWrapper.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameOption.get ());
+              gameLobbyWithAccount->gameOptionWrapper.gameOption = std::make_unique<user_matchmaking_game::GameOptionBase> (*gameOptionWrapper.gameOption.get ());
               sendToAllAccountsInUsersCreateGameLobby (objectToStringWithObjectName (gameLobbyWithAccount->gameOptionWrapper), matchmakingData);
               return;
             }
@@ -978,7 +978,7 @@ public:
 , state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby
 , state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
 , state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby
-, state<LoggedIn>                             + event<std::unique_ptr<u_m_g::GameOptionBase>>                                     / setGameOption
+, state<LoggedIn>                             + event<u_m_g::GameOptionWrapper>                                                   / setGameOption
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby

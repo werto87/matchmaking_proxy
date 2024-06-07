@@ -305,10 +305,6 @@ createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
             {
               if (auto errorInGameOptionResult = user_matchmaking_game::errorInGameOption (gameLobbyWithUser->gameOptionAsString))
                 {
-                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ errorInGameOptionResult.error () }));
-                }
-              else
-                {
                   if (gameLobbyWithUser->accountNames.size () > 1)
                     {
                       askUsersToJoinGame (gameLobbyWithUser, matchmakingData);
@@ -318,6 +314,10 @@ createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
                       co_await startGame (*gameLobbyWithUser, matchmakingData);
                       matchmakingData.gameLobbies.erase (gameLobbyWithUser);
                     }
+                }
+              else
+                {
+                  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ errorInGameOptionResult.error () }));
                 }
             }
           else
@@ -508,6 +508,18 @@ auto const leaveGameLobby = [] (MatchmakingData &matchmakingData) {
       matchmakingData.gameLobbies.erase (gameLobbyWithAccount);
     }
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbySuccess{}));
+};
+
+auto const gameOptionValid = [] (user_matchmaking_game::GameOptionAsString const &gameOptionAsString, MatchmakingData &matchmakingData) {
+  if (auto errorInGameOptionResult = user_matchmaking_game::errorInGameOption (gameOptionAsString))
+    {
+      return true;
+    }
+  else
+    {
+      matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameOptionError{ errorInGameOptionResult.error () }));
+      return false;
+    }
 };
 
 auto const setGameOption = [] (user_matchmaking_game::GameOptionAsString const &gameOptionAsString, MatchmakingData &matchmakingData) {
@@ -976,7 +988,7 @@ public:
 , state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby
 , state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
 , state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby
-, state<LoggedIn>                             + event<u_m_g::GameOptionAsString>                                                  / setGameOption
+, state<LoggedIn>                             + event<u_m_g::GameOptionAsString>           [ gameOptionValid ]                    / setGameOption
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby

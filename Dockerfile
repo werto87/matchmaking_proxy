@@ -1,4 +1,4 @@
-FROM ghcr.io/werto87/arch_linux_docker_image/archlinux_base_devel_conan:2024_02_11_12_32_48 as BUILD
+FROM ghcr.io/werto87/arch_linux_docker_image/archlinux_base_devel_conan:2024_06_09_08_54_52 as BUILD
 
 COPY cmake /home/build_user/matchmaking_proxy/cmake
 COPY matchmaking_proxy /home/build_user/matchmaking_proxy/matchmaking_proxy

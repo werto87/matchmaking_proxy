@@ -10,7 +10,6 @@
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include <__expected/unexpected.h>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
@@ -55,6 +54,7 @@
 #include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <cstddef>
+#include <expected>
 #include <fmt/color.h>
 #include <functional> // for __base
 #include <iostream>   // for string

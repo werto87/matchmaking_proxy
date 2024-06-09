@@ -3,7 +3,7 @@ target_sources(matchmaking_proxy PUBLIC
         )
 
 install(FILES
-        matchmaking_proxy/database/constant.hxx
-        matchmaking_proxy/database/database.hxx
+        constant.hxx
+        database.hxx
         DESTINATION include/matchmaking_proxy
 )        

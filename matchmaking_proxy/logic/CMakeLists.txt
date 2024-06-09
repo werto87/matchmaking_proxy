@@ -5,11 +5,11 @@
  )
 
  install(FILES
-        matchmaking_proxy/logic/matchmaking.hxx
-        matchmaking_proxy/logic/matchmakingAllowedTypes.hxx
-        matchmaking_proxy/logic/matchmakingData.hxx
-        matchmaking_proxy/logic/matchmakingGame.hxx
-        matchmaking_proxy/logic/matchmakingGameAllowedTypes.hxx
-        matchmaking_proxy/logic/rating.hxx
+        matchmaking.hxx
+        matchmakingAllowedTypes.hxx
+        matchmakingData.hxx
+        matchmakingGame.hxx
+        matchmakingGameAllowedTypes.hxx
+        rating.hxx
         DESTINATION include/matchmaking_proxy
         )

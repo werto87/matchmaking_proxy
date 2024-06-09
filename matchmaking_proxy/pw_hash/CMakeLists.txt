@@ -2,7 +2,7 @@
  )
 
  install(FILES
-        matchmaking_proxy/pw_hash/constant.hxx
-        matchmaking_proxy/pw_hash/passwordHash.hxx
+        constant.hxx
+        passwordHash.hxx
         DESTINATION include/matchmaking_proxy
         )

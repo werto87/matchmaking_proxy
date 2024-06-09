@@ -18,19 +18,6 @@ if(BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 endif(BUILD_TESTS)
-add_executable(run_server main.cxx)
-find_package(modern_durak_game_option)
-target_link_libraries(run_server matchmaking_proxy modern_durak_game_option::modern_durak_game_option)
-
-target_compile_definitions(
-  run_server
-  PRIVATE # BOOST_ASIO_DISABLE_THREADS
-          LOG_CO_SPAWN_PRINT_EXCEPTIONS
-          LOG_COMPUTER_CONTROLLED_OPPONENT_MASSAGE_RECEIVED
-          LOG_FOR_STATE_MACHINE
-          LOG_MY_WEBSOCKET
-          BOOST_ASIO_ENABLE_HANDLER_TRACKING
-          CURRENT_BINARY_DIR="${CMAKE_BINARY_DIR}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(copy_compile_commands_json ALL

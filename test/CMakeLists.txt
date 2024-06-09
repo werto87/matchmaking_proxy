@@ -1,6 +1,5 @@
 add_executable(
   _test
-  gameOption.cxx
   main.cxx
   matchmaking.cxx
   matchmakingGame.cpp

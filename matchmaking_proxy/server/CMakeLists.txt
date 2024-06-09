@@ -10,5 +10,5 @@
         myWebsocket.hxx
         server.hxx
         user.hxx
-        DESTINATION include/matchmaking_proxy
+        DESTINATION include/matchmaking_proxy/server
   )

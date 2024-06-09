@@ -4,5 +4,5 @@
  install(FILES
         constant.hxx
         passwordHash.hxx
-        DESTINATION include/matchmaking_proxy
+        DESTINATION include/matchmaking_proxy/pw_hash
         )

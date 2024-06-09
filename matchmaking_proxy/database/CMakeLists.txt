@@ -5,5 +5,5 @@ target_sources(matchmaking_proxy PUBLIC
 install(FILES
         constant.hxx
         database.hxx
-        DESTINATION include/matchmaking_proxy
+        DESTINATION include/matchmaking_proxy/database
 )        

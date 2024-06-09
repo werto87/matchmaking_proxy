@@ -11,5 +11,5 @@
         matchmakingGame.hxx
         matchmakingGameAllowedTypes.hxx
         rating.hxx
-        DESTINATION include/matchmaking_proxy
+        DESTINATION include/matchmaking_proxy/logic
         )

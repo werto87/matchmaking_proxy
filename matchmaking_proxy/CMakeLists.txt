@@ -12,7 +12,6 @@ find_package(confu_soci)
 find_package(certify)
 find_package(libsodium)
 find_package(sml)
-find_package(Corrade)
 find_package(login_matchmaking_game_shared)
 find_package(durak)
 find_package(confu_json)
@@ -27,7 +26,6 @@ target_link_libraries(
          libsodium::libsodium
          sml::sml
          range-v3::range-v3
-         Corrade::Corrade
          login_matchmaking_game_shared::login_matchmaking_game_shared
          durak::durak
          confu_json::confu_json

@@ -14,8 +14,10 @@ namespace boost::asio
 class thread_pool;
 class io_context;
 }
-struct MatchmakingOption;
 
+namespace matchmaking_proxy
+{
+struct MatchmakingOption;
 class Server
 {
 public:
@@ -27,5 +29,5 @@ public:
   boost::asio::thread_pool &pool;
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
 };
-
+}
 #endif /* AD140436_3FBA_4D63_8C0E_9113B92859E0 */

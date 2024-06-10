@@ -11,8 +11,8 @@
 #include <chrono>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+using namespace matchmaking_proxy;
 using namespace user_matchmaking;
-
 TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
 {
   database::createEmptyDatabase ();

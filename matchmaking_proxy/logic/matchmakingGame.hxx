@@ -4,7 +4,8 @@
 #include <functional>
 #include <list>
 #include <memory>
-
+namespace matchmaking_proxy
+{
 class Matchmaking;
 
 class MatchmakingGame
@@ -22,5 +23,5 @@ public:
 
   std::unique_ptr<StateMachineWrapper, StateMachineWrapperDeleter> sm; // only use this member inside of ".cxx". reason because of incomplete type
 };
-
+}
 #endif /* EFFCC19D_EF93_4BD9_B516_6E5932A5ECA0 */

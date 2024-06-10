@@ -31,6 +31,7 @@
 #include <string>
 #include <type_traits>
 #include <utility> // for pair
+using namespace matchmaking_proxy;
 using namespace boost::asio;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;

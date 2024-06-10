@@ -82,6 +82,14 @@ typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waita
 using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordMatches, (std::string, accountName))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ProxyToGame, )
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SendMessageToUser, (std::string, msg))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordDoesNotMatch, (std::string, accountName))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ConnectionToGameLost, )
+namespace matchmaking_proxy
+{
 template <typename T>
 concept hasAccountName = requires (T t) { t.accountName; };
 
@@ -99,9 +107,6 @@ struct NotLoggedIn
 {
 };
 
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
-
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordMatches, (std::string, accountName))
 struct WaitingForPasswordHashed
 {
 };
@@ -113,7 +118,6 @@ struct WaitingForPasswordCheck
 struct WaitingForUserWantsToRelogGameLobby
 {
 };
-BOOST_FUSION_DEFINE_STRUCT ((), ProxyToGame, )
 
 struct LoggedIn
 {
@@ -123,14 +127,9 @@ struct ConnectedWithGame
 {
 };
 
-BOOST_FUSION_DEFINE_STRUCT ((), SendMessageToUser, (std::string, msg))
-
 struct GlobalState
 {
 };
-
-BOOST_FUSION_DEFINE_STRUCT ((), PasswordDoesNotMatch, (std::string, accountName))
-BOOST_FUSION_DEFINE_STRUCT ((), ConnectionToGameLost, )
 
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
 
@@ -682,7 +681,6 @@ sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingD
   auto myWebsocket = MyWebsocket<Websocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
-  // TODO replace GameOptionBase with derived class or we slice here probably
   startGame.gameOptionAsString = gameLobby.gameOptionAsString;
   startGame.ratedGame = gameLobby.lobbyAdminType == GameLobby::LobbyType::MatchMakingSystemRanked;
   co_await myWebsocket.async_write_one_message (objectToStringWithObjectName (startGame));
@@ -1242,4 +1240,5 @@ Matchmaking::cleanUp ()
           userGameLobby->cancelTimer ();
         }
     }
+}
 }

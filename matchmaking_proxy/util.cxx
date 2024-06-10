@@ -1,5 +1,6 @@
 #include "util.hxx"
-
+namespace matchmaking_proxy
+{
 #ifdef LOG_CO_SPAWN_PRINT_EXCEPTIONS
 void
 printExceptionHelper (std::exception_ptr eptr)
@@ -23,3 +24,4 @@ printExceptionHelper (std::exception_ptr)
 }
 
 #endif
+}

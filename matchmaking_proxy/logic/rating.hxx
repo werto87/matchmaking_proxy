@@ -5,6 +5,8 @@
 #include <string>  // for string
 #include <utility> // for pair
 #include <vector>  // for vector
+namespace matchmaking_proxy
+{
 namespace database
 {
 struct Account;
@@ -20,5 +22,5 @@ size_t averageRating (std::vector<size_t> const &ratings);
 size_t averageRating (size_t sum, size_t elements);
 std::pair<std::vector<database::Account>, std::vector<database::Account>> calcRatingLoserAndWinner (std::vector<database::Account> losers, std::vector<database::Account> winners);
 std::vector<database::Account> calcRatingDraw (std::vector<database::Account> accounts);
-
+}
 #endif /* BE8478DC_CF98_4643_A3A0_36C1F7C77C87 */

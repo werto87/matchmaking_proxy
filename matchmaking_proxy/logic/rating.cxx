@@ -16,7 +16,8 @@
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <stdlib.h>
-
+namespace matchmaking_proxy
+{
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
@@ -133,4 +134,5 @@ calcRatingDraw (std::vector<database::Account> accounts)
         }
     }
   return accounts;
+}
 }

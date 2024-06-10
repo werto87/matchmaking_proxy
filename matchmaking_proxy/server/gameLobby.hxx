@@ -14,8 +14,6 @@
 #include <string>
 #include <vector>
 
-struct User;
-
 namespace boost
 {
 namespace asio
@@ -23,7 +21,9 @@ namespace asio
 class io_context;
 }
 }
-
+namespace matchmaking_proxy
+{
+struct User;
 struct GameLobby
 {
   GameLobby () = default;
@@ -72,5 +72,5 @@ private:
   bool waitingForAnswerToStartGame = false;
   size_t _maxUserCount{ 2 };
 };
-
+}
 #endif /* DBE82937_D6AB_4777_A3C8_A62B68300AA3 */

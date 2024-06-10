@@ -7,6 +7,7 @@
 #include <iostream> // for operator<<, ostream
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <vector> // for allocator
+using namespace matchmaking_proxy;
 template <typename T, template <typename ELEM, typename ALLOC = std::allocator<ELEM>> class Container>
 std::ostream &
 operator<< (std::ostream &o, const Container<T> &container)

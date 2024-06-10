@@ -24,12 +24,15 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+// TODO  figure out if we can remove this
 namespace meta
 {
 template <typename T> struct id;
 }
+// //////////////////////////////////////
 using namespace boost::sml;
-
+namespace matchmaking_proxy
+{
 struct MatchmakingGameDependencies
 {
   std::list<std::shared_ptr<Matchmaking>> &stateMachines;
@@ -209,4 +212,5 @@ MatchmakingGame::process_event (std::string const &event)
         std::cout << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
       }
   }
+}
 }

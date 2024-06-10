@@ -17,7 +17,8 @@ namespace asio
 class io_context;
 }
 }
-
+namespace matchmaking_proxy
+{
 GameLobby::GameLobby (std::string name_, std::string password_) : name{ std::move (name_) }, password (std::move (password_)) {}
 
 std::optional<std::string>
@@ -168,4 +169,5 @@ bool
 GameLobby::getWaitingForAnswerToStartGame () const
 {
   return waitingForAnswerToStartGame;
+}
 }

@@ -3,6 +3,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <catch2/catch.hpp>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+using namespace matchmaking_proxy;
 std::shared_ptr<Matchmaking>
 createAccountAndJoinMatchmakingQueue (const std::string &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, const user_matchmaking::JoinMatchMakingQueue &joinMatchMakingQueue)
 {

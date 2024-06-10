@@ -1,8 +1,8 @@
 #pragma once
 
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
-
 // clang-format off
+
 namespace user_matchmaking{
 static boost::hana::tuple<
 JoinChannel,
@@ -73,5 +73,6 @@ ProxyStopped,
 GetMatchmakingLogic,
 MatchmakingLogic
   >  const  userMatchmaking{};
-}
+
 // clang-format on
+}

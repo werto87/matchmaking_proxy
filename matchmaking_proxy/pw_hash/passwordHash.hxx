@@ -19,7 +19,8 @@
 #include <string>
 #include <thread>
 #include <utility>
-
+namespace matchmaking_proxy
+{
 std::string inline pw_to_hash (std::string const &password)
 {
   auto hashed_password = std::array<char, crypto_pwhash_STRBYTES>{};
@@ -71,5 +72,5 @@ async_check_hashed_pw (boost::asio::thread_pool &pool, boost::asio::io_context &
       },
       token, password, hashedPassword);
 }
-
+}
 #endif /* AD3B06C2_4AC7_438D_8907_4643053A4E7E */

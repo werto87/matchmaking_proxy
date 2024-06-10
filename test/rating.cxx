@@ -2,7 +2,7 @@
 #include "matchmaking_proxy/database/database.hxx" // for Account
 #include <catch2/catch.hpp>                        // for AssertionHandler
 #include <type_traits>                             // for add_const<>::type
-
+using namespace matchmaking_proxy;
 TEST_CASE ("updateRatingWinLose", "[rating]")
 {
   SECTION ("updateRatingWinLose 2 player", "[rating]")

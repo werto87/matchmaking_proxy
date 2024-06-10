@@ -5,7 +5,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+namespace matchmaking_proxy
+{
 struct MatchmakingData;
 
 class Matchmaking
@@ -37,5 +38,5 @@ public:
 
   std::unique_ptr<StateMachineWrapper, StateMachineWrapperDeleter> sm; // only use this member inside of matchmaking.cxx. reason because of incomplete type
 };
-
+}
 #endif /* AB446319_39F6_4D7F_9EC5_860337CA5001 */

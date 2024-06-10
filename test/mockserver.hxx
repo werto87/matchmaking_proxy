@@ -12,7 +12,7 @@
 #include <exception>
 #include <map>
 #include <variant>
-
+using namespace matchmaking_proxy;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::use_awaitable_t<>::executor_with_default<boost::asio::any_io_executor>> Socket;
 

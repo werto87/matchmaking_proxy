@@ -9,6 +9,9 @@
 #include <random>
 #include <string>
 
+namespace matchmaking_proxy
+{
+
 template <typename TypeToSend>
 std::string
 objectToStringWithObjectName (TypeToSend const &typeToSend)
@@ -64,5 +67,5 @@ rndNumber ()
   std::uniform_int_distribution<T> distr{};
   return distr (eng);
 }
-
+}
 #endif /* EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1 */

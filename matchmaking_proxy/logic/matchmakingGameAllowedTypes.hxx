@@ -1,11 +1,10 @@
 #pragma once
 
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
-
 // clang-format off
 namespace matchmaking_game{
 static boost::hana::tuple<
-  UnhandledMessageError,
+UnhandledMessageError,
 StartGameError,
 StartGameSuccess,
 LeaveGameServer,
@@ -23,4 +22,4 @@ ConnectToGameError,
 ConnectToGameSuccess
   >  const matchmakingGame{};
 }
-
+// clang-format on

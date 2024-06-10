@@ -15,7 +15,7 @@
 #include <catch2/catch.hpp> // for Ass...
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
-
+using namespace matchmaking_proxy;
 using namespace user_matchmaking;
 using namespace matchmaking_game;
 

@@ -28,6 +28,8 @@ using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
+namespace matchmaking_proxy
+{
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
 boost::asio::awaitable<void>
@@ -178,4 +180,5 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
     {
       std::cout << "exception: " << e.what () << std::endl;
     }
+}
 }

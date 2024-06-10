@@ -7,7 +7,8 @@
 #include "matchmaking_proxy/server/user.hxx"
 #include <boost/asio/ip/tcp.hpp>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
-
+namespace matchmaking_proxy
+{
 struct MatchmakingData
 {
   MatchmakingData (boost::asio::io_context &ioContext_, std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_) : ioContext{ ioContext_ }, stateMachines{ stateMachines_ }, sendMsgToUser{ sendMsgToUser_ }, gameLobbies{ gameLobbies_ }, pool{ pool_ }, matchmakingOption{ matchmakingOption_ }, matchmakingGameEndpoint{ matchmakingGameEndpoint_ }, userGameViaMatchmakingEndpoint{ userGameViaMatchmakingEndpoint_ } { cancelCoroutineTimer->expires_at (std::chrono::system_clock::time_point::max ()); }
@@ -53,5 +54,5 @@ struct MatchmakingData
   boost::asio::ip::tcp::endpoint matchmakingGameEndpoint{};
   boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint{};
 };
-
+}
 #endif /* C774F1C4_44FA_4B2F_9526_46C43EFDB937 */

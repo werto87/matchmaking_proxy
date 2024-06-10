@@ -10,6 +10,8 @@
 #include <sqlite3.h>
 #include <stdio.h>
 
+namespace matchmaking_proxy
+{
 namespace database
 {
 void
@@ -70,5 +72,6 @@ createAccount (std::string const &accountName, std::string const &password, size
 {
   soci::session sql (soci::sqlite3, databaseName);
   return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));
+}
 }
 }

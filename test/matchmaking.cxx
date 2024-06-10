@@ -11,7 +11,7 @@
 #include <modern_durak_game_option/userDefinedGameOption.hxx>
 #include <sstream>
 using namespace user_matchmaking;
-
+using namespace matchmaking_proxy;
 TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ();

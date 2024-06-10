@@ -31,7 +31,8 @@
 #include <stdexcept>
 #include <string>
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
-
+namespace matchmaking_proxy
+{
 template <class T> class MyWebsocket
 {
 public:
@@ -222,5 +223,5 @@ MyWebsocket<T>::sendPingToEndpoint ()
     }
   co_return;
 }
-
+}
 #endif /* FDE41782_20C3_436A_B415_E198F593F0AE */

@@ -1,7 +1,7 @@
 #include "util.hxx"
 namespace matchmaking_proxy
 {
-#ifdef LOG_CO_SPAWN_PRINT_EXCEPTIONS
+#ifdef MATCHMAKING_PROXY_LOG_CO_SPAWN_PRINT_EXCEPTIONS
 void
 printExceptionHelper (std::exception_ptr eptr)
 {

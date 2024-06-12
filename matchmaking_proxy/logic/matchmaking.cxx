@@ -1058,7 +1058,7 @@ struct Matchmaking::StateMachineWrapper
 {
   StateMachineWrapper (Matchmaking *owner, MatchmakingData &&matchmakingData_)
       : matchmakingData{ std::move (matchmakingData_) }, impl (owner,
-#ifdef LOG_FOR_STATE_MACHINE
+#ifdef MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
                                                                logger,
 #endif
                                                                matchmakingData)
@@ -1066,7 +1066,7 @@ struct Matchmaking::StateMachineWrapper
   }
   MatchmakingData matchmakingData;
 
-#ifdef LOG_FOR_STATE_MACHINE
+#ifdef MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
   my_logger logger;
   boost::sml::sm<MatchmakingStateMachine, boost::sml::logger<my_logger>> impl;
 #else

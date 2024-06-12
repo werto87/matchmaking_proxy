@@ -83,7 +83,7 @@ MyWebsocket<T>::async_read_one_message ()
   boost::beast::flat_buffer buffer;
   co_await webSocket->async_read (buffer, boost::asio::use_awaitable);
   auto msg = boost::beast::buffers_to_string (buffer.data ());
-#ifdef LOG_MY_WEBSOCKET
+#ifdef MATCHMAKING_PROXY_LOG_MY_WEBSOCKET
   printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
   fmt::print ("[r] {}", msg);
   std::cout << std::endl;
@@ -107,7 +107,7 @@ MyWebsocket<T>::readLoop (std::function<void (std::string const &readResult)> on
     {
       webSocket.reset ();
       if (timer) timer->cancel ();
-#ifdef LOG_MY_WEBSOCKET_READ_END
+#ifdef MATCHMAKING_PROXY_LOG_MY_WEBSOCKET_READ_END
       printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
       fmt::print ("[c]");
       std::cout << std::endl;
@@ -119,7 +119,7 @@ template <class T>
 inline boost::asio::awaitable<void>
 MyWebsocket<T>::async_write_one_message (std::string message)
 {
-#ifdef LOG_MY_WEBSOCKET
+#ifdef MATCHMAKING_PROXY_LOG_MY_WEBSOCKET
   printTagWithPadding (loggingName + (loggingName.empty () ? "" : " ") + id, loggingTextStyleForName, 30);
   fmt::print ("[w] {}", message);
   std::cout << std::endl;

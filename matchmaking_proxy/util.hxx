@@ -18,7 +18,7 @@ objectToStringWithObjectName (TypeToSend const &typeToSend)
 {
   std::stringstream ss{};
   ss << confu_json::type_name<TypeToSend> () << '|' << confu_json::to_json (typeToSend);
-#ifdef LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
+#ifdef MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
   std::cout << "objectToStringWithObjectName: " << ss.str () << std::endl;
 #endif
   return ss.str ();

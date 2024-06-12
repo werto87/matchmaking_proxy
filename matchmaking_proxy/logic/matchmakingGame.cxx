@@ -158,14 +158,14 @@ struct MatchmakingGame::StateMachineWrapper
 {
   StateMachineWrapper (MatchmakingGame *owner,MatchmakingGameDependencies matchmakingGameDependencies_) : matchmakingGameDependencies{std::move(matchmakingGameDependencies_)},
   impl (owner,
-#ifdef LOG_FOR_STATE_MACHINE
+#ifdef MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
                                                                                               logger,
 #endif
                                                                                               matchmakingGameDependencies){}
 
   MatchmakingGameDependencies matchmakingGameDependencies;
 
-#ifdef LOG_FOR_STATE_MACHINE
+#ifdef MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
   my_logger logger;
   boost::sml::sm<MatchmakingGameStateMachine, boost::sml::logger<my_logger>> impl;
 #else

@@ -907,6 +907,7 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
           std::cout << state << std::endl;
         }
     }
+  throw "write tests for users in game and implement it. use the mockserver to mock it and count users with stat proxy hm but how to check if it is ranked or not?";
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 

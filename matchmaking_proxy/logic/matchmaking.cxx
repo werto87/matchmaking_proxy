@@ -899,6 +899,14 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
           }
         }
     }
+  for (auto const &stateMachine : matchmakingData.stateMachines)
+    {
+      // TODO calc something
+      for (auto const &state : stateMachine->currentStatesAsString ())
+        {
+          std::cout << state << std::endl;
+        }
+    }
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 

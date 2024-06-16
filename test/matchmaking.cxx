@@ -54,7 +54,6 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
-
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
@@ -238,6 +237,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   ioContext.reset ();
 }
 
+// TODO put this in one section not logged in global state
 TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
 {
   using namespace boost::asio;

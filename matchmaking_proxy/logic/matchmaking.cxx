@@ -875,6 +875,33 @@ auto const leaveGameLobbyErrorUserNotInGameLobby = [] (MatchmakingData &matchmak
 auto const leaveGameLobbyErrorControlledByMatchmaking = [] (MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LeaveGameLobbyError{ "not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby" })); };
 auto const sendMessageToUser = [] (user_matchmaking::Message const &message, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (message)); };
 
+auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, MatchmakingData &matchmakingData) {
+  auto result = user_matchmaking::UserStatistics{};
+  // TODO use std::ranges::left_fold when it is implemented in libc++
+  for (auto const &gameLobby : matchmakingData.gameLobbies)
+    {
+      switch (gameLobby.lobbyAdminType)
+        {
+        case GameLobby::LobbyType::FirstUserInLobbyUsers:
+          {
+            result.userInCreateCustomGameLobby += gameLobby.accountCount ();
+            break;
+          }
+        case GameLobby::LobbyType::MatchMakingSystemRanked:
+          {
+            result.userInRankedQueue += gameLobby.accountCount ();
+            break;
+          }
+        case GameLobby::LobbyType::MatchMakingSystemUnranked:
+          {
+            result.userInUnRankedQueue += gameLobby.accountCount ();
+            break;
+          }
+        }
+    }
+  matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
+};
+
 template <class T>
 void
 dump_transition (std::stringstream &ss) noexcept
@@ -1004,6 +1031,7 @@ public:
 ,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
+, state<GlobalState>                          + event<u_m::GetUserStatistics>                                                     / userStatistics
 
         // clang-format on
     );

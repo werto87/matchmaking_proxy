@@ -71,7 +71,8 @@ ConnectGameError,
 ProxyStarted,
 ProxyStopped,
 GetMatchmakingLogic,
-MatchmakingLogic
+MatchmakingLogic,
+GetUserStatistics
   >  const  userMatchmaking{};
 
 // clang-format on

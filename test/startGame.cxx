@@ -272,7 +272,6 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   }
   SECTION ("UserStatistics", "[matchmaking]")
   {
-    // TODO write the tests for UserStatistics
     REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
     ioContext.run_for (std::chrono::milliseconds{ 10 });
     REQUIRE (messagesPlayer1.size () == 1);

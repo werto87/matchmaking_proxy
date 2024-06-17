@@ -1,5 +1,4 @@
 #include "matchmaking_proxy/logic/matchmaking.hxx"
-#include "confu_json/confu_json.hxx"
 #include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingAllowedTypes.hxx"
@@ -12,72 +11,20 @@
 #include "matchmaking_proxy/util.hxx"
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-#include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/beast.hpp>
-#include <boost/fusion/adapted/struct/adapt_struct.hpp>
-#include <boost/fusion/adapted/struct/define_struct.hpp>
-#include <boost/fusion/algorithm/query/count.hpp>
-#include <boost/fusion/functional.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
-#include <boost/fusion/include/algorithm.hpp>
-#include <boost/fusion/include/at.hpp>
-#include <boost/fusion/include/count.hpp>
-#include <boost/fusion/include/define_struct.hpp>
-#include <boost/fusion/sequence/intrinsic/at.hpp>
-#include <boost/fusion/sequence/intrinsic_fwd.hpp>
-#include <boost/hana/assert.hpp>
-#include <boost/hana/at_key.hpp>
-#include <boost/hana/equal.hpp>
-#include <boost/hana/find.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/integral_constant.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/optional.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
-#include <boost/json.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/range_c.hpp>
 #include <boost/sml.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <cassert>
-#include <chrono>
-#include <confu_json/concept.hxx>
-#include <confu_json/to_json.hxx>
-#include <confu_json/util.hxx>
-#include <confu_soci/convenienceFunctionForSoci.hxx>
-#include <cstddef>
 #include <expected>
-#include <fmt/color.h>
-#include <functional> // for __base
-#include <iostream>   // for string
-#include <iostream>
 #include <login_matchmaking_game_shared/gameOptionAsString.hxx>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
-#include <map>
-#include <memory>
 #include <range/v3/to_container.hpp>
 #include <range/v3/view/remove_if.hpp>
 #include <ranges>
-#include <set>
-#include <sstream> // for basic_...
-#include <sstream>
-#include <stdexcept>
-#include <string> // for operat...
-#include <string>
-#include <type_traits>
-#include <utility> // for pair
-#include <variant>
-#include <vector> // for vector
-// TODO clean up includes
+
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 using namespace boost::sml;
 typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;

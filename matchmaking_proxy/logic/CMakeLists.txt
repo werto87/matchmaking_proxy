@@ -2,6 +2,7 @@
          matchmaking.cxx
          matchmakingGame.cxx
          rating.cxx
+         matchmakingData.cxx
  )
 
  install(FILES

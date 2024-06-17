@@ -4,13 +4,17 @@
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "mockserver.hxx"
 #include "util.hxx"
-#include <algorithm> // for max
+#include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 #include <catch2/catch.hpp>
@@ -21,7 +25,7 @@
 #include <fmt/color.h>
 #include <functional>
 #include <iostream>
-#include <iterator> // for next
+#include <iterator>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
@@ -30,7 +34,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <utility> // for pair
+#include <utility>
 using namespace matchmaking_proxy;
 using namespace boost::asio;
 typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;

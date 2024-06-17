@@ -1,12 +1,11 @@
 #include "matchmaking_proxy/logic/matchmaking.hxx"
-#include "matchmaking_proxy/database/database.hxx" // for cre...
+#include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <boost/sml.hpp>
-#include <catch2/catch.hpp> // for Ass...
+#include <catch2/catch.hpp>
 #include <confu_json/to_json.hxx>
 #include <modern_durak_game_option/userDefinedGameOption.hxx>
 #include <sstream>

@@ -3,11 +3,14 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include <algorithm> // for max
+#include <algorithm>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 #include <boost/current_function.hpp>
@@ -16,13 +19,13 @@
 #include <exception>
 #include <functional>
 #include <iostream>
-#include <iterator> // for next
+#include <iterator>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <openssl/ssl3.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <utility> // for pair
+#include <utility>
 using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>

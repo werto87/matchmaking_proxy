@@ -1,4 +1,5 @@
 #include "matchmaking_proxy/util.hxx"
+#include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include <boost/asio/ip/tcp.hpp>
 #include <catch2/catch.hpp>

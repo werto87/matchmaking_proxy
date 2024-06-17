@@ -83,6 +83,19 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE (messagesPlayer2.size () == 1);                // cppcheck-suppress knownConditionTrueFalse //false positive
     REQUIRE ("ProxyStarted|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
     REQUIRE (gameLobbies.empty ());
+    ioContext.stop ();
+    ioContext.reset ();
+    ioContext.restart ();
+    messagesPlayer1.clear ();
+    messagesPlayer2.clear ();
+    SECTION ("UserStatistics user in game")
+    {
+      REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
+      ioContext.run_for (std::chrono::milliseconds{ 100 });
+      REQUIRE (messagesPlayer1.size () == 1); // cppcheck-suppress knownConditionTrueFalse //false positive
+      REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":0,"userInRankedQueue":0,"userInGame":2})foo");
+      REQUIRE (messagesPlayer2.empty ()); // cppcheck-suppress containerOutOfBounds //false positive
+    }
   }
   SECTION ("playerOne accept playerTwo declined", "[matchmaking]")
   {
@@ -229,7 +242,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
     ioContext.run_for (std::chrono::milliseconds{ 10 });
     REQUIRE (messagesPlayer1.size () == 1);
-    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":2,"userInRankedQueue":0,"userInUnRankedGame":0,"userInRankedGame":0})foo");
+    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":2,"userInRankedQueue":0,"userInGame":0})foo");
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -275,7 +288,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
     ioContext.run_for (std::chrono::milliseconds{ 10 });
     REQUIRE (messagesPlayer1.size () == 1);
-    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":0,"userInRankedQueue":2,"userInUnRankedGame":0,"userInRankedGame":0})foo");
+    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":0,"userInRankedQueue":2,"userInGame":0})foo");
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -374,7 +387,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
     REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
     ioContext.run_for (std::chrono::milliseconds{ 10 });
     REQUIRE (messagesPlayer1.size () == 1);
-    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":2,"userInUnRankedQueue":0,"userInRankedQueue":0,"userInUnRankedGame":0,"userInRankedGame":0})foo");
+    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":2,"userInUnRankedQueue":0,"userInRankedQueue":0,"userInGame":0})foo");
   }
   ioContext.stop ();
   ioContext.reset ();

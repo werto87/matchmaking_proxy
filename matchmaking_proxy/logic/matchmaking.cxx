@@ -846,13 +846,7 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
           }
         }
     }
-  for (auto const &stateMachine : matchmakingData.stateMachines)
-    {
-      for (auto const &state : stateMachine->currentStatesAsString ())
-        {
-          std::cout << state << std::endl;
-        }
-    }
+  result.userInGame = boost::numeric_cast<size_t> (std::ranges::count_if (matchmakingData.stateMachines, [] (auto const &stateMachine) { return std::ranges::contains (stateMachine->currentStatesAsString (), "matchmaking_proxy::ProxyToGame"); }));
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 

@@ -676,14 +676,23 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName);
-              if (userGameLobby->accountNames.empty ())
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
+              auto accountNames = std::move (userGameLobby->accountNames);
+              matchmakingData.gameLobbies.erase (userGameLobby);
+              for (auto const &userName : accountNames)
                 {
-                  matchmakingData.gameLobbies.erase (userGameLobby);
-                }
-              else
-                {
-                  sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
-                  userGameLobby->cancelTimer ();
+                  if (auto matchmaking = std::ranges::find_if (matchmakingData.stateMachines, [&userName] (auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (userName); }); matchmaking != matchmakingData.stateMachines.end ())
+                    {
+                      auto processEventExpect = matchmaking->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
+                      if (not processEventExpect.has_value ())
+                        {
+                          std::cout << processEventExpect.error () << std::endl;
+                        }
+                    }
+                  else
+                    {
+                      std::cout << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
+                    }
                 }
             }
         }

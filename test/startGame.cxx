@@ -392,3 +392,59 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   ioContext.stop ();
   ioContext.reset ();
 }
+
+TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  boost::asio::thread_pool pool{};
+  std::list<GameLobby> gameLobbies{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  auto messagesPlayer1 = std::vector<std::string>{};
+  auto matchmakingPlayer1 = createAccountAndJoinMatchmakingQueue ("player1", ioContext, messagesPlayer1, gameLobbies, matchmakings, pool, JoinMatchMakingQueue{ false });
+  REQUIRE (messagesPlayer1.size () == 2);
+  REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player1" + std::string{ "\"}" } == messagesPlayer1.at (0));
+  REQUIRE (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messagesPlayer1.at (1));
+  auto messagesPlayer2 = std::vector<std::string>{};
+  auto matchmakingPlayer2 = createAccountAndJoinMatchmakingQueue ("player2", ioContext, messagesPlayer2, gameLobbies, matchmakings, pool, JoinMatchMakingQueue{ false });
+  REQUIRE (messagesPlayer2.size () == 3);
+  REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player2" + std::string{ "\"}" } == messagesPlayer2.at (0));
+  REQUIRE (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messagesPlayer2.at (1));
+  REQUIRE (R"foo(AskIfUserWantsToJoinGame|{})foo" == messagesPlayer2.at (2));
+  auto messagesPlayer3 = std::vector<std::string>{};
+  auto matchmakingPlayer3 = createAccountAndJoinMatchmakingQueue ("player3", ioContext, messagesPlayer3, gameLobbies, matchmakings, pool, JoinMatchMakingQueue{ false });
+  REQUIRE (messagesPlayer3.size () == 2);
+  REQUIRE (R"foo(LoginAccountSuccess|{"accountName":)foo" + std::string{ "\"" } + "player3" + std::string{ "\"}" } == messagesPlayer3.at (0));
+  REQUIRE (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messagesPlayer3.at (1));
+  REQUIRE (gameLobbies.size () == 2);
+  messagesPlayer1.clear ();
+  messagesPlayer2.clear ();
+  messagesPlayer3.clear ();
+  SECTION ("UserStatistics", "[matchmaking]")
+  {
+    REQUIRE (matchmakingPlayer1->processEvent (objectToStringWithObjectName (GetUserStatistics{})));
+    ioContext.run_for (std::chrono::milliseconds{ 10 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE (messagesPlayer1.front () == R"foo(UserStatistics|{"userInCreateCustomGameLobby":0,"userInUnRankedQueue":3,"userInRankedQueue":0,"userInGame":0})foo");
+  }
+  SECTION ("player2 declines", "[matchmaking]")
+  {
+    REQUIRE (matchmakingPlayer2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false })));
+    ioContext.run_for (std::chrono::seconds{ 5 });
+    REQUIRE (messagesPlayer1.size () == 1);
+    REQUIRE ("GameStartCanceled|{}" == messagesPlayer1.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    REQUIRE (messagesPlayer2.size () == 1);
+    REQUIRE ("GameStartCanceledRemovedFromQueue|{}" == messagesPlayer2.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    SECTION ("player1 and player3 gets asked to join")
+    {
+      REQUIRE (gameLobbies.size () == 1);
+      REQUIRE (gameLobbies.front ().accountNames.front () == "player1");
+    }
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}

@@ -725,7 +725,7 @@ auto const removeUserFromGameLobby = [] (MatchmakingData &matchmakingData) {
 
 auto const joinMatchMakingQueue = [] (user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueueEv, MatchmakingData &matchmakingData) {
   auto lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked;
-  if (std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == matchmakingData.gameLobbies.end ())
+  if (std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName] (auto const &gameLobby) { return std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }) == matchmakingData.gameLobbies.end ()) // todo should use contains to find out if he is in the lobby and not find
     {
       if (auto gameLobbyToAddUser = std::ranges::find_if (matchmakingData.gameLobbies, [lobbyType = (joinMatchMakingQueueEv.isRanked) ? GameLobby::LobbyType::MatchMakingSystemRanked : GameLobby::LobbyType::MatchMakingSystemUnranked, accountName = matchmakingData.user.accountName, &matchmakingData] (GameLobby const &gameLobby) { return matchingLobby (accountName, gameLobby, lobbyType, matchmakingData.matchmakingOption.allowedRatingDifference); }); gameLobbyToAddUser != matchmakingData.gameLobbies.end ())
         {

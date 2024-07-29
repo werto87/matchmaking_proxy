@@ -7,7 +7,6 @@
  install(FILES
         gameLobby.hxx
         matchmakingOption.hxx
-        myWebsocket.hxx
         server.hxx
         user.hxx
         DESTINATION include/matchmaking_proxy/server

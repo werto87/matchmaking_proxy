@@ -6,7 +6,7 @@
 // #include "server/server.hxx"
 // #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 // #include "util.hxx"
-// #include "mockserver.hxx"
+// #include <my_web_socket/mockServer.hxx>
 // #include <algorithm> // for max
 // #include <boost/algorithm/string/predicate.hpp>
 // #include <boost/asio/co_spawn.hpp>
@@ -95,7 +95,7 @@
 //     auto const gamePort = 22222;
 //     // TODO create some test certificates and share them on git
 //     // TODO run mock server which reads the game over messages and stops instead of the current stopping logic
-//     auto mockserver = Mockserver{ { ip::tcp::v4 (), 12312 }, { .callOnMessageStartsWith{ { "GameOver", [&ioContext] () { ioContext.stop (); } } } }, "GameToMatchmaking" };
+//     auto mockserver = my_web_socket::MockServer{ { ip::tcp::v4 (), 12312 }, { .callOnMessageStartsWith{ { "GameOver", [&ioContext] () { ioContext.stop (); } } } }, "GameToMatchmaking" };
 //     auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
 //     auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
 //     auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/dhparams/dhparam.pem" };
@@ -105,7 +105,7 @@
 //     auto matchmakingGameEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 4242 };
 //     auto userGameViaMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 3232 };
 //     using namespace boost::asio::experimental::awaitable_operators;
-//     co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, "localhost", "4242", "3232") || server.gameMatchmaking (gameEndpoint), printException);
+//     co_spawn (ioContext, server.userMatchmaking (userEndpoint, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{ .usersNeededToStartQuickGame = 2 }, "localhost", "4242", "3232") || server.gameMatchmaking (gameEndpoint), my_web_socket::printException);
 
 //     auto sendAfterConnect = std::vector<std::string>{ { "LoginAsGuest|{}", objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}) } };
 //     auto const joinGameLogic = [] (auto &&, auto const &msg, auto &&myWebsocket) {
@@ -124,8 +124,8 @@
 //             }
 //         }
 //     };
-//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), printException);
-//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), printException);
+//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), my_web_socket::printException);
+//     co_spawn (ioContext, connectWebsocketSSL2 (joinGameLogic, ioContext, userEndpoint, sendAfterConnect, "user"), my_web_socket::printException);
 //     ioContext.run ();
 //   }
 // }

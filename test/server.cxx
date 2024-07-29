@@ -1,8 +1,7 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "mockserver.hxx"
-#include "util.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -29,6 +28,7 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <my_web_socket/mockServer.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
 #include <sodium/core.h>
@@ -139,14 +139,14 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   auto const gameMatchmakingPort = 22222;
   auto const matchmakingGamePort = 44444;
   auto const userGameViaMatchmakingPort = 33333;
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
   auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
   auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/live/test-name/dhparams.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), printException);
+  co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
@@ -169,9 +169,9 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
             }
         }
     };
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer2), printException);
+    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer2), my_web_socket::printException);
     ioContext.run_for (std::chrono::seconds{ 5 });
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));

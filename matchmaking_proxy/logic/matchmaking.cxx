@@ -20,6 +20,7 @@
 #include <login_matchmaking_game_shared/gameOptionAsString.hxx>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <my_web_socket/coSpawnPrintException.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <range/v3/to_container.hpp>
 #include <range/v3/view/remove_if.hpp>
@@ -277,12 +278,12 @@ createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
 };
 
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void {
-  boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), printException); // NOLINT(clang-analyzer-core.NullDereference) //TODO check if this is really a false positive
+  boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), my_web_socket::printException); // NOLINT(clang-analyzer-core.NullDereference) //TODO check if this is really a false positive
 };
-auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), printException); };
-auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), printException); };
-auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), printException); };
-auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs), printException); };
+auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), my_web_socket::printException); };
+auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { co_spawn (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), my_web_socket::printException); };
+auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), my_web_socket::printException); };
+auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { boost::asio::co_spawn (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs), my_web_socket::printException); };
 
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRatingDifference)

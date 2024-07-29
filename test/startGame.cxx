@@ -1,16 +1,17 @@
-#include "matchmaking_proxy/database/database.hxx" // for cre...
+#include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "mockserver.hxx"
-#include "util.hxx"
+#include "matchmaking_proxy/util.hxx"
+#include "test/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <catch2/catch.hpp> // for Ass...
+#include <catch2/catch.hpp>
 #include <chrono>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <my_web_socket/mockServer.hxx>
 using namespace matchmaking_proxy;
 using namespace user_matchmaking;
 TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
@@ -19,8 +20,8 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
@@ -54,8 +55,8 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
@@ -258,8 +259,8 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "TEST_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "TEST_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "TEST_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "TEST_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
@@ -354,8 +355,8 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
@@ -403,8 +404,8 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
   database::createTables ();
   using namespace boost::asio;
   auto ioContext = io_context ();
-  auto matchmakingGame = Mockserver{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = Mockserver{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { ip::tcp::v4 (), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { ip::tcp::v4 (), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};

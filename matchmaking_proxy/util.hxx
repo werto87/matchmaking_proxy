@@ -43,29 +43,5 @@ stringToObject (std::string const &objectAsString)
   return t;
 }
 
-void printExceptionHelper (std::exception_ptr eptr);
-
-template <class... Fs> struct overloaded : Fs...
-{
-  using Fs::operator()...;
-};
-
-template <class... Fs> overloaded (Fs...) -> overloaded<Fs...>;
-
-auto const printException1 = [] (std::exception_ptr eptr) { printExceptionHelper (eptr); };
-
-auto const printException2 = [] (std::exception_ptr eptr, auto) { printExceptionHelper (eptr); };
-
-auto const printException = overloaded{ printException1, printException2 };
-
-template <typename T>
-T
-rndNumber ()
-{
-  static std::random_device rd;       // Get a random seed from the OS entropy device, or whatever
-  static std::mt19937_64 eng (rd ()); // Use the 64-bit Mersenne Twister 19937 generator
-  std::uniform_int_distribution<T> distr{};
-  return distr (eng);
-}
 }
 #endif /* EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1 */

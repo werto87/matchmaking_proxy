@@ -4,7 +4,7 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-add_library(matchmaking_proxy util.cxx)
+add_library(matchmaking_proxy)
 
 add_library(myproject::matchmaking_proxy ALIAS matchmaking_proxy)
 

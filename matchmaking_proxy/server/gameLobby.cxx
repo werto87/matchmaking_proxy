@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <my_web_socket/coSpawnPrintException.hxx>
 #include <string>
 namespace boost
 {
@@ -150,8 +151,7 @@ GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std
   waitingForAnswerToStartGame = true;
   _timer = std::make_shared<boost::asio::system_timer> (io_context);
   _timer->expires_after (timeToAcceptInvite);
-  co_spawn (
-      _timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, printException);
+  co_spawn (_timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, my_web_socket::printException);
 }
 
 void

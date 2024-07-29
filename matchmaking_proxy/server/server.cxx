@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iterator>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <my_web_socket/coSpawnPrintException.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
 #include <stdexcept>
@@ -106,7 +107,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               co_await connection.async_accept (use_awaitable);
               static size_t id = 0;
               auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
-              co_spawn (ioContext, myWebsocket->sendPingToEndpoint (), printException);
+              co_spawn (ioContext, myWebsocket->sendPingToEndpoint (), my_web_socket::printException);
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
@@ -128,7 +129,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
                   }
               }) && myWebsocket->writeLoop (),
                         [&_matchmakings = matchmakings, matchmaking] (auto eptr) {
-                          printException (eptr);
+                          my_web_socket::printException (eptr);
                           matchmaking->get ()->cleanUp ();
                           _matchmakings.erase (matchmaking);
                         });
@@ -169,7 +170,7 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
                 auto matchmakingGame = MatchmakingGame{ _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); } };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop (),
-                        printException);
+                        my_web_socket::printException);
             }
           catch (std::exception const &e)
             {

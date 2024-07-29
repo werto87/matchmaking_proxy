@@ -1,7 +1,6 @@
 #ifndef FB5474CE_322D_4D7A_B298_185229E7B05A
 #define FB5474CE_322D_4D7A_B298_185229E7B05A
 
-#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -12,10 +11,11 @@
 #include <cstddef>
 #include <exception>
 #include <map>
+#include <my_web_socket/myWebSocket.hxx>
 #include <thread>
 #include <variant>
 using namespace matchmaking_proxy;
-typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
+
 typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::use_awaitable_t<>::executor_with_default<boost::asio::any_io_executor>> Socket;
 
 struct MockserverOption
@@ -55,12 +55,12 @@ struct Mockserver
           {
             using namespace boost::asio::experimental::awaitable_operators;
             auto socket = co_await (acceptor.async_accept ());
-            auto connection = std::make_shared<Websocket> (Websocket{ std::move (socket) });
-            connection->set_option (websocket::stream_base::timeout::suggested (role_type::server));
-            connection->set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
-            co_await connection->async_accept ();
-            websockets.emplace_back (MyWebsocket<Websocket>{ std::move (connection), loggingName_, loggingTextStyleForName_, id_ });
-            std::list<MyWebsocket<Websocket>>::iterator websocket = std::prev (websockets.end ());
+            auto connection = my_web_socket::WebSocket{ std::move (socket) };
+            connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
+            connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
+            co_await connection.async_accept ();
+            websockets.emplace_back (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), loggingName_, loggingTextStyleForName_, id_ });
+            std::list<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>::iterator websocket = std::prev (websockets.end ());
             boost::asio::co_spawn (executor, websocket->readLoop ([websocket, &_mockserverOption = mockserverOption, &_ioContext = ioContext] (const std::string &msg) mutable {
               for (auto const &[startsWith, callback] : _mockserverOption.callOnMessageStartsWith)
                 {
@@ -75,7 +75,7 @@ struct Mockserver
                   _ioContext.stop ();
                 }
               else if (_mockserverOption.requestResponse.count (msg))
-                websocket->sendMessage (_mockserverOption.requestResponse.at (msg));
+                websocket->queueMessage (_mockserverOption.requestResponse.at (msg));
               else
                 {
                   auto msgFound = false;
@@ -84,7 +84,7 @@ struct Mockserver
                       if (boost::starts_with (msg, startsWith))
                         {
                           msgFound = true;
-                          websocket->sendMessage (response);
+                          websocket->queueMessage (response);
                           break;
                         }
                     }
@@ -112,7 +112,7 @@ struct Mockserver
   bool shouldRun = true;
   boost::asio::io_context ioContext;
   std::thread thread{};
-  std::list<MyWebsocket<Websocket>> websockets{ {} };
+  std::list<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> websockets{ {} };
 };
 
 #endif /* FB5474CE_322D_4D7A_B298_185229E7B05A */

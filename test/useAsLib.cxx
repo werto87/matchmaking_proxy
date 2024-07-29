@@ -45,8 +45,8 @@
 //       ctx.set_verify_mode (boost::asio::ssl::verify_none); // DO NOT USE THIS IN PRODUCTION THIS WILL IGNORE CHECKING FOR TRUSTFUL CERTIFICATE
 //       try
 //         {
-//           typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
-//           auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ ioContext, ctx });
+//           typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> my_web_socket::SSLWebSocket;
+//           auto connection = std::make_shared<my_web_socket::SSLWebSocket> (my_web_socket::SSLWebSocket{ ioContext, ctx });
 //           get_lowest_layer (*connection).expires_never ();
 //           connection->set_option (websocket::stream_base::timeout::suggested (role_type::client));
 //           connection->set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
@@ -54,7 +54,7 @@
 //           co_await connection->next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
 //           co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
 //           static size_t id = 0;
-//           auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), connectionName ? connectionName.value () : std::string{ "connectWebsocket" }, fmt::fg (fmt::color::chocolate), std::to_string (id++) });
+//           auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), connectionName ? connectionName.value () : std::string{ "connectWebsocket" }, fmt::fg (fmt::color::chocolate), std::to_string (id++) });
 //           for (auto message : sendMessageBeforeStartRead)
 //             {
 //               co_await myWebsocket->async_write_one_message (message);
@@ -116,11 +116,11 @@
 //           auto const &typeToSearch = splitMessage.at (0);
 //           if (typeToSearch == "AskIfUserWantsToJoinGame")
 //             {
-//               myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
+//               myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
 //             }
 //           else if (typeToSearch == "ProxyStarted")
 //             {
-//               myWebsocket->sendMessage ("DurakLeaveGame|{}");
+//               myWebsocket->queueMessage ("DurakLeaveGame|{}");
 //             }
 //         }
 //     };

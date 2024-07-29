@@ -21,7 +21,6 @@ class Project(ConanFile):
 
     def requirements(self):
         self.requires("boost/1.85.0", force=True)
-        self.requires("durak/1.0.5", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/[>=0.9.5 <10]")
         self.requires("certify/cci.20201114")
@@ -29,7 +28,9 @@ class Project(ConanFile):
         self.requires("confu_json/1.1.0", force=True)
         self.requires("sml/1.1.11")
         self.requires("range-v3/0.12.0")
-        self.requires("login_matchmaking_game_shared/0.0.0")
+        self.requires("login_matchmaking_game_shared/latest")
+        self.requires("my_web_socket/0.0.5")
+        
         ### only for testing please do not put this in the package build recept ###
         self.requires("modern_durak_game_option/latest")
         self.requires("catch2/2.13.9")

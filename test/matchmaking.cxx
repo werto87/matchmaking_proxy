@@ -2,6 +2,7 @@
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
+#include "matchmaking_proxy/util.hxx"
 #include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>

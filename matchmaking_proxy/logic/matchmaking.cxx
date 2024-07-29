@@ -7,7 +7,6 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/pw_hash/passwordHash.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
@@ -21,13 +20,12 @@
 #include <login_matchmaking_game_shared/gameOptionAsString.hxx>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <my_web_socket/myWebSocket.hxx>
 #include <range/v3/to_container.hpp>
 #include <range/v3/view/remove_if.hpp>
 #include <ranges>
 
-typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 using namespace boost::sml;
-typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
 
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordMatches, (std::string, accountName))
@@ -124,19 +122,19 @@ boost::asio::awaitable<void>
 connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto &&deps, auto &&subs)
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
-  auto ws = std::make_shared<Websocket> (Websocket{ matchmakingData.ioContext });
+  auto ws = my_web_socket::WebSocket{ matchmakingData.ioContext };
   if (auto matchmakingForAccount = std::ranges::find_if (matchmakingData.stateMachines, [accountName = connectToGameEv.accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingForAccount != matchmakingData.stateMachines.end ())
     {
       auto matchmakingForAccountSptr = *matchmakingForAccount;
       try
         {
-          co_await ws->next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
-          ws->next_layer ().expires_never ();
-          ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-          ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-          co_await ws->async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
+          co_await ws.next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
+          ws.next_layer ().expires_never ();
+          ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+          ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+          co_await ws.async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
           static size_t id = 0;
-          matchmakingData.matchmakingGame = MyWebsocket<Websocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
+          matchmakingData.matchmakingGame = my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++) };
           co_await matchmakingData.matchmakingGame.async_write_one_message (objectToStringWithObjectName (connectToGameEv));
           auto connectToGameResult = co_await matchmakingData.matchmakingGame.async_read_one_message ();
           std::vector<std::string> splitMesssage{};
@@ -618,14 +616,14 @@ auto const createAccount = [] (PasswordHashed const &passwordHash, MatchmakingDa
 boost::asio::awaitable<std::string>
 sendStartGameToServer (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
 {
-  auto ws = std::make_shared<Websocket> (matchmakingData.ioContext);
-  co_await ws->next_layer ().async_connect (matchmakingData.matchmakingGameEndpoint);
-  ws->next_layer ().expires_never ();
-  ws->set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
-  ws->set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
-  co_await ws->async_handshake (matchmakingData.matchmakingGameEndpoint.address ().to_string () + std::to_string (matchmakingData.matchmakingGameEndpoint.port ()), "/");
+  auto ws = my_web_socket::WebSocket{ matchmakingData.ioContext };
+  co_await ws.next_layer ().async_connect (matchmakingData.matchmakingGameEndpoint);
+  ws.next_layer ().expires_never ();
+  ws.set_option (boost::beast::websocket::stream_base::timeout::suggested (boost::beast::role_type::client));
+  ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
+  co_await ws.async_handshake (matchmakingData.matchmakingGameEndpoint.address ().to_string () + std::to_string (matchmakingData.matchmakingGameEndpoint.port ()), "/");
   static size_t id = 0;
-  auto myWebsocket = MyWebsocket<Websocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
+  auto myWebsocket = my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++) };
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobby.accountNames;
   startGame.gameOptionAsString = gameLobby.gameOptionAsString;
@@ -1117,7 +1115,7 @@ Matchmaking::processEvent (std::string const &event)
 void
 Matchmaking::sendMessageToGame (std::string const &message)
 {
-  sm->matchmakingData.matchmakingGame.sendMessage (message);
+  sm->matchmakingData.matchmakingGame.queueMessage (message);
 }
 
 bool

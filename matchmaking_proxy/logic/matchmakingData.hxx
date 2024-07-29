@@ -1,11 +1,12 @@
 #ifndef C774F1C4_44FA_4B2F_9526_46C43EFDB937
 #define C774F1C4_44FA_4B2F_9526_46C43EFDB937
 
-#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "matchmaking_proxy/server/user.hxx"
+#include <boost/asio/thread_pool.hpp>
 #include <boost/beast/websocket.hpp>
 #include <list>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <my_web_socket/myWebSocket.hxx>
 namespace matchmaking_proxy
 {
 class Matchmaking;
@@ -18,16 +19,13 @@ struct MatchmakingData
   void cancelAndResetTimer ();
 
   boost::asio::io_context &ioContext;
-
-  typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
-  std::unique_ptr<CoroTimer> cancelCoroutineTimer{ std::make_unique<CoroTimer> (CoroTimer{ ioContext }) };
+  std::unique_ptr<my_web_socket::CoroTimer> cancelCoroutineTimer{ std::make_unique<my_web_socket::CoroTimer> (my_web_socket::CoroTimer{ ioContext }) };
   std::list<std::shared_ptr<Matchmaking>> &stateMachines;
   std::function<void (std::string const &msg)> sendMsgToUser{};
   User user{};
   std::list<GameLobby> &gameLobbies;
   boost::asio::thread_pool &pool;
-  typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
-  MyWebsocket<Websocket> matchmakingGame{ {} };
+  my_web_socket::MyWebSocket<my_web_socket::WebSocket> matchmakingGame{};
   MatchmakingOption matchmakingOption{};
   boost::asio::ip::tcp::endpoint matchmakingGameEndpoint{};
   boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint{};

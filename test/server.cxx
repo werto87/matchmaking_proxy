@@ -1,7 +1,6 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
-#include "matchmaking_proxy/server/myWebsocket.hxx"
 #include "mockserver.hxx"
 #include "util.hxx"
 #include <algorithm>
@@ -11,6 +10,7 @@
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/ssl.hpp>
@@ -29,6 +29,7 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
 #include <sodium/core.h>
 #include <stdexcept>
@@ -37,8 +38,7 @@
 #include <utility>
 using namespace matchmaking_proxy;
 using namespace boost::asio;
-typedef boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>> SSLWebsocket;
-typedef boost::beast::websocket::stream<boost::asio::use_awaitable_t<>::as_default_on_t<boost::beast::tcp_stream>> Websocket;
+
 boost::asio::awaitable<void>
 connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio::ip::tcp::endpoint endpoint, std::vector<std::string> &messagesFromGame)
 {
@@ -50,16 +50,16 @@ connectWebsocketSSL (auto handleMsgFromGame, io_context &ioContext, boost::asio:
       ctx.set_verify_mode (boost::asio::ssl::verify_none); // DO NOT USE THIS IN PRODUCTION THIS WILL IGNORE CHECKING FOR TRUSTFUL CERTIFICATE
       try
         {
-          auto connection = std::make_shared<SSLWebsocket> (SSLWebsocket{ ioContext, ctx });
-          get_lowest_layer (*connection).expires_never ();
-          connection->set_option (websocket::stream_base::timeout::suggested (role_type::client));
-          connection->set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
-          co_await get_lowest_layer (*connection).async_connect (endpoint, use_awaitable);
-          co_await connection->next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
-          co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
-          co_await connection->async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
+          auto connection = my_web_socket::SSLWebSocket{ ioContext, ctx };
+          get_lowest_layer (connection).expires_never ();
+          connection.set_option (websocket::stream_base::timeout::suggested (role_type::client));
+          connection.set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
+          co_await get_lowest_layer (connection).async_connect (endpoint, use_awaitable);
+          co_await connection.next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
+          co_await connection.async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
+          co_await connection.async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<MyWebsocket<SSLWebsocket>> (MyWebsocket<SSLWebsocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
+          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await (myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);
@@ -87,18 +87,18 @@ connectWebsocket (io_context &ioContext, boost::asio::ip::tcp::endpoint const &e
 
       try
         {
-          auto connection = std::make_shared<Websocket> (Websocket{ ioContext });
-          get_lowest_layer (*connection).expires_never ();
-          connection->set_option (websocket::stream_base::timeout::suggested (role_type::client));
-          connection->set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
-          co_await get_lowest_layer (*connection).async_connect (endpoint, use_awaitable);
-          co_await connection->async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
+          auto connection = my_web_socket::WebSocket{ ioContext };
+          get_lowest_layer (connection).expires_never ();
+          connection.set_option (websocket::stream_base::timeout::suggested (role_type::client));
+          connection.set_option (websocket::stream_base::decorator ([] (websocket::request_type &req) { req.set (http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async-ssl"); }));
+          co_await get_lowest_layer (connection).async_connect (endpoint, use_awaitable);
+          co_await connection.async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
           for (auto message : sendMessageBeforeStartRead)
             {
-              co_await connection->async_write (boost::asio::buffer (message), use_awaitable);
+              co_await connection.async_write (boost::asio::buffer (message), use_awaitable);
             }
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<MyWebsocket<Websocket>> (MyWebsocket<Websocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), std::to_string (id++) });
+          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "connectWebsocket", fmt::fg (fmt::color::beige), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;
           co_await (myWebsocket->readLoop ([&ioContext, myWebsocket, &messageFromMatchmaking] (const std::string &msg) {
             if (msg == "GameOverSuccess|{}")
@@ -151,14 +151,14 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     size_t gameOver = 0;
-    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<MyWebsocket<SSLWebsocket>> myWebsocket) {
+    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
-          myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
+          myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
         }
       else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame"))
         {
-          myWebsocket->sendMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
+          myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
         }
       else if (boost::starts_with (msg, "ProxyStarted"))
         {

@@ -18,6 +18,7 @@ find_package(confu_json)
 find_package(Boost)
 find_package(magic_enum)
 find_package(range-v3)
+find_package(my_web_socket)
 
 target_link_libraries(
   matchmaking_proxy
@@ -31,6 +32,7 @@ target_link_libraries(
          confu_json::confu_json
          boost::boost
          magic_enum::magic_enum
+         my_web_socket::my_web_socket
          )
 
 

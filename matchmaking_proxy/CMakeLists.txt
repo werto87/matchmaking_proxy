@@ -17,7 +17,6 @@ find_package(durak)
 find_package(confu_json)
 find_package(Boost)
 find_package(magic_enum)
-find_package(range-v3)
 find_package(my_web_socket)
 
 target_link_libraries(
@@ -26,7 +25,6 @@ target_link_libraries(
          certify::core
          libsodium::libsodium
          sml::sml
-         range-v3::range-v3
          login_matchmaking_game_shared::login_matchmaking_game_shared
          durak::durak
          confu_json::confu_json

@@ -196,7 +196,7 @@ void sendMessageToUsers (std::string const &message, std::vector<std::string> co
 auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, MatchmakingData &matchmakingData) {
   if (gameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers)
     {
-      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | std::ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | ranges::to<std::vector<std::string>> (), matchmakingData);
+      sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGame{}), gameLobby->accountNames | std::ranges::views::drop (1 /*drop first user because he is the admin and started createGame*/) | std::ranges::to<std::vector<std::string>> (), matchmakingData);
       gameLobby->readyUsers.push_back (gameLobby->accountNames.at (0));
     }
   else
@@ -680,7 +680,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
               matchmakingData.gameLobbies.erase (userGameLobby);
               for (auto const &userName : accountNames)
                 {
-                  if (auto matchmaking = std::ranges::find_if (matchmakingData.stateMachines, [&userName] (auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (userName); }); matchmaking != matchmakingData.stateMachines.end ())
+                  if (auto matchmaking = std::ranges::find_if (matchmakingData.stateMachines, [&userName] (auto &matchmaking_) { return matchmaking_->isLoggedInWithAccountName (userName); }); matchmaking != matchmakingData.stateMachines.end ())
                     {
                       auto processEventExpect = matchmaking->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
                       if (not processEventExpect.has_value ())

@@ -276,3 +276,32 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   REQUIRE_FALSE (result.has_value ());
   REQUIRE (result.error () == "No transition found");
 }
+TEST_CASE ("matchmaking option errors matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmakingOption = MatchmakingOption{};
+  matchmakingOption.usersNeededToStartQuickGame = 0;
+  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, matchmakingOption, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
+  REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
+  ioContext.run ();
+  ioContext.stop ();
+  ioContext.reset ();
+  CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
+  messages.clear ();
+  SECTION ("JoinMatchMakingQueue", "[matchmaking]")
+  {
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (JoinMatchMakingQueue{})));
+    ioContext.run ();
+    CHECK (messages.size () == 1);
+    CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+  }
+  ioContext.stop ();
+  ioContext.reset ();
+}

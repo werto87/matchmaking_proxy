@@ -1191,7 +1191,7 @@ sendMessageToUsers (std::string const &message, std::vector<std::string> const &
 {
   for (auto const &accountToSendMessageTo : accountNames)
     {
-      for (auto &matchmaking : matchmakingData.stateMachines | ranges::views::remove_if ([&accountToSendMessageTo] (auto const &matchmaking) { return matchmaking->sm->matchmakingData.user.accountName != accountToSendMessageTo; }))
+      for (auto &matchmaking : matchmakingData.stateMachines | std::ranges::views::filter ([&accountToSendMessageTo] (auto const &matchmaking) { return matchmaking->sm->matchmakingData.user.accountName == accountToSendMessageTo; }))
         {
           matchmaking->sm->impl.process_event (SendMessageToUser{ message });
         }

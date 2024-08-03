@@ -17,7 +17,6 @@
 #include <confu_soci/convenienceFunctionForSoci.hxx>
 #include <iostream>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
-#include <range/v3/to_container.hpp>
 #include <ranges>
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
@@ -44,7 +43,7 @@ auto const accountNamesToAccounts = [] (std::vector<std::string> const &accountN
            soci::session sql (soci::sqlite3, databaseName);
            return confu_soci::findStruct<database::Account> (sql, "accountName", accountName);
          })
-         | std::ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | std::ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | ranges::to<std::vector<database::Account>> ();
+         | std::ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | std::ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | std::ranges::to<std::vector<database::Account>> ();
 };
 
 void

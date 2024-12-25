@@ -28,7 +28,7 @@ target_link_libraries(
          login_matchmaking_game_shared::login_matchmaking_game_shared
          durak::durak
          confu_json::confu_json
-         boost::boost
+         Boost::headers
          magic_enum::magic_enum
          my_web_socket::my_web_socket
          )

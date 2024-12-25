@@ -7,7 +7,8 @@ namespace matchmaking_proxy
 {
 struct MatchmakingOption
 {
-  size_t usersNeededToStartQuickGame{ 2 };
+  size_t usersNeededToStartQuickGame{ 2 }; // TODO ERROR HANDLING for example 0 elements
+  // if a game does not have for example ranked mode why the user has to set values????
   size_t usersNeededToStartRankedGame{ 2 };
   size_t allowedRatingDifference{ 100 };
   std::chrono::milliseconds timeToAcceptInvite{ 10'000 };

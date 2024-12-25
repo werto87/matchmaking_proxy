@@ -297,10 +297,12 @@ TEST_CASE ("matchmaking option errors matchmaking LoggedIn -> LoggedIn", "[match
   messages.clear ();
   SECTION ("JoinMatchMakingQueue", "[matchmaking]")
   {
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (JoinMatchMakingQueue{})));
+    auto result = matchmaking->processEvent (objectToStringWithObjectName (JoinMatchMakingQueue{}));
+    REQUIRE_FALSE (result.has_value ());
+    CHECK (result.error () == "exception: Configuration Error. Please check MatchmakingOption. Error: userMaxCount < 1");
+    // It should not be possible to create game options which make no sense
     ioContext.run ();
-    CHECK (messages.size () == 1);
-    CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    CHECK (messages.empty ());
   }
   ioContext.stop ();
   ioContext.reset ();

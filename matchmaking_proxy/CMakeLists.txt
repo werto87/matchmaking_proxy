@@ -26,7 +26,6 @@ target_link_libraries(
          libsodium::libsodium
          sml::sml
          login_matchmaking_game_shared::login_matchmaking_game_shared
-         durak::durak
          confu_json::confu_json
          Boost::headers
          magic_enum::magic_enum

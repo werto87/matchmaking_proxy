@@ -27,7 +27,7 @@ class Project(ConanFile):
         self.requires("confu_json/1.1.1", force=True)
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/0.0.8")
+        self.requires("my_web_socket/0.0.9")
         
         ### only for testing please do not put this in the package build recept ###
         self.requires("modern_durak_game_option/latest")

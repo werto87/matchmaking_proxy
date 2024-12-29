@@ -856,6 +856,13 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 
+auto const getTopRatedPlayers = [] (user_matchmaking::GetTopRatedPlayers const &getTopRatedPlayers, MatchmakingData &matchmakingData) {
+  auto result = user_matchmaking::TopRatedPlayers{};
+  auto topRatedAccounts = database::getTopRatedAccounts (getTopRatedPlayers.playerCount);
+  std::ranges::transform (topRatedAccounts, std::back_inserter (result.players), [] (auto &&account) { return user_matchmaking::RatedPlayer{ account.accountName, account.rating }; });
+  matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
+};
+
 template <class T>
 void
 dump_transition (std::stringstream &ss) noexcept
@@ -986,6 +993,7 @@ public:
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
 , state<GlobalState>                          + event<u_m::GetUserStatistics>                                                     / userStatistics
+, state<GlobalState>                          + event<u_m::GetTopRatedPlayers>                                                     / getTopRatedPlayers
 
         // clang-format on
     );

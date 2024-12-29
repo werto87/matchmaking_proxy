@@ -276,3 +276,22 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   REQUIRE_FALSE (result.has_value ());
   REQUIRE (result.error () == "No transition found");
 }
+
+TEST_CASE ("matchmaking GetTopRatedPlayers", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  database::createAccount ("aa", "", 0);
+  database::createAccount ("bb", "", 1);
+  database::createAccount ("cc", "", 3);
+  database::createAccount ("dd", "", 42);
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
+  auto result = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetTopRatedPlayers{ 2 })); // cppcheck-suppress danglingTemporaryLifetime //false positive
+  REQUIRE (messages.at (0) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"dd","rating":42}},{"RatedPlayer":{"name":"cc","rating":3}}]})MyStringLiteral");
+}

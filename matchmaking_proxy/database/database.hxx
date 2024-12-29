@@ -16,6 +16,8 @@ void createDatabaseIfNotExist ();
 
 void createTables ();
 
+std::vector<Account> getTopRatedAccounts (uint64_t count);
+
 boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, size_t startRating = 1500);
 }
 }

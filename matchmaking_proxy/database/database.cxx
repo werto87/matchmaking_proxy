@@ -73,5 +73,13 @@ createAccount (std::string const &accountName, std::string const &password, size
   soci::session sql (soci::sqlite3, databaseName);
   return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));
 }
+
+std::vector<Account>
+getTopRatedAccounts (uint64_t count)
+{
+  auto sql = soci::session{ soci::sqlite3, databaseName };
+  return confu_soci::findStructsOrderBy<database::Account> (sql, count, "rating", confu_soci::OrderMethod::Descending);
+}
+
 }
 }

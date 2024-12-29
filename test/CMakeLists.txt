@@ -6,6 +6,7 @@ add_executable(
   rating.cxx
   server.cxx
   startGame.cxx
+  database.cxx
   util.cxx)
 find_package(Catch2)
 find_package(modern_durak_game_option)

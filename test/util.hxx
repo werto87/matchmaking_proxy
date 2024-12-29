@@ -4,6 +4,7 @@
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "util.hxx"
+#include <boost/asio/thread_pool.hpp>
 #include <iostream> // for operator<<, ostream
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <vector> // for allocator

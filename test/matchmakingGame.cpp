@@ -28,9 +28,10 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   boost::asio::thread_pool pool_{};
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
-  auto messages = std::vector<std::string>{};
-  auto &matchmaking1 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
-  auto &matchmaking2 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
+  auto messages1 = std::vector<std::string>{};
+  auto messages2 = std::vector<std::string>{};
+  auto &matchmaking1 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages1] (std::string message) { messages1.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
+  auto &matchmaking2 = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages2] (std::string message) { messages2.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
   REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" })));
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
   ioContext.run ();
@@ -38,8 +39,8 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   ioContext.reset ();
   auto matchmakingGameTmp = MatchmakingGame{ matchmakings, [] (auto) {} };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
-  REQUIRE (messages.at (2) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1490}");
-  REQUIRE (messages.at (3) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1510}");
+  REQUIRE (messages1.at (1) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1510}");
+  REQUIRE (messages2.at (1) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1490}");
 }
 
 TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")

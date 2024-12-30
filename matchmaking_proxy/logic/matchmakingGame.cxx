@@ -66,7 +66,7 @@ auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, Matchmaki
         {
           auto losers = accountNamesToAccounts (_gameOver.losers);
           auto winners = accountNamesToAccounts (_gameOver.winners);
-          auto [winnersWithNewRating, losersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
+          auto [losersWithNewRating, winnersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, winners, winnersWithNewRating);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameDependencies, losers, losersWithNewRating);
         }

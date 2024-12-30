@@ -11,6 +11,13 @@ namespace matchmaking_proxy
 {
 class Matchmaking;
 struct GameLobby;
+
+struct SubscribedToGetTopRatedPlayers
+{
+  bool isSubscribed{};
+  uint64_t playerCount{};
+};
+
 struct MatchmakingData
 {
   MatchmakingData (boost::asio::io_context &ioContext_, std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_);
@@ -29,6 +36,7 @@ struct MatchmakingData
   MatchmakingOption matchmakingOption{};
   boost::asio::ip::tcp::endpoint matchmakingGameEndpoint{};
   boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint{};
+  SubscribedToGetTopRatedPlayers subscribedToGetTopRatedPlayers{};
 };
 }
 #endif /* C774F1C4_44FA_4B2F_9526_46C43EFDB937 */

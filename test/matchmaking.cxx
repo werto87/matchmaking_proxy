@@ -295,3 +295,37 @@ TEST_CASE ("matchmaking GetTopRatedPlayers", "[matchmaking]")
   auto result = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetTopRatedPlayers{ 2 })); // cppcheck-suppress danglingTemporaryLifetime //false positive
   REQUIRE (messages.at (0) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"dd","rating":42}},{"RatedPlayer":{"name":"cc","rating":3}}]})MyStringLiteral");
 }
+
+TEST_CASE ("matchmaking GetTopRatedPlayers no accounts", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } } };
+  auto result = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetTopRatedPlayers{ 1 })); // cppcheck-suppress danglingTemporaryLifetime //false positive
+  // TODO this will fail. the returned vector should be empty something like ""players":[]"
+  REQUIRE (messages.at (0) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"dd","rating":42}},{"RatedPlayer":{"name":"cc","rating":3}}]})MyStringLiteral");
+}
+
+TEST_CASE ("matchmaking subscribe get top rated players", "[matchmaking]")
+{
+  database::createEmptyDatabase ();
+  database::createTables ();
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::tcp::v4 (), 33333 } }));
+  REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::SubscribeGetTopRatedPlayers{ 5 })));
+  REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
+  ioContext.run ();
+  CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
+  CHECK (R"foo(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"newAcc","rating":1500}}]})foo" == messages.at (1));
+}

@@ -73,7 +73,9 @@ ProxyStopped,
 GetMatchmakingLogic,
 MatchmakingLogic,
 GetUserStatistics,
-GetTopRatedPlayers
+GetTopRatedPlayers,
+SubscribeGetTopRatedPlayers,
+UnSubscribeGetTopRatedPlayers
   >  const  userMatchmaking{};
 
 // clang-format on

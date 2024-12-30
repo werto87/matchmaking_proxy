@@ -74,6 +74,9 @@ struct ConnectedWithGame
 struct GlobalState
 {
 };
+struct SendTopRatedPlayersToUser
+{
+};
 
 boost::asio::awaitable<void> startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData);
 
@@ -856,12 +859,34 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 
-auto const getTopRatedPlayers = [] (user_matchmaking::GetTopRatedPlayers const &getTopRatedPlayers, MatchmakingData &matchmakingData) {
+auto const getTopRatedPlayers = [] (auto const &getTopRatedPlayers, MatchmakingData &matchmakingData) {
+  auto playerCount = uint64_t{};
+  if constexpr (std::same_as<std::decay_t<decltype (getTopRatedPlayers)>, user_matchmaking::GetTopRatedPlayers>)
+    {
+      playerCount = getTopRatedPlayers.playerCount;
+    }
+  else
+    {
+      playerCount = matchmakingData.subscribedToGetTopRatedPlayers.playerCount;
+    }
   auto result = user_matchmaking::TopRatedPlayers{};
-  auto topRatedAccounts = database::getTopRatedAccounts (getTopRatedPlayers.playerCount);
+  auto topRatedAccounts = database::getTopRatedAccounts (playerCount);
   std::ranges::transform (topRatedAccounts, std::back_inserter (result.players), [] (auto &&account) { return user_matchmaking::RatedPlayer{ account.accountName, account.rating }; });
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
+
+auto const subscribeGetTopRatedPlayers = [] (user_matchmaking::SubscribeGetTopRatedPlayers const &subscribeGetTopRatedPlayers, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetTopRatedPlayers = SubscribedToGetTopRatedPlayers{ .isSubscribed = true, .playerCount = subscribeGetTopRatedPlayers.playerCount }; };
+
+auto const unSubscribeGetTopRatedPlayers = [] (user_matchmaking::UnSubscribeGetTopRatedPlayers const &, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetTopRatedPlayers = SubscribedToGetTopRatedPlayers{}; };
+
+auto const possibleTopRatedPlayersChanged = [] (MatchmakingData &matchmakingData) {
+  for (auto &matchmaking : matchmakingData.stateMachines)
+    {
+      matchmaking->proccessSendTopRatedPlayersToUser ();
+    }
+};
+
+auto const subscribedToGetTopRatedPlayers = [] (MatchmakingData &matchmakingData) { return matchmakingData.subscribedToGetTopRatedPlayers.isSubscribed; };
 
 template <class T>
 void
@@ -951,7 +976,7 @@ public:
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
 // WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
-, state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / createAccount                           = state<LoggedIn>
+, state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / (createAccount,possibleTopRatedPlayersChanged)                           = state<LoggedIn>
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / cancelCreateAccount                     = state<NotLoggedIn>
 // WaitingForPasswordCheck-----------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ alreadyLoggedIn ]                    / loginAccountErrorAccountAlreadyLoggedIn = state<WaitingForUserWantsToRelogGameLobby>
@@ -993,7 +1018,10 @@ public:
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
 , state<GlobalState>                          + event<u_m::GetUserStatistics>                                                     / userStatistics
-, state<GlobalState>                          + event<u_m::GetTopRatedPlayers>                                                     / getTopRatedPlayers
+, state<GlobalState>                          + event<u_m::GetTopRatedPlayers>                                                    / getTopRatedPlayers
+, state<GlobalState>                          + event<u_m::SubscribeGetTopRatedPlayers>                                           / subscribeGetTopRatedPlayers
+, state<GlobalState>                          + event<u_m::UnSubscribeGetTopRatedPlayers>                                         / unSubscribeGetTopRatedPlayers
+, state<GlobalState>                          + event<SendTopRatedPlayersToUser>           [ subscribedToGetTopRatedPlayers]      / getTopRatedPlayers
 
         // clang-format on
     );
@@ -1147,6 +1175,12 @@ void
 Matchmaking::disconnectFromProxy ()
 {
   sm->impl.process_event (matchmaking_game::LeaveGameSuccess{});
+}
+
+void
+Matchmaking::proccessSendTopRatedPlayersToUser ()
+{
+  sm->impl.process_event (SendTopRatedPlayersToUser{});
 }
 
 std::vector<std::string>

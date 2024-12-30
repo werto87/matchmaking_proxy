@@ -94,6 +94,13 @@ auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLef
   matchmakingGameDependencies.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
 };
 
+auto const sendTopRatedPlayersToUser = [] (MatchmakingGameDependencies &matchmakingGameDependencies) {
+  for (auto &matchmaking : matchmakingGameDependencies.stateMachines)
+    {
+      matchmaking->proccessSendTopRatedPlayersToUser ();
+    }
+};
+
 class MatchmakingGameStateMachine
 {
 public:
@@ -105,7 +112,7 @@ public:
     // clang-format off
     return make_transition_table(
   // Default-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-* "Default"_s                          + event<m_g::GameOver>                             / gameOver
+* "Default"_s                          + event<m_g::GameOver>                             / (gameOver,sendTopRatedPlayersToUser)
 , "Default"_s                          + event<m_g::UserLeftGame>   [isLoggedIn]          / userLeftGameErrorNotLoggedIn
 , "Default"_s                          + event<m_g::UserLeftGame>   [hasProxy]            / userLeftGameErrorUserHasNoProxy
 , "Default"_s                          + event<m_g::UserLeftGame>                         / cancelProxyToGame

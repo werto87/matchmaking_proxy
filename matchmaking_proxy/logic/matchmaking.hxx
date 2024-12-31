@@ -3,6 +3,7 @@
 
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 namespace matchmaking_proxy
@@ -26,6 +27,8 @@ public:
 
   bool isLoggedInWithAccountName (std::string const &accountName) const;
 
+  std::optional<std::string> loggedInWithAccountName () const;
+
   bool isUserInChatChannel (std::string const &channelName) const;
 
   void disconnectFromProxy ();
@@ -35,6 +38,8 @@ public:
   void cleanUp ();
 
   void proccessSendTopRatedPlayersToUser ();
+
+  void proccessSendLoggedInPlayersToUser ();
 
   std::vector<std::string> currentStatesAsString () const;
 

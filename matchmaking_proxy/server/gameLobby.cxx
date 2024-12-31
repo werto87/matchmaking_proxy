@@ -62,12 +62,12 @@ GameLobby::tryToAddUser (User const &user)
     {
       if (std::ranges::none_of (accountNames, [&accountName = user.accountName] (std::string const &accountInGameLobby) { return accountInGameLobby == accountName; }))
         {
-          accountNames.push_back (user.accountName);
+          accountNames.push_back (user.accountName.value ());
           return {};
         }
       else
         {
-          return "User allready in lobby with user name: " + user.accountName;
+          return "User allready in lobby with user name: " + user.accountName.value ();
         }
     }
   else

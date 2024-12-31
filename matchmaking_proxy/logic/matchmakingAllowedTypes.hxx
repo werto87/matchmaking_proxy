@@ -75,7 +75,10 @@ MatchmakingLogic,
 GetUserStatistics,
 GetTopRatedPlayers,
 SubscribeGetTopRatedPlayers,
-UnSubscribeGetTopRatedPlayers
+UnSubscribeGetTopRatedPlayers,
+GetLoggedInPlayers,
+SubscribeGetLoggedInPlayers,
+UnSubscribeGetLoggedInPlayers
   >  const  userMatchmaking{};
 
 // clang-format on

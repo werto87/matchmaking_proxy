@@ -902,11 +902,11 @@ auto const getLoggedInPlayers = [] (auto const &_getLoggedInPlayers, Matchmaking
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 
-auto const subscribeGetTopRatedPlayers = [] (user_matchmaking::SubscribeGetTopRatedPlayers const &subscribeGetTopRatedPlayers, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetTopRatedPlayers = SubscribedToGetTopRatedPlayers{ .isSubscribed = true, .playerCount = subscribeGetTopRatedPlayers.playerCount }; };
+auto const subscribeGetTopRatedPlayers = [] (user_matchmaking::SubscribeGetTopRatedPlayers const &_subscribeGetTopRatedPlayers, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetTopRatedPlayers = SubscribedToGetTopRatedPlayers{ .isSubscribed = true, .playerCount = _subscribeGetTopRatedPlayers.playerCount }; };
 
 auto const unSubscribeGetTopRatedPlayers = [] (user_matchmaking::UnSubscribeGetTopRatedPlayers const &, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetTopRatedPlayers = SubscribedToGetTopRatedPlayers{}; };
 
-auto const subscribeGetLoggedInPlayers = [] (user_matchmaking::SubscribeGetLoggedInPlayers const &subscribeGetLoggedInPlayers, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetLoggedInPlayers = SubscribedToGetLoggedInPlayers{ .isSubscribed = true, .playerCount = subscribeGetLoggedInPlayers.playerCount }; };
+auto const subscribeGetLoggedInPlayers = [] (user_matchmaking::SubscribeGetLoggedInPlayers const &_subscribeGetLoggedInPlayers, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetLoggedInPlayers = SubscribedToGetLoggedInPlayers{ .isSubscribed = true, .playerCount = _subscribeGetLoggedInPlayers.playerCount }; };
 
 auto const unSubscribeGetLoggedInPlayers = [] (user_matchmaking::UnSubscribeGetLoggedInPlayers const &, MatchmakingData &matchmakingData) { matchmakingData.subscribedToGetLoggedInPlayers = SubscribedToGetLoggedInPlayers{}; };
 

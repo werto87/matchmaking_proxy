@@ -30,7 +30,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-TEST_CASE ("10 connections", "[!benchmark]")
+TEST_CASE ("1000 messages from one player", "[!benchmark]")
 {
   if (sodium_init () < 0)
     {
@@ -58,43 +58,27 @@ TEST_CASE ("10 connections", "[!benchmark]")
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
   co_spawn (ioContext, server.userMatchmaking ({ ip::tcp::v4 (), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ ip::tcp::v4 (), gameMatchmakingPort }), my_web_socket::printException);
-  SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
-  {
-    auto messagesFromGamePlayer1 = std::vector<std::string>{};
-    size_t gameOver = 0;
-    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
-      if (boost::starts_with (msg, "LoginAsGuestSuccess"))
-        {
-          myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
-        }
-      else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame"))
-        {
-          myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::WantsToJoinGame{ true }));
-        }
-      else if (boost::starts_with (msg, "ProxyStarted"))
-        {
-          gameOver++;
-          if (gameOver == 2)
-            {
-              _ioContext.stop ();
-            }
-        }
-    };
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
-    auto messagesFromGamePlayer2 = std::vector<std::string>{};
-    co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer2), my_web_socket::printException);
-    ioContext.run_for (std::chrono::seconds{ 5 });
-    CHECK (messagesFromGamePlayer1.size () == 4);
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
-    CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");
-    CHECK (messagesFromGamePlayer1.at (2) == "AskIfUserWantsToJoinGame|{}");
-    CHECK (messagesFromGamePlayer1.at (3) == "ProxyStarted|{}");
-    CHECK (messagesFromGamePlayer2.size () == 4);
-    CHECK (boost::starts_with (messagesFromGamePlayer2.at (0), "LoginAsGuestSuccess"));
-    CHECK (messagesFromGamePlayer2.at (1) == "JoinMatchMakingQueueSuccess|{}");
-    CHECK (messagesFromGamePlayer2.at (2) == "AskIfUserWantsToJoinGame|{}");
-    CHECK (messagesFromGamePlayer2.at (3) == "ProxyStarted|{}");
-  }
+  auto messagesFromGamePlayer1 = std::vector<std::string>{};
+  size_t messagesSend = 0;
+  auto handleMsgFromGame = [&messagesSend] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
+    if (boost::starts_with (msg, "LoginAsGuestSuccess"))
+      {
+        for (uint64_t i = 0; i < 1000; ++i)
+          {
+            myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
+          }
+      }
+    if (boost::starts_with (msg, "JoinMatchMakingQueue"))
+      {
+        ++messagesSend;
+        if (messagesSend == 1000)
+          {
+            _ioContext.stop ();
+          }
+      }
+  };
+  co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
+  BENCHMARK ("benchmark123") { return ioContext.run_for (std::chrono::seconds{ 30 }); };
   ioContext.stop ();
   ioContext.reset ();
 }

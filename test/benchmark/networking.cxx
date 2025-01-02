@@ -1,23 +1,13 @@
-#include "matchmaking_proxy/server/server.hxx"
+#include "catch2/catch.hpp"
+#include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include "networkingUtil.hxx"
+#include "test/networkingUtil.hxx"
 #include "util.hxx"
 #include <algorithm>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/signal_set.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/asio/thread_pool.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/beast/core/flat_buffer.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/websocket/ssl.hpp>
-#include <boost/certify/extensions.hpp>
-#include <boost/certify/https_verification.hpp>
 #include <catch2/catch.hpp>
 #include <cstddef>
 #include <deque>
@@ -33,15 +23,14 @@
 #include <my_web_socket/mockServer.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
+#include <soci/soci.h>
 #include <sodium/core.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
-using namespace matchmaking_proxy;
-using namespace boost::asio;
-
-TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
+#include <vector>
+TEST_CASE ("10 connections", "[!benchmark]")
 {
   if (sodium_init () < 0)
     {

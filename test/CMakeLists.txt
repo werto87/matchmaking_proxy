@@ -7,7 +7,9 @@ add_executable(
   server.cxx
   startGame.cxx
   database.cxx
-  util.cxx)
+  networkingUtil.cxx
+  )
+add_subdirectory(benchmark)
 find_package(Catch2)
 find_package(modern_durak_game_option)
 

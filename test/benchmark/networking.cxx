@@ -79,7 +79,9 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
       }
   };
   co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { ip::tcp::v4 (), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
-  BENCHMARK ("benchmark123") { return ioContext.run_for (std::chrono::seconds{ 30 }); };
+  // BENCHMARK ("benchmark123") { return
+  ioContext.run ();
+  // };
   ioContext.stop ();
   ioContext.reset ();
 }

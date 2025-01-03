@@ -30,6 +30,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+// TODO this test crashes when using gcc release and disabling my_web_socket log in conanfile.py
 TEST_CASE ("1000 messages from one player", "[!benchmark]")
 {
   if (sodium_init () < 0)

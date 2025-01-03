@@ -44,7 +44,8 @@
                 "CMAKE_TOOLCHAIN_FILE": "conan_toolchain.cmake",
                 "BUILD_TESTS": "True",
                 "CMAKE_C_COMPILER": "gcc",
-                "CMAKE_CXX_COMPILER": "g++"
+                "CMAKE_CXX_COMPILER": "g++",
+                "myproject_WARNINGS_AS_ERRORS": "OFF"
             }
         },
         {

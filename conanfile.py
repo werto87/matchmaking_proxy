@@ -22,7 +22,7 @@ class Project(ConanFile):
 
 
     def requirements(self):
-        self.requires("boost/1.85.0", force=True)
+        self.requires("boost/1.86.0", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/[>=0.9.5 <10]")
         self.requires("certify/cci.20201114@modern-durak")
@@ -31,7 +31,7 @@ class Project(ConanFile):
         self.requires("confu_algorithm/1.2.0")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/0.0.9")
+        self.requires("my_web_socket/0.0.10")
         
         ### only for testing please do not put this in the package build recept ###
         self.requires("modern_durak_game_option/latest")

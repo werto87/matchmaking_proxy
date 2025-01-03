@@ -168,7 +168,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LeaveGameLobby{})));
     ioContext.run ();
     CHECK (messages.size () == 1);
-    CHECK (R"foo(LeaveGameLobbyError|{"error":"not allowed to leave a game lobby which is controlled by the matchmaking system with leave game lobby"})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
+    CHECK (R"foo(LeaveGameLobbyError|{"error":"could not remove user from lobby user not found in lobby"})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
   }
   SECTION ("CreateGame", "[matchmaking]")
   {

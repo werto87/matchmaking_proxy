@@ -817,6 +817,10 @@ auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, Mat
     auto const &accountNames = gameLobby.accountNames;
     return std::ranges::find_if (accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != accountNames.end ();
   });
+  if (userGameLobby == matchmakingData.gameLobbies.end ())
+    {
+      throw std::logic_error{ "User is not in a game lobby" };
+    }
   return userGameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
 };
 
@@ -1042,8 +1046,8 @@ public:
 , state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
 , state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby
 , state<LoggedIn>                             + event<u_m_g::GameOptionAsString>           [ gameOptionValid ]                    / setGameOption
-, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not userInGameLobby ]                / leaveGameLobbyErrorUserNotInGameLobby
+, state<LoggedIn>                             + event<u_m::LeaveGameLobby>                 [ not gameLobbyControlledByUsers ]     / leaveGameLobbyErrorControlledByMatchmaking
 , state<LoggedIn>                             + event<u_m::LeaveGameLobby>                                                        / leaveGameLobby
 , state<LoggedIn>                             + event<u_m::CreateGame>                                                            / createGameWrapper
 , state<LoggedIn>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper

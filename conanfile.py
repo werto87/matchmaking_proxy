@@ -23,7 +23,7 @@ class Project(ConanFile):
 
     def requirements(self):
         self.requires("boost/1.86.0", force=True)
-        self.requires("confu_soci/[<1]")
+        self.requires("confu_soci/[<1]@modern-durak")
         self.requires("magic_enum/[>=0.9.5 <10]")
         self.requires("certify/cci.20201114@modern-durak")
         self.requires("libsodium/1.0.18")

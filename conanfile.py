@@ -28,7 +28,7 @@ class Project(ConanFile):
         self.requires("certify/cci.20201114@modern-durak")
         self.requires("libsodium/1.0.18")
         self.requires("confu_json/1.1.1", force=True)
-        self.requires("confu_algorithm/1.2.0")
+        self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
         self.requires("my_web_socket/0.1.1")

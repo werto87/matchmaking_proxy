@@ -31,7 +31,8 @@ class Project(ConanFile):
         self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/0.1.1")
+        self.requires("my_web_socket/0.1.3")
+        self.requires("sqlite3/3.44.2")
         
         ### only for testing please do not put this in the package build recept ###
         self.requires("modern_durak_game_option/latest")

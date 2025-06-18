@@ -26,12 +26,19 @@
 
 using namespace boost::sml;
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4003)
+#endif
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordHashed, (std::string, accountName) (std::string, hashedPassword))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordMatches, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ProxyToGame, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SendMessageToUser, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordDoesNotMatch, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ConnectionToGameLost, )
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 namespace matchmaking_proxy
 {
 template <typename T>
@@ -863,7 +870,7 @@ auto const userStatistics = [] (user_matchmaking::GetUserStatistics const &, Mat
           }
         }
     }
-  result.userInGame = boost::numeric_cast<size_t> (std::ranges::count_if (matchmakingData.stateMachines, [] (auto const &stateMachine) { return std::ranges::contains (stateMachine->currentStatesAsString (), "matchmaking_proxy::ProxyToGame"); }));
+  result.userInGame = boost::numeric_cast<size_t> (std::ranges::count_if (matchmakingData.stateMachines, [] (auto const &stateMachine) { return std::ranges::contains (stateMachine->currentStatesAsString (), "matchmaking_proxy::ProxyToGame") or std::ranges::contains (stateMachine->currentStatesAsString (), "struct matchmaking_proxy::ProxyToGame"); }));
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
 
@@ -954,7 +961,7 @@ dump_transition (std::stringstream &ss) noexcept
   const auto has_guard = !boost::sml::aux::is_same<typename T::guard, boost::sml::front::always>::value;
   const auto has_action = !boost::sml::aux::is_same<typename T::action, boost::sml::front::none>::value;
 
-  if (has_event || has_guard || has_action)
+  if constexpr (has_event || has_guard || has_action)
     {
       ss << " :";
     }

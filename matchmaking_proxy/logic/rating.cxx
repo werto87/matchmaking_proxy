@@ -21,8 +21,8 @@ namespace matchmaking_proxy
 size_t
 ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
-  auto const sum = std::accumulate (userRatings.begin (), userRatings.end (), boost::numeric_cast<long double> (0), [] (size_t sum_, size_t value) { return sum_ + value; });
-  return boost::numeric_cast<size_t> (std::rintl ((userRating / sum) * ratingChange));
+  auto const sum = std::accumulate (userRatings.begin (), userRatings.end (), size_t{ 0 }, [] (size_t sum_, size_t value) { return sum_ + value; });
+  return boost::numeric_cast<size_t> (std::rintl ((userRating / boost::numeric_cast<long double> (sum)) * ratingChange));
 }
 size_t
 averageRating (std::vector<std::string> const &accountNames)
@@ -38,7 +38,6 @@ averageRating (std::vector<std::string> const &accountNames)
       {
         std::cout << "Can not find user in database but he is in ranked queue";
         abort ();
-        return x;
       }
   });
   return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (sumOfRatingInTheLobby) / accountNames.size ()));
@@ -48,7 +47,7 @@ averageRating (std::vector<std::string> const &accountNames)
 size_t
 ratingShareWinningTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange)
 {
-  auto const inverseSum = std::accumulate (userRatings.begin (), userRatings.end (), boost::numeric_cast<long double> (0), [] (long double sum, long double value) { return sum + (boost::numeric_cast<long double> (1) / value); });
+  auto const inverseSum = std::accumulate (userRatings.begin (), userRatings.end (), static_cast<long double> (0), [] (long double sum, size_t value) { return sum + (boost::numeric_cast<long double> (1) / boost::numeric_cast<long double> (value)); });
   return boost::numeric_cast<size_t> (std::rintl ((boost::numeric_cast<long double> (1) / (boost::numeric_cast<long double> (userRating)) / inverseSum) * ratingChange));
 }
 
@@ -62,7 +61,7 @@ ratingChange (size_t userRating, size_t otherUserRating, long double score, size
 size_t
 averageRating (std::vector<size_t> const &ratings)
 {
-  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (std::accumulate (ratings.begin (), ratings.end (), 0ul)) / ratings.size ()));
+  return boost::numeric_cast<size_t> (std::rintl (boost::numeric_cast<long double> (std::accumulate (ratings.begin (), ratings.end (), size_t{})) / ratings.size ()));
 }
 
 size_t

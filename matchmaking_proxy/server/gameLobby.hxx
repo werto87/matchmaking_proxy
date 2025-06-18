@@ -2,10 +2,16 @@
 #define DBE82937_D6AB_4777_A3C8_A62B68300AA3
 
 #include <boost/asio/awaitable.hpp>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wnull-dereference"
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wnull-dereference"
+#endif
+
 #include <boost/asio/system_timer.hpp>
-#pragma GCC diagnostic pop
+
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif
 #include <cstddef>
 #include <functional>
 #include <login_matchmaking_game_shared/gameOptionAsString.hxx>

@@ -25,7 +25,7 @@ std::string inline pw_to_hash (std::string const &password)
 {
   auto hashed_password = std::array<char, crypto_pwhash_STRBYTES>{};
   // TODO find a way to cancel this
-  if (crypto_pwhash_str (hashed_password.begin (), password.data (), password.size (), hash_opt, hash_memory) != 0)
+  if (crypto_pwhash_str (hashed_password.data (), password.data (), password.size (), hash_opt, hash_memory) != 0)
     {
       std::cout << "out of memory" << std::endl;
       std::terminate ();

@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <string>
 namespace matchmaking_proxy
 {
 class Matchmaking;

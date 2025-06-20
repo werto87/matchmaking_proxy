@@ -35,5 +35,3 @@ createAccountAndJoinMatchmakingQueue (const std::string &playerName, boost::asio
   ioContext.run_for (std::chrono::milliseconds{ 10 });
   return matchmaking;
 }
-
-boost::asio::awaitable<void> connectWebsocket (boost::asio::io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::vector<std::string> &messageFromMatchmaking, std::vector<std::string> const &sendMessageBeforeStartRead);

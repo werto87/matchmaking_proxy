@@ -54,5 +54,3 @@ connectWebsocketSSL (auto handleMsgFromGame, boost::asio::io_context &ioContext,
       std::cout << "exception: " << e.what () << std::endl;
     }
 }
-
-boost::asio::awaitable<void> connectWebsocket (boost::asio::io_context &ioContext, boost::asio::ip::tcp::endpoint const &endpoint, std::vector<std::string> &messageFromMatchmaking, std::vector<std::string> const &sendMessageBeforeStartRead);

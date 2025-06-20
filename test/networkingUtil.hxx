@@ -18,7 +18,7 @@ using namespace matchmaking_proxy;
 std::shared_ptr<Matchmaking> createAccountAndJoinMatchmakingQueue (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueue);
 
 boost::asio::awaitable<void>
-connectWebsocketSSL (auto handleMsgFromGame, boost::asio::io_context &ioContext, boost::asio::ip::tcp::endpoint endpoint, std::vector<std::string> &messagesFromGame)
+connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToSendAfterConnect, boost::asio::io_context &ioContext, boost::asio::ip::tcp::endpoint endpoint, std::vector<std::string> &messagesFromGame)
 {
   try
     {
@@ -35,7 +35,10 @@ connectWebsocketSSL (auto handleMsgFromGame, boost::asio::io_context &ioContext,
           co_await get_lowest_layer (connection).async_connect (endpoint, use_awaitable);
           co_await connection.next_layer ().async_handshake (ssl::stream_base::client, use_awaitable);
           co_await connection.async_handshake ("localhost:" + std::to_string (endpoint.port ()), "/", use_awaitable);
-          co_await connection.async_write (boost::asio::buffer (std::string{ "LoginAsGuest|{}" }), use_awaitable);
+          for (auto const &message : messageToSendAfterConnect)
+            {
+              co_await connection.async_write (boost::asio::buffer (message), use_awaitable);
+            }
           static size_t id = 0;
           auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
           using namespace boost::asio::experimental::awaitable_operators;

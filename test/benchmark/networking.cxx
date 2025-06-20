@@ -78,7 +78,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
           }
       }
   };
-  co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, ioContext, { boost::asio::ip::make_address("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
+  co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame,{{"LoginAsGuest|{}"}}, ioContext, { boost::asio::ip::make_address("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
   // BENCHMARK ("benchmark123") { return
   ioContext.run ();
   // };

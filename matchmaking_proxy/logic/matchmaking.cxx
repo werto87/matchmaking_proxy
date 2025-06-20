@@ -1021,8 +1021,7 @@ public:
     // clang-format off
   return make_transition_table(
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-* state<NotLoggedIn>                          + boost::sml::on_entry<_>                                                                  / loggedInPlayersChanged                
-, state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
+* state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
 , state<NotLoggedIn>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<LoggedIn>
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
@@ -1040,7 +1039,7 @@ public:
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                        [ wantsToRelog ]                       / relogToGameLobby                        = state<LoggedIn>
 , state<WaitingForUserWantsToRelogGameLobby>  + event<u_m::RelogTo>                                                               / removeUserFromGameLobby                 = state<LoggedIn>
 // LoggedIn---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<LoggedIn>                             + boost::sml::on_entry<_>                                                                  / loggedInPlayersChanged                
+, state<LoggedIn>                             + boost::sml::on_entry<_>                                                           / loggedInPlayersChanged                
 , state<LoggedIn>                             + event<u_m::CreateAccount>                                                         / (logoutAccount,hashPassword)            = state<WaitingForPasswordHashed>
 , state<LoggedIn>                             + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
 , state<LoggedIn>                             + event<u_m::LoginAccount>                                                          / (logoutAccount,checkPassword)           = state<WaitingForPasswordCheck>
@@ -1048,7 +1047,7 @@ public:
 , state<LoggedIn>                             + event<u_m::BroadCastMessage>                                                      / broadCastMessage
 , state<LoggedIn>                             + event<u_m::Message>                                                               / sendMessageToUser
 , state<LoggedIn>                             + event<u_m::LeaveChannel>                                                          / leaveChannel
-, state<LoggedIn>                             + event<u_m::LogoutAccount>                                                         / logoutAccount                           = state<NotLoggedIn>
+, state<LoggedIn>                             + event<u_m::LogoutAccount>                                                         / (logoutAccount,loggedInPlayersChanged)  = state<NotLoggedIn>
 , state<LoggedIn>                             + event<u_m::CreateGameLobby>                                                       / createGameLobby
 , state<LoggedIn>                             + event<u_m::JoinGameLobby>                                                         / joinGameLobby
 , state<LoggedIn>                             + event<u_m::SetMaxUserSizeInCreateGameLobby>                                       / setMaxUserSizeInCreateGameLobby

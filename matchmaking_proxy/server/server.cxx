@@ -77,19 +77,19 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
       co_await tryUntilNoException (
           [&pathToChainFile, &ctx] () {
             std::cout << "load fullchain: " << pathToChainFile << std::endl;
-            ctx.use_certificate_chain_file (pathToChainFile.string());
+            ctx.use_certificate_chain_file (pathToChainFile.string ());
           },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToPrivateFile, &ctx] () {
             std::cout << "load privkey: " << pathToPrivateFile << std::endl;
-            ctx.use_private_key_file (pathToPrivateFile.string(), boost::asio::ssl::context::pem);
+            ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
           },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToTmpDhFile, &ctx] () {
             std::cout << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
-            ctx.use_tmp_dh_file (pathToTmpDhFile.string());
+            ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
           },
           pollingSleepTimer);
       boost::certify::enable_native_https_server_verification (ctx);
@@ -130,8 +130,16 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               }) && myWebsocket->writeLoop (),
                         [&_matchmakings = matchmakings, matchmaking] (auto eptr) {
                           my_web_socket::printException (eptr);
+                          auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                           matchmaking->get ()->cleanUp ();
                           _matchmakings.erase (matchmaking);
+                          if (loggedInPlayerLostConnection and not _matchmakings.empty ())
+                            {
+                              for (auto &_matchmaking : _matchmakings)
+                                {
+                                  _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                }
+                            }
                         });
             }
           catch (std::exception const &e)

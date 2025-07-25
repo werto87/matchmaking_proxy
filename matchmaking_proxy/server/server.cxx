@@ -30,12 +30,18 @@
 using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
-using tcp_acceptor = use_awaitable_t<>::as_default_on_t<tcp::acceptor>;
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 namespace matchmaking_proxy
 {
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
 
+Server::~Server ()
+{
+  userMatchmakingAcceptor->cancel ();
+  userMatchmakingAcceptor->close ();
+  gameMatchmakingAcceptor->cancel ();
+  gameMatchmakingAcceptor->close ();
+}
 boost::asio::awaitable<void>
 tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds const &timeToWaitBeforeCallingFunctionAgain)
 {
@@ -63,7 +69,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
   try
     {
       auto executor = co_await this_coro::executor;
-      tcp_acceptor acceptor (executor, userEndpoint);
+      userMatchmakingAcceptor = std::make_unique<boost::asio::ip::tcp::acceptor> (executor, userEndpoint);
       net::ssl::context ctx (net::ssl::context::tls_server);
       if (sslContextVerifyNone)
         {
@@ -99,7 +105,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
         {
           try
             {
-              auto socket = co_await acceptor.async_accept ();
+              auto socket = co_await userMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::SSLWebSocket{ std::move (socket), ctx };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
               connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
@@ -160,13 +166,13 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
   try
     {
       auto executor = co_await this_coro::executor; // NOLINT(clang-analyzer-core.CallAndMessage)
-      tcp_acceptor acceptor (executor, endpoint);
+      gameMatchmakingAcceptor = std::make_unique<boost::asio::ip::tcp::acceptor> (executor, endpoint);
       for (;;)
         {
           try
             {
               std::cout << "wait for game over" << std::endl;
-              auto socket = co_await acceptor.async_accept ();
+              auto socket = co_await gameMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::WebSocket{ std::move (socket) };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
               connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));

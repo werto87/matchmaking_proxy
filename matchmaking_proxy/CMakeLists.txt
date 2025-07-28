@@ -8,8 +8,14 @@ add_library(matchmaking_proxy)
 
 add_library(myproject::matchmaking_proxy ALIAS matchmaking_proxy)
 
+
 find_package(confu_soci)
-find_package(certify)
+
+option(WITH_SSL_VERIFICATION "Enable ssl verification" OFF)
+if(WITH_SSL_VERIFICATION)
+  find_package(certify)
+endif()
+
 find_package(libsodium)
 find_package(sml)
 find_package(login_matchmaking_game_shared)
@@ -21,7 +27,6 @@ find_package(confu_algorithm)
 target_link_libraries(
   matchmaking_proxy
   PUBLIC confu_soci::confu_soci
-         certify::core
          libsodium::libsodium
          sml::sml
          login_matchmaking_game_shared::login_matchmaking_game_shared
@@ -30,9 +35,13 @@ target_link_libraries(
          magic_enum::magic_enum
          my_web_socket::my_web_socket
          confu_algorithm::confu_algorithm
-         )
-
-
+)
+if(WITH_SSL_VERIFICATION)
+  target_link_libraries(matchmaking_proxy PUBLIC certify::core)
+endif()
+if(WITH_SSL_VERIFICATION)
+  target_compile_definitions(matchmaking_proxy PUBLIC MATCHMAKING_PROXY_WITH_SSL_VERIFICATION)
+endif()
 target_compile_features(matchmaking_proxy PUBLIC cxx_std_20)
 
 target_include_directories(matchmaking_proxy

@@ -16,8 +16,10 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/ssl.hpp>
+#ifdef MATCHMAKING_PROXY_ENABLE_SSL_VERIFICATION
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
+#endif
 #include <catch2/catch.hpp>
 #include <cstddef>
 #include <deque>

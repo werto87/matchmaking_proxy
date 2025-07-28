@@ -10,8 +10,11 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket/ssl.hpp>
+#ifdef MATCHMAKING_PROXY_ENABLE_SSL_VERIFICATION
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
+#include <certify/https_verification.hpp>
+#endif
 #include <boost/current_function.hpp>
 #include <chrono>
 #include <deque>
@@ -98,7 +101,9 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
             ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
           },
           pollingSleepTimer);
+#ifdef MATCHMAKING_PROXY_ENABLE_SSL_VERIFICATION
       boost::certify::enable_native_https_server_verification (ctx);
+#endif
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
       std::list<GameLobby> gameLobbies{};
       for (;;)

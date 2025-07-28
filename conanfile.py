@@ -2,13 +2,21 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 from conan.tools.files import collect_libs, rmdir
 
-class Project(ConanFile):
+class MatchmakingProxy(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators =  "CMakeDeps"
+
+    options = {
+        "with_ssl_verification": [True, False],
+    }
+    default_options = {
+        "with_ssl_verification": True
+    }
 
     def generate(self):
         tc = CMakeToolchain(self)
         tc.user_presets_path = False #workaround because this leads to useless options in cmake-tools configure
+        tc.variables["WITH_SSL_VERIFICATION"] = self.options.with_ssl_verification
         tc.generate()
 
 
@@ -25,13 +33,14 @@ class Project(ConanFile):
         self.requires("boost/1.86.0", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/0.9.6")
-        self.requires("certify/cci.20201114@modern-durak")
+        if self.options.with_ssl_verification:
+            self.requires("certify/cci.20201114@modern-durak")
         self.requires("libsodium/1.0.18")
         self.requires("confu_json/1.1.1@modern-durak", force=True)
         self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/0.1.3")
+        self.requires("my_web_socket/1.0.0")
         self.requires("sqlite3/3.44.2")
         
         ### only for testing please do not put this in the package build recept ###

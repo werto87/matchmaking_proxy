@@ -15,16 +15,17 @@ namespace matchmaking_proxy
 namespace database
 {
 void
-createEmptyDatabase ()
+createEmptyDatabase (std::string const &whereToCreateDatabase)
 {
-  std::filesystem::remove (databaseName.c_str ());
-  if (not std::filesystem::exists ("database"))
+  auto const whereToCreateDatabasePath = std::filesystem::path{ whereToCreateDatabase };
+  std::filesystem::remove (whereToCreateDatabasePath / std::filesystem::path{ databaseName });
+  if (not std::filesystem::exists ((whereToCreateDatabasePath / "database")))
     {
-      std::filesystem::create_directory ("database");
+      std::filesystem::create_directory (whereToCreateDatabasePath / "database");
     }
   sqlite3 *db{};
   int rc{};
-  rc = sqlite3_open (databaseName.c_str (), &db);
+  rc = sqlite3_open ((whereToCreateDatabasePath / std::filesystem::path{ databaseName }).string ().c_str (), &db);
   if (rc)
     {
       fprintf (stderr, "Can't open database: %s\n", sqlite3_errmsg (db));
@@ -34,15 +35,16 @@ createEmptyDatabase ()
 }
 
 void
-createDatabaseIfNotExist ()
+createDatabaseIfNotExist (std::string const &whereToCreateDatabase)
 {
-  if (not std::filesystem::exists ("database"))
+  auto const whereToCreateDatabasePath = std::filesystem::path{ whereToCreateDatabase };
+  if (not std::filesystem::exists ((whereToCreateDatabasePath / "database")))
     {
-      std::filesystem::create_directory ("database");
+      std::filesystem::create_directory (whereToCreateDatabasePath / "database");
     }
   sqlite3 *db{};
   int rc{};
-  rc = sqlite3_open (databaseName.c_str (), &db);
+  rc = sqlite3_open ((whereToCreateDatabasePath / std::filesystem::path{ databaseName }).string ().c_str (), &db);
   if (rc)
     {
       fprintf (stderr, "Can't open database: %s\n", sqlite3_errmsg (db));
@@ -52,9 +54,10 @@ createDatabaseIfNotExist ()
 }
 
 void
-createTables ()
+createTables (std::string const &whereToCreateDatabase)
 {
-  soci::session sql (soci::sqlite3, databaseName);
+  auto const whereToCreateDatabasePath = std::filesystem::path{ whereToCreateDatabase };
+  soci::session sql (soci::sqlite3, (whereToCreateDatabasePath / std::filesystem::path{ databaseName }).string ().c_str ());
   try
     {
       confu_soci::createTableForStruct<Account> (sql);
@@ -66,16 +69,18 @@ createTables ()
 }
 
 boost::optional<Account>
-createAccount (std::string const &accountName, std::string const &password, size_t startRating)
+createAccount (std::string const &accountName, std::string const &password, size_t startRating, std::string const &whereToCreateDatabase)
 {
-  soci::session sql (soci::sqlite3, databaseName);
+  auto const whereToCreateDatabasePath = std::filesystem::path{ whereToCreateDatabase };
+  soci::session sql (soci::sqlite3, (whereToCreateDatabasePath / std::filesystem::path{ databaseName }).string ().c_str ());
   return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));
 }
 
 std::vector<Account>
-getTopRatedAccounts (uint64_t count)
+getTopRatedAccounts (uint64_t count, std::string const &whereToCreateDatabase)
 {
-  auto sql = soci::session{ soci::sqlite3, databaseName };
+  auto const whereToCreateDatabasePath = std::filesystem::path{ whereToCreateDatabase };
+  auto sql = soci::session{ soci::sqlite3, (whereToCreateDatabasePath / std::filesystem::path{ databaseName }).string ().c_str () };
   return confu_soci::findStructsOrderBy<database::Account> (sql, count, "rating", confu_soci::OrderMethod::Descending);
 }
 

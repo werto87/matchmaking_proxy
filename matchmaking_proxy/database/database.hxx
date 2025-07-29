@@ -10,15 +10,15 @@ namespace matchmaking_proxy
 {
 namespace database
 {
-void createEmptyDatabase ();
+void createEmptyDatabase (std::string const &whereToCreateDatabase = {});
 
-void createDatabaseIfNotExist ();
+void createDatabaseIfNotExist (std::string const &whereToCreateDatabase = {});
 
-void createTables ();
+void createTables (std::string const &whereToCreateDatabase = {});
 
-std::vector<Account> getTopRatedAccounts (uint64_t count);
+std::vector<Account> getTopRatedAccounts (uint64_t count, std::string const &whereToCreateDatabase = {});
 
-boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, size_t startRating = 1500);
+boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, size_t startRating = 1500, std::string const &whereToCreateDatabase = {});
 }
 }
 #endif /* B86FE02F_B7D0_4435_9031_A334C305B294 */

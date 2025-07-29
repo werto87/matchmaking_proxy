@@ -6,6 +6,6 @@
 
 namespace matchmaking_proxy
 {
-std::string const databaseName = "database/modern-durak.db";
+std::string const databaseName = "modern-durak.db";
 }
 #endif /* AA8179A7_F57B_4110_97DC_CEBEDA7522AB */

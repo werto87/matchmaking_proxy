@@ -51,8 +51,8 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   io_context ioContext (1);
   signal_set signals (ioContext, SIGINT, SIGTERM);
@@ -70,7 +70,7 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   auto const PATH_TO_DH_File = std::string{ "C:/Users/walde/certs/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }), my_web_socket::printException);
+  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort },"matchmaking_proxy.db"), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
@@ -120,8 +120,8 @@ TEST_CASE ("Start Server test", "[.][integration]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   io_context ioContext (1);
   signal_set signals (ioContext, SIGINT, SIGTERM);
@@ -137,7 +137,7 @@ TEST_CASE ("Start Server test", "[.][integration]")
   auto const PATH_TO_DH_File = std::string{ "C:/Users/walde/certs/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }), my_web_socket::printException);
+  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort },"matchmaking_proxy.db"), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};

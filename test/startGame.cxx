@@ -17,8 +17,8 @@ using namespace matchmaking_proxy;
 using namespace user_matchmaking;
 TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
 {
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
@@ -52,8 +52,8 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
 
 TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
 {
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
@@ -256,8 +256,8 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
 
 TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
 {
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "TEST_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
@@ -303,7 +303,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
 std::shared_ptr<Matchmaking>
 createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, CreateGameLobby const &createGameLobby, int &proxyStartedCalled)
 {
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 } }));
+  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
   matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings,
                                                                 [&messages, &ioContext, &proxyStartedCalled] (std::string msg) {
                                                                   messages.push_back (msg);
@@ -316,7 +316,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
                                                                         }
                                                                     }
                                                                 },
-                                                                gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 } });
+                                                                gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" })));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -328,7 +328,7 @@ createAccountCreateGameLobby (std::string const &playerName, boost::asio::io_con
 std::shared_ptr<Matchmaking>
 createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, JoinGameLobby const &joinGameLobby, int &proxyStartedCalled)
 {
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 } }));
+  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [] (auto) {}, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
   matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings,
                                                                 [&messages, &ioContext, &proxyStartedCalled] (const std::string &msg) {
                                                                   messages.push_back (msg);
@@ -341,7 +341,7 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
                                                                         }
                                                                     }
                                                                 },
-                                                                gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 } });
+                                                                gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ playerName, "abc" })));
   ioContext.run_for (std::chrono::seconds{ 5 });
   ioContext.stop ();
@@ -352,8 +352,8 @@ createAccountJoinGameLobby (std::string const &playerName, boost::asio::io_conte
 
 TEST_CASE ("2 player join custom game", "[matchmaking]")
 {
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
@@ -419,8 +419,8 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
 
 TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
 {
-  database::createEmptyDatabase ();
-  database::createTables ();
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };

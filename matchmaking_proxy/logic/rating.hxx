@@ -14,7 +14,7 @@ struct Account;
 
 // In the losing team the user with the most rating loses the most points
 size_t ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange);
-size_t averageRating (std::vector<std::string> const &accountNames);
+size_t averageRating (std::string const &fullPathIncludingDatabaseName, std::vector<std::string> const &accountNames);
 // In the winning team the user with the most rating gets the least points
 size_t ratingShareWinningTeam (size_t userRating, std::vector<size_t> const &userRatings, size_t ratingChange);
 long ratingChange (size_t userRating, size_t otherUserRating, long double score, size_t ratingChangeFactor);

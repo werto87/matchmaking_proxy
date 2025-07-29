@@ -10,6 +10,7 @@
         matchmakingAllowedTypes.hxx
         matchmakingData.hxx
         matchmakingGame.hxx
+        matchmakingGameData.hxx
         matchmakingGameAllowedTypes.hxx
         rating.hxx
         DESTINATION include/matchmaking_proxy/logic

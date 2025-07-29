@@ -1,6 +1,7 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
+#include "matchmaking_proxy/logic/matchmakingGameData.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include <algorithm>
 #include <boost/asio/co_spawn.hpp>
@@ -67,7 +68,7 @@ tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds con
 }
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
+Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
 {
   try
     {
@@ -122,7 +123,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint () }));
+              matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint (), fullPathIncludingDatabaseName }));
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
@@ -166,7 +167,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
 }
 
 boost::asio::awaitable<void>
-Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
+Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName)
 {
   try
     {
@@ -185,8 +186,9 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint)
               static size_t id = 0;
               auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings] (const std::string &msg) {
-                auto matchmakingGame = MatchmakingGame{ _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); } };
+              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings, fullPathIncludingDatabaseName] (const std::string &msg) {
+                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); } };
+                auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop (),
                         my_web_socket::printException);

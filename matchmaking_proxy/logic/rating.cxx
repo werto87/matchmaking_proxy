@@ -1,5 +1,4 @@
 #include "matchmaking_proxy/logic/rating.hxx"
-#include "matchmaking_proxy/database/constant.hxx"
 #include "matchmaking_proxy/database/database.hxx"
 #include <algorithm>
 #include <boost/iterator/iterator_facade.hpp>
@@ -25,10 +24,9 @@ ratingShareLosingTeam (size_t userRating, std::vector<size_t> const &userRatings
   return boost::numeric_cast<size_t> (std::rintl ((userRating / boost::numeric_cast<long double> (sum)) * ratingChange));
 }
 size_t
-averageRating (std::vector<std::string> const &accountNames)
+averageRating (std::string const &fullPathIncludingDatabaseName, std::vector<std::string> const &accountNames)
 {
-
-  soci::session sql (soci::sqlite3, databaseName);
+  soci::session sql (soci::sqlite3, fullPathIncludingDatabaseName);
   auto sumOfRatingInTheLobby = std::accumulate (accountNames.begin (), accountNames.end (), size_t{}, [&] (auto x, std::string const &accountToCheck) {
     if (auto userInDatabase = confu_soci::findStruct<database::Account> (sql, "accountName", accountToCheck))
       {

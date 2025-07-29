@@ -5,6 +5,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include "matchmaking_proxy/logic/matchmakingGameData.hxx"
 namespace matchmaking_proxy
 {
 class Matchmaking;
@@ -18,7 +19,7 @@ class MatchmakingGame
   };
 
 public:
-  MatchmakingGame (std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &)> sendToGame);
+  MatchmakingGame (MatchmakingGameData matchmakingGameData);
 
   void process_event (std::string const &event);
 

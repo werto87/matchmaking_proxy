@@ -78,7 +78,8 @@ SubscribeGetTopRatedPlayers,
 UnSubscribeGetTopRatedPlayers,
 GetLoggedInPlayers,
 SubscribeGetLoggedInPlayers,
-UnSubscribeGetLoggedInPlayers
+UnSubscribeGetLoggedInPlayers,
+CustomMessage
   >  const  userMatchmaking{};
 
 // clang-format on

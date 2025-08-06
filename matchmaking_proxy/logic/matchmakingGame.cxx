@@ -89,6 +89,14 @@ auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLef
   matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
 };
 
+auto const customMessage = [] (matchmaking_game::CustomMessage const &_customMessage, MatchmakingGameData &matchmakingGameData) {
+  if (matchmakingGameData.handleCustomMessageFromGame)
+    {
+      matchmakingGameData.handleCustomMessageFromGame(_customMessage.message,matchmakingGameData);
+    }
+};
+
+
 auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameData) {
   for (auto &matchmaking : matchmakingGameData.stateMachines)
     {
@@ -111,6 +119,7 @@ public:
 , "Default"_s                          + event<m_g::UserLeftGame>   [isLoggedIn]          / userLeftGameErrorNotLoggedIn
 , "Default"_s                          + event<m_g::UserLeftGame>   [hasProxy]            / userLeftGameErrorUserHasNoProxy
 , "Default"_s                          + event<m_g::UserLeftGame>                         / cancelProxyToGame
+, "Default"_s                          + event<m_g::CustomMessage>                        / customMessage
       );
     }
 };

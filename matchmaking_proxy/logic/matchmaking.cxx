@@ -938,6 +938,13 @@ auto const subscribedToGetTopRatedPlayers = [] (MatchmakingData &matchmakingData
 
 auto const subscribedToLoggedInPlayers = [] (MatchmakingData &matchmakingData) { return matchmakingData.subscribedToGetLoggedInPlayers.isSubscribed; };
 
+auto const customMessage = [] (user_matchmaking::CustomMessage const &_customMessage, MatchmakingData &matchmakingData) {
+  if (matchmakingData.matchmakingOption.handleCustomMessageFromUser)
+    {
+      matchmakingData.matchmakingOption.handleCustomMessageFromUser(_customMessage.message,matchmakingData);
+    }
+};
+
 template <class T>
 void
 dump_transition (std::stringstream &ss) noexcept
@@ -1077,7 +1084,7 @@ public:
 , state<GlobalState>                          + event<u_m::SubscribeGetLoggedInPlayers>                                           / subscribeGetLoggedInPlayers
 , state<GlobalState>                          + event<u_m::UnSubscribeGetLoggedInPlayers>                                         / unSubscribeGetLoggedInPlayers
 , state<GlobalState>                          + event<SendLoggedInPlayersToUser>           [ subscribedToLoggedInPlayers]         / getLoggedInPlayers
-
+, state<GlobalState>                          + event<u_m::CustomMessage>                                                         / customMessage
         // clang-format on
     );
   }

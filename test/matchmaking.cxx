@@ -432,3 +432,23 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     CHECK (R"foo(LoggedInPlayers|{"players":[]})foo" == subscriberMessages.at (1));
   }
 }
+
+TEST_CASE ("matchmaking custom message", "[matchmaking]")
+{
+  database::createEmptyDatabase ("matchmaking_proxy.db");
+  database::createTables ("matchmaking_proxy.db");
+  using namespace boost::asio;
+  auto ioContext = io_context ();
+  boost::asio::thread_pool pool_{};
+  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<GameLobby> gameLobbies{};
+  auto messages = std::vector<std::string>{};
+  auto matchmakingOption = MatchmakingOption{};
+  auto called = false;
+  matchmakingOption.handleCustomMessageFromUser = [&called] (std::string const &, MatchmakingData &) {
+    called = true;
+  };
+  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, matchmakingOption, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CustomMessage{})));
+  REQUIRE (called);
+}

@@ -167,7 +167,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
 }
 
 boost::asio::awaitable<void>
-Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName)
+Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &customMessage, MatchmakingGameData &matchmakingGameData)> const &handleCustomMessageFromGame)
 {
   try
     {
@@ -186,8 +186,8 @@ Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesyste
               static size_t id = 0;
               auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
               using namespace boost::asio::experimental::awaitable_operators;
-              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings, fullPathIncludingDatabaseName] (const std::string &msg) {
-                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); } };
+              co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings, fullPathIncludingDatabaseName, handleCustomMessageFromGame] (const std::string &msg) {
+                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); }, handleCustomMessageFromGame };
                 auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
               }) || myWebsocket->writeLoop (),

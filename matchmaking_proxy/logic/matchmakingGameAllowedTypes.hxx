@@ -19,7 +19,8 @@ UserLeftGameSuccess,
 UserLeftGameError,
 ConnectToGame,
 ConnectToGameError,
-ConnectToGameSuccess
+ConnectToGameSuccess,
+CustomMessage
   >  const matchmakingGame{};
 }
 // clang-format on

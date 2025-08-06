@@ -12,5 +12,6 @@ struct MatchmakingGameData
   std::filesystem::path fullPathIncludingDatabaseName{};
   std::list<std::shared_ptr<Matchmaking>> &stateMachines;
   std::function<void (std::string const &)> sendToGame;
+  std::function<void (std::string const &customMessage, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame{};
 };
 }

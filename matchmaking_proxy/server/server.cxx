@@ -167,7 +167,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
 }
 
 boost::asio::awaitable<void>
-Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &customMessage, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
+Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
 {
   try
     {

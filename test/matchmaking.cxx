@@ -445,7 +445,7 @@ TEST_CASE ("matchmaking custom message", "[matchmaking]")
   auto messages = std::vector<std::string>{};
   auto matchmakingOption = MatchmakingOption{};
   auto called = false;
-  matchmakingOption.handleCustomMessageFromUser = [&called] (std::string const &, MatchmakingData &) {
+  matchmakingOption.handleCustomMessageFromUser = [&called] (std::string const &,std::string const &, MatchmakingData &) {
     called = true;
   };
   auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool_, matchmakingOption, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));

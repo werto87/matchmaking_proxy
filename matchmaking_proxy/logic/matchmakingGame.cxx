@@ -50,7 +50,7 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameData &matchmaki
         { // TODO handle error
           std::ignore = matchmakingItr->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
         }
-      soci::session sql (soci::sqlite3, matchmakingGameData.fullPathIncludingDatabaseName.string());
+      soci::session sql (soci::sqlite3, matchmakingGameData.fullPathIncludingDatabaseName.string ());
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
     }
 }
@@ -59,16 +59,16 @@ auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, Matchmaki
     {
       if (_gameOver.draws.empty ())
         {
-          auto losers = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string(), _gameOver.losers);
-          auto winners = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string(), _gameOver.winners);
+          auto losers = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.losers);
+          auto winners = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.winners);
           auto [losersWithNewRating, winnersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, winners, winnersWithNewRating);
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, losers, losersWithNewRating);
         }
       else
         {
-          auto draw = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string(), _gameOver.draws);
-          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string(), _gameOver.draws));
+          auto draw = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws);
+          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws));
           sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, draw, drawNewRating);
         }
     }
@@ -92,10 +92,9 @@ auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLef
 auto const customMessage = [] (matchmaking_game::CustomMessage const &_customMessage, MatchmakingGameData &matchmakingGameData) {
   if (matchmakingGameData.handleCustomMessageFromGame)
     {
-      matchmakingGameData.handleCustomMessageFromGame(_customMessage.message,matchmakingGameData);
+      matchmakingGameData.handleCustomMessageFromGame (_customMessage.messageType, _customMessage.message, matchmakingGameData);
     }
 };
-
 
 auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameData) {
   for (auto &matchmaking : matchmakingGameData.stateMachines)

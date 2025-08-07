@@ -113,7 +113,7 @@ boost::asio::awaitable<void>
 doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
 {
   auto &matchmakingData = aux::get<MatchmakingData &> (deps);
-  soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string());
+  soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string ());
   auto account = confu_soci::findStruct<database::Account> (sql, "accountName", loginAccountObject.accountName);
   using namespace boost::asio::experimental::awaitable_operators;
   auto passwordMatches = co_await (async_check_hashed_pw (matchmakingData.pool, matchmakingData.ioContext, account->password, loginAccountObject.password, boost::asio::use_awaitable) || matchmakingData.cancelCoroutine ());
@@ -304,9 +304,9 @@ isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRat
 }
 
 bool
-checkRating (std::string const& fullPathToDatabaseIncludingDatabaseName,size_t userRating, std::vector<std::string> const &accountNames, size_t allowedRatingDifference)
+checkRating (std::string const &fullPathToDatabaseIncludingDatabaseName, size_t userRating, std::vector<std::string> const &accountNames, size_t allowedRatingDifference)
 {
-  return isInRatingrange (userRating, averageRating (fullPathToDatabaseIncludingDatabaseName,accountNames), allowedRatingDifference);
+  return isInRatingrange (userRating, averageRating (fullPathToDatabaseIncludingDatabaseName, accountNames), allowedRatingDifference);
 }
 
 bool
@@ -319,7 +319,7 @@ matchingLobby (std::filesystem::path const &fullPathToDatabaseIncludingDatabaseN
           soci::session sql (soci::sqlite3, fullPathToDatabaseIncludingDatabaseName.string ());
           if (auto userInDatabase = confu_soci::findStruct<database::Account> (sql, "accountName", accountName))
             {
-              return checkRating (fullPathToDatabaseIncludingDatabaseName.string (),userInDatabase->rating, gameLobby.accountNames, allowedRatingDifference);
+              return checkRating (fullPathToDatabaseIncludingDatabaseName.string (), userInDatabase->rating, gameLobby.accountNames, allowedRatingDifference);
             }
         }
       else
@@ -622,7 +622,7 @@ auto const cancelLoginAccount = [] (MatchmakingData &matchmakingData) {
 auto const createAccount = [] (PasswordHashed const &passwordHash, MatchmakingData &matchmakingData) {
   matchmakingData.user.accountName = passwordHash.accountName;
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ passwordHash.accountName }));
-  database::createAccount (matchmakingData.user.accountName.value (), passwordHash.hashedPassword, matchmakingData.fullPathIncludingDatabaseName.string());
+  database::createAccount (matchmakingData.user.accountName.value (), passwordHash.hashedPassword, matchmakingData.fullPathIncludingDatabaseName.string ());
 };
 
 boost::asio::awaitable<std::string>
@@ -787,8 +787,8 @@ auto const loginAsGuest = [] (MatchmakingData &matchmakingData) {
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAsGuestSuccess{ matchmakingData.user.accountName.value () }));
 };
 
-auto const accountInDatabase = [] (auto const &typeWithAccountName,MatchmakingData &matchmakingData) -> bool {
-  soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string());
+auto const accountInDatabase = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData) -> bool {
+  soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string ());
   return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();
 };
 
@@ -884,7 +884,7 @@ auto const getTopRatedPlayers = [] (auto const &_getTopRatedPlayers, Matchmaking
       playerCount = matchmakingData.subscribedToGetTopRatedPlayers.playerCount;
     }
   auto result = user_matchmaking::TopRatedPlayers{};
-  auto topRatedAccounts = database::getTopRatedAccounts (playerCount,matchmakingData.fullPathIncludingDatabaseName.string());
+  auto topRatedAccounts = database::getTopRatedAccounts (playerCount, matchmakingData.fullPathIncludingDatabaseName.string ());
   std::ranges::transform (topRatedAccounts, std::back_inserter (result.players), [] (auto &&account) { return user_matchmaking::RatedPlayer{ account.accountName, account.rating }; });
   matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
 };
@@ -941,7 +941,7 @@ auto const subscribedToLoggedInPlayers = [] (MatchmakingData &matchmakingData) {
 auto const customMessage = [] (user_matchmaking::CustomMessage const &_customMessage, MatchmakingData &matchmakingData) {
   if (matchmakingData.matchmakingOption.handleCustomMessageFromUser)
     {
-      matchmakingData.matchmakingOption.handleCustomMessageFromUser(_customMessage.message,matchmakingData);
+      matchmakingData.matchmakingOption.handleCustomMessageFromUser (_customMessage.messageType, _customMessage.message, matchmakingData);
     }
 };
 

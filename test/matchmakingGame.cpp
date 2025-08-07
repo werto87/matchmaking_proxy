@@ -82,7 +82,7 @@ TEST_CASE ("matchmaking game custom message", "[matchmaking game]")
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto called = false;
-  auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} , [&called] (std::string const &, MatchmakingGameData &) { called = true; }} };
+  auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} , [&called] (std::string const &,std::string const &, MatchmakingGameData &) { called = true; }} };
   matchmakingGame.process_event (objectToStringWithObjectName (matchmaking_game::CustomMessage{ }));
   REQUIRE (called);
 }

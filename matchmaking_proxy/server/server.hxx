@@ -25,7 +25,7 @@ public:
   Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_);
   ~Server ();
   boost::asio::awaitable<void> userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone = false);
-  boost::asio::awaitable<void> gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &customMessage, MatchmakingGameData &matchmakingGameData)> const &handleCustomMessageFromGame = {});
+  boost::asio::awaitable<void> gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &customMessage, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame = {});
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};

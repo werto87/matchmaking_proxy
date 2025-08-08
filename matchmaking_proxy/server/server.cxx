@@ -127,7 +127,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
-                if (matchmaking->get ()->hasProxyToGame ())
+                if (matchmaking->get ()->hasProxyToGame () && not boost::starts_with(msg,"CustomMessage"))
                   {
                     matchmaking->get ()->sendMessageToGame (msg);
                   }

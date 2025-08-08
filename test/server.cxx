@@ -65,17 +65,23 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   auto const userGameViaMatchmakingPort = 33333;
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
-  auto const PATH_TO_CHAIN_FILE = std::string{ "C:/Users/walde/certs/fullchain.pem" };
-  auto const PATH_TO_PRIVATE_File = std::string{ "C:/Users/walde/certs/privkey.pem" };
-  auto const PATH_TO_DH_File = std::string{ "C:/Users/walde/certs/dhparam.pem" };
+  auto const PATH_TO_CHAIN_FILE = std::string{ "C:/Users/huhul/localhost.pem" };
+  auto const PATH_TO_PRIVATE_File = std::string{ "C:/Users/huhul/localhost-key.pem" };
+  auto const PATH_TO_DH_File = std::string{ "C:/Users/huhul/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort },"matchmaking_proxy.db"), my_web_socket::printException);
+  auto matchmakingOption = MatchmakingOption{};
+  auto handlecustomMessageCalled = false;
+  matchmakingOption.handleCustomMessageFromUser = [&handlecustomMessageCalled, &ioContext] (auto &, auto &, auto &) {
+    handlecustomMessageCalled = true;
+    ioContext.stop ();
+  };
+  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }, "matchmaking_proxy.db"), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     size_t gameOver = 0;
-    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
+    auto handleMsgFromGame = [&gameOver] (boost::asio::io_context &, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
       if (boost::starts_with (msg, "LoginAsGuestSuccess"))
         {
           myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
@@ -89,14 +95,14 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
           gameOver++;
           if (gameOver == 2)
             {
-              _ioContext.stop ();
+              myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::CustomMessage ("CombinationSolved", "")));
             }
         }
     };
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer2), my_web_socket::printException);
-    ioContext.run_for (std::chrono::seconds{ 5 });
+    ioContext.run ();
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");
@@ -107,6 +113,7 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
     CHECK (messagesFromGamePlayer2.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer2.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer2.at (3) == "ProxyStarted|{}");
+    REQUIRE (handlecustomMessageCalled);
   }
   ioContext.stop ();
   ioContext.reset ();
@@ -137,12 +144,12 @@ TEST_CASE ("Start Server test", "[.][integration]")
   auto const PATH_TO_DH_File = std::string{ "C:/Users/walde/certs/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort },"matchmaking_proxy.db"), my_web_socket::printException);
+  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }, "matchmaking_proxy.db"), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     size_t gameOver = 0;
-    auto handleMsgFromGamePlayer1 = [&gameOver] (boost::asio::io_context &_ioContext, std::string const & msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
+    auto handleMsgFromGamePlayer1 = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
       if (boost::starts_with (msg, "LoggedInPlayers"))
         {
           gameOver++;
@@ -164,9 +171,9 @@ TEST_CASE ("Start Server test", "[.][integration]")
     ioContext.run ();
     CHECK (messagesFromGamePlayer1.size () == 4);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (1),"LoggedInPlayers"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (2),"LoggedInPlayers"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (3),"LoggedInPlayers"));
+    CHECK (boost::starts_with (messagesFromGamePlayer1.at (1), "LoggedInPlayers"));
+    CHECK (boost::starts_with (messagesFromGamePlayer1.at (2), "LoggedInPlayers"));
+    CHECK (boost::starts_with (messagesFromGamePlayer1.at (3), "LoggedInPlayers"));
   }
   ioContext.stop ();
   ioContext.reset ();

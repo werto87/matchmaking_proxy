@@ -1072,7 +1072,8 @@ public:
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame
 // GlobalState------------------------------------------------------------------------------------------------------------------------------------------------------------------
-,*state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
+,*state<GlobalState>                          + event<u_m::CustomMessage>                                                         / customMessage
+, state<GlobalState>                          + event<SendMessageToUser>                                                          / sendToUser
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
 , state<GlobalState>                          + event<u_m::GetUserStatistics>                                                     / userStatistics
@@ -1084,7 +1085,7 @@ public:
 , state<GlobalState>                          + event<u_m::SubscribeGetLoggedInPlayers>                                           / subscribeGetLoggedInPlayers
 , state<GlobalState>                          + event<u_m::UnSubscribeGetLoggedInPlayers>                                         / unSubscribeGetLoggedInPlayers
 , state<GlobalState>                          + event<SendLoggedInPlayersToUser>           [ subscribedToLoggedInPlayers]         / getLoggedInPlayers
-, state<GlobalState>                          + event<u_m::CustomMessage>                                                         / customMessage
+
         // clang-format on
     );
   }

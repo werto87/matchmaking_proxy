@@ -24,6 +24,7 @@
 #include <iostream>
 #include <iterator>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <matchmaking_proxy/logic/matchmakingAllowedTypes.hxx>
 #include <my_web_socket/coSpawnPrintException.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
@@ -65,6 +66,24 @@ tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds con
       timer.expires_after (timeToWaitBeforeCallingFunctionAgain);
       co_await timer.async_wait ();
     }
+}
+bool
+messageTypeSupportedByMatchmaking (std::string const &msg)
+{
+  std::vector<std::string> splitMesssage{};
+  boost::algorithm::split (splitMesssage, msg, boost::is_any_of ("|"));
+  auto isSupportedType = false;
+  if (splitMesssage.size () == 2)
+    {
+      auto const &typeToSearch = splitMesssage.at (0);
+      boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
+        if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+          {
+            isSupportedType = true;
+          }
+      });
+    }
+  return isSupportedType;
 }
 
 boost::asio::awaitable<void>
@@ -127,7 +146,7 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
-                if (matchmaking->get ()->hasProxyToGame () && not boost::starts_with(msg,"CustomMessage"))
+                if (matchmaking->get ()->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
                   {
                     matchmaking->get ()->sendMessageToGame (msg);
                   }

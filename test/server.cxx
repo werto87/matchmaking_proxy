@@ -60,9 +60,9 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   thread_pool pool{ 2 };
   auto server = Server{ ioContext, pool };
   auto const userMatchmakingPort = 55555;
-  auto const gameMatchmakingPort = 22222;
-  auto const matchmakingGamePort = 44444;
-  auto const userGameViaMatchmakingPort = 33333;
+  auto const gameMatchmakingPort = 12312;
+  auto const matchmakingGamePort = 4242;
+  auto const userGameViaMatchmakingPort = 3232;
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   auto const PATH_TO_CHAIN_FILE = std::string{ "C:/Users/huhul/localhost.pem" };
@@ -136,12 +136,12 @@ TEST_CASE ("Start Server test", "[.][integration]")
   thread_pool pool{ 2 };
   auto server = Server{ ioContext, pool };
   auto const userMatchmakingPort = 55555;
-  auto const gameMatchmakingPort = 22222;
-  auto const matchmakingGamePort = 44444;
-  auto const userGameViaMatchmakingPort = 33333;
-  auto const PATH_TO_CHAIN_FILE = std::string{ "C:/Users/walde/certs/fullchain.pem" };
-  auto const PATH_TO_PRIVATE_File = std::string{ "C:/Users/walde/certs/privkey.pem" };
-  auto const PATH_TO_DH_File = std::string{ "C:/Users/walde/certs/dhparam.pem" };
+  auto const gameMatchmakingPort = 12312;
+  auto const matchmakingGamePort = 4242;
+  auto const userGameViaMatchmakingPort = 3232;
+  auto const PATH_TO_CHAIN_FILE = std::string{ "C:/Users/huhul/localhost.pem" };
+  auto const PATH_TO_PRIVATE_File = std::string{ "C:/Users/huhul/localhost-key.pem" };
+  auto const PATH_TO_DH_File = std::string{ "C:/Users/huhul/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
   co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }, "matchmaking_proxy.db"), my_web_socket::printException);
@@ -174,6 +174,10 @@ TEST_CASE ("Start Server test", "[.][integration]")
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (1), "LoggedInPlayers"));
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (2), "LoggedInPlayers"));
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (3), "LoggedInPlayers"));
+  }
+  SECTION ("just run the server", "[.debuging matchmaking]")
+  {
+    ioContext.run ();
   }
   ioContext.stop ();
   ioContext.reset ();

@@ -24,9 +24,9 @@ class MatchmakingProxy(ConanFile):
         # We can control the options of our dependencies based on current options
         self.options["catch2"].with_main = True
         self.options["catch2"].with_benchmark = True
-        # self.options["my_web_socket"].log_co_spawn_print_exception = True
-        # self.options["my_web_socket"].log_write = True
-        # self.options["my_web_socket"].log_read = True
+        self.options["my_web_socket"].log_co_spawn_print_exception = True
+        self.options["my_web_socket"].log_write = True
+        self.options["my_web_socket"].log_read = True
 
 
     def requirements(self):

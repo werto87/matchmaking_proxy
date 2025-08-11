@@ -1292,13 +1292,7 @@ startGame (GameLobby const &gameLobby, MatchmakingData &matchmakingData)
         }
       else if (typeToSearch == "CustomMessage")
         {
-          if (auto matchmakingItr = std::ranges::find_if (matchmakingData.stateMachines, [&accountName = matchmakingData.user.accountName.value ()] (auto &stateMachine) { return stateMachine->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingData.stateMachines.end ())
-            {
-              if (auto result = (*matchmakingItr)->processEvent (startServerAnswer); not result)
-                {
-                  std::cout << "Game server answered with: " << result.error () << std::endl;
-                }
-            }
+          std::cout << "Can not handle custom from game before game starts. Not handled custom message: '" << startServerAnswer << "'" << std::endl;
         }
       else
         {

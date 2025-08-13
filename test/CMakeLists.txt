@@ -29,3 +29,7 @@ target_compile_definitions(
 
 target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME _test COMMAND _test -r junit)
+if (CMAKE_BINARY_DIR)
+    target_compile_definitions(_test PRIVATE PATH_TO_BINARY="${CMAKE_BINARY_DIR}")
+    target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
+endif()

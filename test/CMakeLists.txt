@@ -12,10 +12,13 @@ add_executable(
 add_subdirectory(benchmark)
 find_package(Catch2)
 find_package(modern_durak_game_option)
+find_package(modern_durak_game_shared)
 
 target_link_libraries(_test myproject_options myproject_warnings
                       modern_durak_game_option::modern_durak_game_option
-                      matchmaking_proxy Catch2::Catch2WithMain)
+                      matchmaking_proxy Catch2::Catch2WithMain
+                      modern_durak_game_shared::modern_durak_game_shared
+                      )
 target_compile_definitions(
   _test
   PUBLIC $<$<CONFIG:DEBUG>:DEBUG>

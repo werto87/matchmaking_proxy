@@ -32,3 +32,8 @@ add_custom_command(
     "copy compile_commands.json build to compile_commands.json project root so tools can find it more easily"
 )
 endif()
+
+if (CMAKE_BINARY_DIR)
+    target_compile_definitions(_test PRIVATE PATH_TO_BINARY="${CMAKE_BINARY_DIR}")
+    target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
+endif()

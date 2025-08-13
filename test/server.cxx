@@ -1,5 +1,6 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/database/database.hxx"
+#include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "networkingUtil.hxx"
@@ -32,6 +33,7 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <modern_durak_game_shared/modern_durak_game_shared.hxx>
 #include <my_web_socket/mockServer.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
@@ -118,7 +120,7 @@ TEST_CASE ("INTEGRATION TEST user,matchmaking, game", "[.][integration]")
   ioContext.stop ();
   ioContext.reset ();
 }
-
+BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
 TEST_CASE ("Start Server test", "[.][integration]")
 {
   if (sodium_init () < 0)
@@ -127,8 +129,9 @@ TEST_CASE ("Start Server test", "[.][integration]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const pathToMatchmakingDatabase = std::filesystem::path{ PATH_TO_BINARY + std::string{ "/matchmaking_proxy.db" } };
+  database::createEmptyDatabase (pathToMatchmakingDatabase.string());
+  database::createTables (pathToMatchmakingDatabase.string());
   using namespace boost::asio;
   io_context ioContext (1);
   signal_set signals (ioContext, SIGINT, SIGTERM);
@@ -144,7 +147,60 @@ TEST_CASE ("Start Server test", "[.][integration]")
   auto const PATH_TO_DH_File = std::string{ "C:/Users/huhul/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort }, "matchmaking_proxy.db"), my_web_socket::printException);
+  auto matchmakingOption = MatchmakingOption{};
+  matchmakingOption.handleCustomMessageFromUser = [] (std::string const &messageType, std::string const &message, MatchmakingData &matchmakingData) {
+    boost::system::error_code ec{};
+    auto messageAsObject = confu_json::read_json (message, ec);
+    if (ec) std::cout << "no handle for custom message: '" << message << "'" << std::endl;
+    else if (messageType == "GetCombinationSolved")
+      {
+        auto combinationSolved = confu_json::to_object<shared_class::GetCombinationSolved> (messageAsObject);
+        soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string ().c_str ());
+        bool columnExists = false;
+        soci::rowset<soci::row> rs = (sql.prepare << "PRAGMA table_info(Account)");
+        for (auto const &row : rs)
+          {
+            std::string name = row.get<std::string> (1);
+            if (name == "combinationsSolved")
+              {
+                columnExists = true;
+                break;
+              }
+          }
+        if (!columnExists) sql << "ALTER TABLE Account ADD COLUMN combinationsSolved INTEGER NOT NULL DEFAULT 0";
+        if (auto result = confu_soci::findStruct<account_with_combinationsSolved::Account> (sql, "accountName", combinationSolved.accountName))
+          {
+            matchmakingData.sendMsgToUser (objectToStringWithObjectName (shared_class::CombinationsSolved{ result->accountName, result->combinationsSolved }));
+          }
+      }
+  };
+  auto const &handleMessageFromGame = [] (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData) {
+    boost::system::error_code ec{};
+    auto messageAsObject = confu_json::read_json (message, ec);
+    if (ec) std::cout << "no handle for custom message: '" << message << "'" << std::endl;
+    else if (messageType == "CombinationSolved")
+      {
+        auto combinationSolved = confu_json::to_object<shared_class::CombinationSolved> (messageAsObject);
+        soci::session sql (soci::sqlite3, matchmakingGameData.fullPathIncludingDatabaseName.string ().c_str ());
+        bool columnExists = false;
+        soci::rowset<soci::row> rs = (sql.prepare << "PRAGMA table_info(Account)");
+        for (auto const &row : rs)
+          {
+            std::string name = row.get<std::string> (1);
+            if (name == "combinationsSolved")
+              {
+                columnExists = true;
+                break;
+              }
+          }
+        if (!columnExists) sql << "ALTER TABLE Account ADD COLUMN combinationsSolved INTEGER NOT NULL DEFAULT 0";
+        if (auto accountResult = confu_soci::findStruct<account_with_combinationsSolved::Account> (sql, "accountName", combinationSolved.accountName)) confu_soci::updateStruct (sql, account_with_combinationsSolved::Account{ accountResult.value ().accountName, accountResult.value ().password, accountResult.value ().rating, accountResult.value ().combinationsSolved + 1 });
+      }
+    else
+      std::cout << "no handle for custom message: '" << message << "'" << std::endl;
+  };
+  auto gameMatchmakingEndpoint = boost::asio::ip::tcp::endpoint{ ip::tcp::v4 (), gameMatchmakingPort };
+  co_spawn (ioContext, server.userMatchmaking ({ boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, pathToMatchmakingDatabase, POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking (gameMatchmakingEndpoint, pathToMatchmakingDatabase, handleMessageFromGame), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
@@ -175,10 +231,8 @@ TEST_CASE ("Start Server test", "[.][integration]")
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (2), "LoggedInPlayers"));
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (3), "LoggedInPlayers"));
   }
-  SECTION ("just run the server", "[.debuging matchmaking]")
-  {
-    ioContext.run ();
-  }
+  SECTION ("just run the server", "[.debuging matchmaking]") { ioContext.run (); }
+  std::filesystem::remove (pathToMatchmakingDatabase);
   ioContext.stop ();
   ioContext.reset ();
 }

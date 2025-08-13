@@ -44,6 +44,8 @@ class MatchmakingProxy(ConanFile):
         self.requires("sqlite3/3.44.2")
         
         ### only for testing please do not put this in the package build recept ###
+        
+        self.requires("modern_durak_game_shared/latest")
         self.requires("modern_durak_game_option/latest")
         self.requires("catch2/2.13.9")
         ###########################################################################

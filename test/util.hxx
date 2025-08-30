@@ -18,3 +18,21 @@ operator<< (std::ostream &o, const Container<T> &container)
     }
   return o;
 }
+
+
+inline bool
+clearDestinationAndThenCopyFolder (std::filesystem::path const &source, std::filesystem::path const &destination)
+{
+  std::filesystem::remove_all (destination);
+  try
+    {
+      std::filesystem::copy (source, destination, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+      std::cout << "Folder copied successfully!" << std::endl;
+    }
+  catch (const std::filesystem::filesystem_error &e)
+    {
+      std::cerr << "Error copying folder: " << e.what () << std::endl;
+      return false;
+    }
+  return true;
+}

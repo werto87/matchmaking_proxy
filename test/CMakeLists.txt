@@ -8,6 +8,7 @@ add_executable(
   startGame.cxx
   database.cxx
   networkingUtil.cxx
+  testCertServer.cxx
   )
 add_subdirectory(benchmark)
 find_package(Catch2)
@@ -26,6 +27,8 @@ target_compile_definitions(
         #  MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
         #  MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
 )
+  target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
+
 
 target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME _test COMMAND _test -r junit)

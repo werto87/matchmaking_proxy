@@ -38,7 +38,7 @@ using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 namespace matchmaking_proxy
 {
-Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_) : ioContext{ ioContext_ }, pool{ pool_ } {}
+Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_, boost::asio::ip::tcp::endpoint const &userMatchmakingEndpoint, boost::asio::ip::tcp::endpoint const &gameMatchmakingEndpoint) : ioContext{ ioContext_ }, pool{ pool_ }, userMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, userMatchmakingEndpoint) }, gameMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, gameMatchmakingEndpoint) } {}
 
 Server::~Server ()
 {
@@ -87,12 +87,10 @@ messageTypeSupportedByMatchmaking (std::string const &msg)
 }
 
 boost::asio::awaitable<void>
-Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
+Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
 {
   try
     {
-      auto executor = co_await this_coro::executor;
-      userMatchmakingAcceptor = std::make_unique<boost::asio::ip::tcp::acceptor> (executor, userEndpoint);
       net::ssl::context ctx (net::ssl::context::tls_server);
       if (sslContextVerifyNone)
         {
@@ -186,12 +184,10 @@ Server::userMatchmaking (boost::asio::ip::tcp::endpoint userEndpoint, std::files
 }
 
 boost::asio::awaitable<void>
-Server::gameMatchmaking (boost::asio::ip::tcp::endpoint endpoint, std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
+Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
 {
   try
     {
-      auto executor = co_await this_coro::executor; // NOLINT(clang-analyzer-core.CallAndMessage)
-      gameMatchmakingAcceptor = std::make_unique<boost::asio::ip::tcp::acceptor> (executor, endpoint);
       for (;;)
         {
           try

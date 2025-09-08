@@ -1,6 +1,6 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/logic/MatchmakingGameData.hxx"
+#include "matchmaking_proxy/logic/matchmakingGameData.hxx"
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/logic/matchmakingGameAllowedTypes.hxx"
 #include "matchmaking_proxy/util.hxx"

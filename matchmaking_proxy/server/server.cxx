@@ -40,13 +40,7 @@ namespace matchmaking_proxy
 {
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_, boost::asio::ip::tcp::endpoint const &userMatchmakingEndpoint, boost::asio::ip::tcp::endpoint const &gameMatchmakingEndpoint) : ioContext{ ioContext_ }, pool{ pool_ }, userMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, userMatchmakingEndpoint) }, gameMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, gameMatchmakingEndpoint) } {}
 
-Server::~Server ()
-{
-  userMatchmakingAcceptor->cancel ();
-  userMatchmakingAcceptor->close ();
-  gameMatchmakingAcceptor->cancel ();
-  gameMatchmakingAcceptor->close ();
-}
+
 boost::asio::awaitable<void>
 tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds const &timeToWaitBeforeCallingFunctionAgain)
 {
@@ -124,7 +118,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
 #endif
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
       std::list<GameLobby> gameLobbies{};
-      for (;;)
+      while (running.load ())
         {
           try
             {
@@ -183,12 +177,23 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
     }
 }
 
+void
+Server::stopRunning ()
+{
+  running.store (false, std::memory_order_release);
+  boost::system::error_code ec;
+  userMatchmakingAcceptor->cancel (ec);
+  userMatchmakingAcceptor->close (ec);
+  gameMatchmakingAcceptor->cancel (ec);
+  gameMatchmakingAcceptor->close (ec);
+}
+
 boost::asio::awaitable<void>
 Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
 {
   try
     {
-      for (;;)
+      while (running.load ())
         {
           try
             {

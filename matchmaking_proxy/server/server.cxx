@@ -152,9 +152,9 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                        [&_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking] (auto eptr) {
+                        [&_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running] (auto eptr) {
                           my_web_socket::printException (eptr);
-                          if (hasToDoCleanUpWithMatchmaking)
+                          if (hasToDoCleanUpWithMatchmaking and _running.load ())
                             {
                               auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                               matchmaking->get ()->cleanUp ();

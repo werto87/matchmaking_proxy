@@ -8,6 +8,7 @@
 #include <filesystem>                              // for path
 #include <list>                                    // for list
 #include <memory>                                  // for share...
+#include <my_web_socket/myWebSocket.hxx>
 namespace boost::asio
 {
 
@@ -30,6 +31,8 @@ public:
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>> webSockets{};
+  std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>> sslWebSockets{};
 
   std::unique_ptr<boost::asio::ip::tcp::acceptor> userMatchmakingAcceptor{};
   std::unique_ptr<boost::asio::ip::tcp::acceptor> gameMatchmakingAcceptor{};

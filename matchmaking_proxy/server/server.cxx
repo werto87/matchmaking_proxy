@@ -121,6 +121,8 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
         {
           try
             {
+              auto hasToDoCleanUpWithMatchmaking = false;
+              auto hasToDoCleanUpWithWebSocket = false;
               auto socket = co_await userMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::SSLWebSocket{ std::move (socket), ctx };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
@@ -128,12 +130,13 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection.async_accept (use_awaitable);
               static size_t id = 0;
-              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) });
+              auto myWebsocket = sslWebSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) }));
+              std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>>::iterator myWebsocketItr = std::prev (sslWebSockets.end ());
+              hasToDoCleanUpWithWebSocket = true;
               co_spawn (ioContext, myWebsocket->sendPingToEndpoint (), my_web_socket::printException);
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              auto hasToDoCleanUpWithMatchmaking = false;
               matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint (), fullPathIncludingDatabaseName }));
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               hasToDoCleanUpWithMatchmaking = true;
@@ -152,13 +155,14 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                        [&_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running] (auto eptr) {
+                        [hasToDoCleanUpWithWebSocket, &_sslWebSockets = sslWebSockets, &_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running, myWebsocketItr] (auto eptr) {
                           my_web_socket::printException (eptr);
                           if (hasToDoCleanUpWithMatchmaking and _running.load ())
                             {
                               auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                               matchmaking->get ()->cleanUp ();
                               _matchmakings.erase (matchmaking);
+                              if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                               if (loggedInPlayerLostConnection and not _matchmakings.empty ())
                                 {
                                   for (auto &_matchmaking : _matchmakings)
@@ -190,6 +194,14 @@ Server::stopRunning ()
   userMatchmakingAcceptor->close (ec);
   gameMatchmakingAcceptor->cancel (ec);
   gameMatchmakingAcceptor->close (ec);
+  for (auto webSocket : webSockets)
+    {
+      webSocket->close ();
+    }
+  for (auto sslWebSocket : sslWebSockets)
+    {
+      sslWebSocket->close ();
+    }
 }
 
 boost::asio::awaitable<void>
@@ -208,14 +220,23 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
               connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
               co_await connection.async_accept ();
               static size_t id = 0;
-              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) });
+              auto hasToDoWebSocketsCleanup = false;
+              auto myWebsocket = webSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) }));
+              std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>>::iterator myWebsocketItr = std::prev (webSockets.end ());
               using namespace boost::asio::experimental::awaitable_operators;
+              hasToDoWebSocketsCleanup = true;
               co_spawn (ioContext, myWebsocket->readLoop ([myWebsocket, &_matchmakings = matchmakings, fullPathIncludingDatabaseName, handleCustomMessageFromGame] (const std::string &msg) {
                 auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, _matchmakings, [myWebsocket] (std::string const &_msg) { myWebsocket->queueMessage (_msg); }, handleCustomMessageFromGame };
                 auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
-              }) || myWebsocket->writeLoop (),
-                        my_web_socket::printException);
+              }) && myWebsocket->writeLoop (),
+                        [myWebsocketItr, hasToDoWebSocketsCleanup, &_webSockets = webSockets, &_running = running] (auto eptr) {
+                          my_web_socket::printException (eptr);
+                          if (hasToDoWebSocketsCleanup and _running.load ())
+                            {
+                              _webSockets.erase (myWebsocketItr);
+                            }
+                        });
             }
           catch (std::exception const &e)
             {

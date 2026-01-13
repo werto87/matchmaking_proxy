@@ -40,7 +40,6 @@ namespace matchmaking_proxy
 {
 Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_, boost::asio::ip::tcp::endpoint const &userMatchmakingEndpoint, boost::asio::ip::tcp::endpoint const &gameMatchmakingEndpoint) : ioContext{ ioContext_ }, pool{ pool_ }, userMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, userMatchmakingEndpoint) }, gameMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, gameMatchmakingEndpoint) } {}
 
-
 boost::asio::awaitable<void>
 tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds const &timeToWaitBeforeCallingFunctionAgain)
 {
@@ -134,8 +133,10 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
+              auto hasToDoCleanUpWithMatchmaking = false;
               matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint (), fullPathIncludingDatabaseName }));
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
+              hasToDoCleanUpWithMatchmaking = true;
               using namespace boost::asio::experimental::awaitable_operators;
               co_spawn (ioContext, myWebsocket->readLoop ([matchmaking, myWebsocket] (const std::string &msg) {
                 if (matchmaking->get ()->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
@@ -151,16 +152,19 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                        [&_matchmakings = matchmakings, matchmaking] (auto eptr) {
+                        [&_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking] (auto eptr) {
                           my_web_socket::printException (eptr);
-                          auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
-                          matchmaking->get ()->cleanUp ();
-                          _matchmakings.erase (matchmaking);
-                          if (loggedInPlayerLostConnection and not _matchmakings.empty ())
+                          if (hasToDoCleanUpWithMatchmaking)
                             {
-                              for (auto &_matchmaking : _matchmakings)
+                              auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
+                              matchmaking->get ()->cleanUp ();
+                              _matchmakings.erase (matchmaking);
+                              if (loggedInPlayerLostConnection and not _matchmakings.empty ())
                                 {
-                                  _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                  for (auto &_matchmaking : _matchmakings)
+                                    {
+                                      _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                    }
                                 }
                             }
                         });

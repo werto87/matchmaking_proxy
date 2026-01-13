@@ -157,12 +157,11 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               }) && myWebsocket->writeLoop (),
                         [hasToDoCleanUpWithWebSocket, &_sslWebSockets = sslWebSockets, &_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running, myWebsocketItr] (auto eptr) {
                           my_web_socket::printException (eptr);
-                          if (hasToDoCleanUpWithMatchmaking and _running.load ())
+                          if (hasToDoCleanUpWithMatchmaking)
                             {
                               auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                               matchmaking->get ()->cleanUp ();
                               _matchmakings.erase (matchmaking);
-                              if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                               if (loggedInPlayerLostConnection and not _matchmakings.empty ())
                                 {
                                   for (auto &_matchmaking : _matchmakings)
@@ -171,6 +170,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                     }
                                 }
                             }
+                          if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                         });
             }
           catch (std::exception const &e)

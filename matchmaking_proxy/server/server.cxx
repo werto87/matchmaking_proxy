@@ -219,7 +219,7 @@ Server::asyncStopRunning ()
     }
   for (auto sslWebSocket : sslWebSockets)
     {
-      sslWebSocket->close ();
+      co_await sslWebSocket->asyncClose ();
     }
 }
 

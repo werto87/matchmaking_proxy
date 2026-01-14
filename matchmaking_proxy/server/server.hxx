@@ -28,6 +28,7 @@ public:
   boost::asio::awaitable<void> gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &type, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame = {});
   void stopRunning ();
 
+  boost::asio::awaitable<void> asyncStopRunning ();
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};

@@ -205,6 +205,25 @@ Server::stopRunning ()
 }
 
 boost::asio::awaitable<void>
+Server::asyncStopRunning ()
+{
+  running.store (false, std::memory_order_release);
+  boost::system::error_code ec;
+  userMatchmakingAcceptor->cancel (ec);
+  userMatchmakingAcceptor->close (ec);
+  gameMatchmakingAcceptor->cancel (ec);
+  gameMatchmakingAcceptor->close (ec);
+  for (auto webSocket : webSockets)
+    {
+      co_await webSocket->asyncClose ();
+    }
+  for (auto sslWebSocket : sslWebSockets)
+    {
+      sslWebSocket->close ();
+    }
+}
+
+boost::asio::awaitable<void>
 Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, std::function<void (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData)> handleCustomMessageFromGame)
 {
   try

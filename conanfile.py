@@ -40,7 +40,7 @@ class MatchmakingProxy(ConanFile):
         self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/1.0.0")
+        self.requires("my_web_socket/2.0.5")
         self.requires("sqlite3/3.44.2")
         self.requires("openssl/3.5.2",force=True)
         ### only for testing please do not put this in the package build recept ###

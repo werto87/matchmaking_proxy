@@ -7,7 +7,6 @@ add_executable(
   server.cxx
   startGame.cxx
   database.cxx
-  networkingUtil.cxx
   testCertServer.cxx
   )
 add_subdirectory(benchmark)
@@ -23,7 +22,7 @@ target_link_libraries(_test myproject_options myproject_warnings
 target_compile_definitions(
   _test
   PUBLIC $<$<CONFIG:DEBUG>:DEBUG>
-         # BOOST_ASIO_ENABLE_HANDLER_TRACKING 
+         BOOST_ASIO_ENABLE_HANDLER_TRACKING 
         #  MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
         #  MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
 )

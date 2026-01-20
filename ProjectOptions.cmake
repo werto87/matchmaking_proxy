@@ -6,7 +6,7 @@ macro(myproject_setup_options)
   option(myproject_ENABLE_FORTIFY_SOURCE_AND_SET_OPTIMIZATION_TO_O0
          "Enable fortify source and set optimization to -O0" OFF)
   option(myproject_ENABLE_COVERAGE "Enable coverage reporting" OFF)
-  option(myproject_WARNINGS_AS_ERRORS "Treat Warnings As Errors" OFF)
+  option(myproject_WARNINGS_AS_ERRORS "Treat Warnings As Errors" ON)
   option(myproject_ENABLE_SANITIZER_ADDRESS "Enable address sanitizer" OFF)
   option(myproject_ENABLE_SANITIZER_LEAK "Enable leak sanitizer" OFF)
   option(myproject_ENABLE_SANITIZER_UNDEFINED "Enable undefined sanitizer" OFF)

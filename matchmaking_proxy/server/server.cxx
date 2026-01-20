@@ -130,14 +130,14 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               co_await connection.async_accept (use_awaitable);
               static size_t id = 0;
-              auto myWebsocket = sslWebSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++) }));
+              auto myWebsocket = sslWebSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++)));
               std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>>::iterator myWebsocketItr = std::prev (sslWebSockets.end ());
               hasToDoCleanUpWithWebSocket = true;
               co_spawn (ioContext, myWebsocket->sendPingToEndpoint (), my_web_socket::printException);
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint->endpoint (), resolvedUserGameViaMatchmakingEndpoint->endpoint (), fullPathIncludingDatabaseName }));
+              matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName }));
               std::list<std::shared_ptr<Matchmaking>>::iterator matchmaking = std::prev (matchmakings.end ());
               hasToDoCleanUpWithMatchmaking = true;
               using namespace boost::asio::experimental::awaitable_operators;
@@ -185,25 +185,6 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
     }
 }
 
-void
-Server::stopRunning ()
-{
-  running.store (false, std::memory_order_release);
-  boost::system::error_code ec;
-  userMatchmakingAcceptor->cancel (ec);
-  userMatchmakingAcceptor->close (ec);
-  gameMatchmakingAcceptor->cancel (ec);
-  gameMatchmakingAcceptor->close (ec);
-  for (auto webSocket : webSockets)
-    {
-      webSocket->close ();
-    }
-  for (auto sslWebSocket : sslWebSockets)
-    {
-      sslWebSocket->close ();
-    }
-}
-
 boost::asio::awaitable<void>
 Server::asyncStopRunning ()
 {
@@ -213,11 +194,13 @@ Server::asyncStopRunning ()
   userMatchmakingAcceptor->close (ec);
   gameMatchmakingAcceptor->cancel (ec);
   gameMatchmakingAcceptor->close (ec);
-  for (auto webSocket : webSockets)
+  auto keepWebsocketsAliveUntilStopRunningReturns = webSockets;
+  for (auto webSocket : keepWebsocketsAliveUntilStopRunningReturns)
     {
       co_await webSocket->asyncClose ();
     }
-  for (auto sslWebSocket : sslWebSockets)
+  auto keepSSLWebsocketsAliveUntilStopRunningReturns = sslWebSockets;
+  for (auto sslWebSocket : keepSSLWebsocketsAliveUntilStopRunningReturns)
     {
       co_await sslWebSocket->asyncClose ();
     }
@@ -240,7 +223,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
               co_await connection.async_accept ();
               static size_t id = 0;
               auto hasToDoWebSocketsCleanup = false;
-              auto myWebsocket = webSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (my_web_socket::MyWebSocket<my_web_socket::WebSocket>{ std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++) }));
+              auto myWebsocket = webSockets.emplace_back (std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++)));
               std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>>::iterator myWebsocketItr = std::prev (webSockets.end ());
               using namespace boost::asio::experimental::awaitable_operators;
               hasToDoWebSocketsCleanup = true;

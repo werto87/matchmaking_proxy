@@ -1,4 +1,5 @@
 #pragma once
+#include "catch2/catch.hpp"
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "util.hxx"
@@ -13,9 +14,8 @@
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <vector> // for allocator
-using namespace matchmaking_proxy;
 
-std::shared_ptr<Matchmaking> createAccountAndJoinMatchmakingQueue (std::string const &playerName, boost::asio::io_context &ioContext, std::vector<std::string> &messages, std::list<GameLobby> &gameLobbies, std::list<std::shared_ptr<Matchmaking>> &matchmakings, boost::asio::thread_pool &pool, user_matchmaking::JoinMatchMakingQueue const &joinMatchMakingQueue);
+using namespace matchmaking_proxy;
 
 boost::asio::awaitable<void>
 connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToSendAfterConnect, boost::asio::io_context &ioContext, boost::asio::ip::tcp::endpoint endpoint, std::vector<std::string> &messagesFromGame)
@@ -40,7 +40,7 @@ connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToS
               co_await connection.async_write (boost::asio::buffer (message), use_awaitable);
             }
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>{ std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++) });
+          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++));
           using namespace boost::asio::experimental::awaitable_operators;
           co_await (myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);

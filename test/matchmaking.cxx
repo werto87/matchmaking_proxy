@@ -44,7 +44,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
     CHECK (boost::starts_with (messages.at (0), "LoginAsGuestSuccess"));
   }
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }
 
 TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
@@ -74,7 +74,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
     CHECK (messages.at (0) == "LoginAccountCancel|{}");
   }
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }
 
 TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
@@ -91,7 +91,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
   ioContext.run ();
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
   CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
   messages.clear ();
   SECTION ("CreateAccount", "[matchmaking]")
@@ -199,7 +199,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
     CHECK (R"foo(JoinMatchMakingQueueSuccess|{})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
   }
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }
 
 TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
@@ -216,7 +216,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
   ioContext.run ();
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
   CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == messages.at (0));
   messages.clear ();
   SECTION ("LogoutAccount", "[matchmaking]")
@@ -234,7 +234,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
     CHECK (R"foo(LogoutAccountSuccess|{})foo" == messages.at (0)); // cppcheck-suppress containerOutOfBounds //false positive
   }
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }
 
 // TODO put this in one section not logged in global state
@@ -382,7 +382,7 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
     ioContext.run ();
     ioContext.stop ();
-    ioContext.reset ();
+    // ioContext.reset ();
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == playerMessages.at (0));
     CHECK (R"foo(LoggedInPlayers|{"players":["newAcc"]})foo" == subscriberMessages.at (0));
   }
@@ -391,7 +391,7 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
     ioContext.run ();
     ioContext.stop ();
-    ioContext.reset ();
+    // ioContext.reset ();
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LogoutAccount{})));
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == playerMessages.at (0));
     CHECK (R"foo(LoggedInPlayers|{"players":["newAcc"]})foo" == subscriberMessages.at (0));
@@ -403,7 +403,7 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
     ioContext.run ();
     ioContext.stop ();
-    ioContext.reset ();
+    // ioContext.reset ();
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::UnSubscribeGetLoggedInPlayers{})));
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LogoutAccount{})));
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == playerMessages.at (0));
@@ -415,7 +415,7 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
     ioContext.run ();
     ioContext.stop ();
-    ioContext.reset ();
+    // ioContext.reset ();
     // simulate connection lost by running the clean up logic
     auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
     matchmaking->cleanUp ();

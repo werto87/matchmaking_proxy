@@ -27,10 +27,13 @@ class MatchmakingProxy(ConanFile):
         self.options["my_web_socket"].log_co_spawn_print_exception = True
         self.options["my_web_socket"].log_write = True
         self.options["my_web_socket"].log_read = True
+        self.options["my_web_socket"].log_boost_asio = True
+        
+        
 
 
     def requirements(self):
-        self.requires("boost/1.86.0", force=True)
+        self.requires("boost/1.90.0", force=True)
         self.requires("confu_soci/[<1]")
         self.requires("magic_enum/0.9.6")
         if self.options.with_ssl_verification:
@@ -40,7 +43,7 @@ class MatchmakingProxy(ConanFile):
         self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.11")
         self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/2.0.5")
+        self.requires("my_web_socket/3.0.3")
         self.requires("sqlite3/3.44.2")
         self.requires("openssl/3.5.2",force=True)
         ### only for testing please do not put this in the package build recept ###

@@ -9,7 +9,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/fusion/support/is_sequence.hpp>
 #include <boost/hana/fwd/for_each.hpp>
-#include <boost/json/system_error.hpp>
+#include <boost/system/system_error.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/sml.hpp>
 #include <confu_json/to_object.hxx>

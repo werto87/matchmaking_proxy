@@ -165,6 +165,7 @@
                 "LOG_CO_SPAWN_PRINT_EXCEPTIONS": "OFF",
                 "LOG_WRITE": "OFF",
                 "LOG_READ": "OFF",
+                "myproject_ENABLE_SANITIZER_ADDRESS": "ON",
                 "LOG_BOOST_ASIO": "OFF"
             }
         }

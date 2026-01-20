@@ -36,7 +36,7 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
   ioContext.run ();
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
   auto matchmakingGameTmp = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
   REQUIRE (messages1.at (1) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1510}");
@@ -60,11 +60,11 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" })));
   ioContext.run ();
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
   ioContext.run ();
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
   auto matchmakingGameTmp = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
   REQUIRE (messages1.at (1) == "TopRatedPlayers|{\"players\":[{\"RatedPlayer\":{\"name\":\"a\",\"rating\":1500}}]}");
@@ -82,7 +82,7 @@ TEST_CASE ("matchmaking game custom message", "[matchmaking game]")
   std::list<std::shared_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto called = false;
-  auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} , [&called] (std::string const &,std::string const &, MatchmakingGameData &) { called = true; }} };
-  matchmakingGame.process_event (objectToStringWithObjectName (matchmaking_game::CustomMessage{ }));
+  auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {}, [&called] (std::string const &, std::string const &, MatchmakingGameData &) { called = true; } } };
+  matchmakingGame.process_event (objectToStringWithObjectName (matchmaking_game::CustomMessage{}));
   REQUIRE (called);
 }

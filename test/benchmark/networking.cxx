@@ -82,5 +82,5 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   ioContext.run ();
   // };
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }

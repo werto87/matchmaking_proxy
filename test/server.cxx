@@ -117,7 +117,7 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
     REQUIRE (handlecustomMessageCalled);
   }
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }
 BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
 TEST_CASE ("Sandbox", "[.][Sandbox]")
@@ -232,5 +232,5 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   SECTION ("just run the server", "[.debuging matchmaking]") { ioContext.run (); }
   std::filesystem::remove (pathToMatchmakingDatabase);
   ioContext.stop ();
-  ioContext.reset ();
+  // ioContext.reset ();
 }

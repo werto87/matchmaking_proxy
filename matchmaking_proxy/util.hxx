@@ -1,6 +1,6 @@
 #ifndef EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1
 #define EBD66723_6B6F_4460_A3DE_00AEB1E6D6B1
-#include <boost/json/system_error.hpp>
+
 #include <confu_json/to_json.hxx>
 #include <confu_json/to_object.hxx>
 #include <confu_json/util.hxx>

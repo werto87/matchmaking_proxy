@@ -157,20 +157,23 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               }) && myWebsocket->writeLoop (),
                         [hasToDoCleanUpWithWebSocket, &_sslWebSockets = sslWebSockets, &_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running, myWebsocketItr] (auto eptr) {
                           my_web_socket::printException (eptr);
-                          if (hasToDoCleanUpWithMatchmaking)
+                          if (_running.load ())
                             {
-                              auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
-                              matchmaking->get ()->cleanUp ();
-                              _matchmakings.erase (matchmaking);
-                              if (loggedInPlayerLostConnection and not _matchmakings.empty ())
+                              if (hasToDoCleanUpWithMatchmaking)
                                 {
-                                  for (auto &_matchmaking : _matchmakings)
+                                  auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
+                                  matchmaking->get ()->cleanUp ();
+                                  _matchmakings.erase (matchmaking);
+                                  if (loggedInPlayerLostConnection)
                                     {
-                                      _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                      for (auto &_matchmaking : _matchmakings)
+                                        {
+                                          _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                        }
                                     }
                                 }
+                              if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                             }
-                          if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                         });
             }
           catch (std::exception const &e)
@@ -188,6 +191,11 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
 boost::asio::awaitable<void>
 Server::asyncStopRunning ()
 {
+  auto keepMatchmakingsAliveUntilStopRunningReturns = matchmakings;
+  for (auto matchmaking : keepMatchmakingsAliveUntilStopRunningReturns)
+    {
+      matchmaking->cleanUp ();
+    }
   running.store (false, std::memory_order_release);
   boost::system::error_code ec;
   userMatchmakingAcceptor->cancel (ec);

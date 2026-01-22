@@ -41,9 +41,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   database::createEmptyDatabase ("matchmaking_proxy.db");
   database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
-  io_context ioContext (1);
-  signal_set signals (ioContext, SIGINT, SIGTERM);
-  signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
+  auto ioContext = io_context{};
   thread_pool pool{ 2 };
   auto const userMatchmakingPort = 55555;
   auto const gameMatchmakingPort = 22222;
@@ -52,15 +50,15 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   auto server = Server{ ioContext, pool, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, { boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort } };
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
-  auto const PATH_TO_CHAIN_FILE = std::string{ "/etc/letsencrypt/live/test-name/fullchain.pem" };
-  auto const PATH_TO_PRIVATE_File = std::string{ "/etc/letsencrypt/live/test-name/privkey.pem" };
-  auto const PATH_TO_DH_File = std::string{ "/etc/letsencrypt/live/test-name/dhparams.pem" };
+  auto const PATH_TO_CHAIN_FILE = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/localhost.pem" };
+  auto const PATH_TO_PRIVATE_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/localhost-key.pem" };
+  auto const PATH_TO_DH_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
   co_spawn (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ("matchmaking_proxy.db"), my_web_socket::printException);
   auto messagesFromGamePlayer1 = std::vector<std::string>{};
   size_t messagesSend = 0;
-  auto handleMsgFromGame = [&messagesSend] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
+  auto handleMsgFromGame = [&messagesSend, &server, &matchmakingGame, &userGameViaMatchmaking] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
     if (boost::starts_with (msg, "LoginAsGuestSuccess"))
       {
         for (uint64_t i = 0; i < 1000; ++i)
@@ -73,14 +71,13 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
         ++messagesSend;
         if (messagesSend == 1000)
           {
-            _ioContext.stop ();
+            co_spawn (_ioContext, server.asyncStopRunning (), my_web_socket::printException);
           }
       }
   };
   co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
-  // BENCHMARK ("benchmark123") { return
   ioContext.run ();
-  // };
-  ioContext.stop ();
-  // ioContext.reset ();
+  CHECK (messagesSend == 1000);
+  matchmakingGame.shutDownUsingMockServerIoContext ();
+  userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
 }

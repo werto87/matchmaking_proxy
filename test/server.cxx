@@ -56,10 +56,8 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
   database::createEmptyDatabase ("matchmaking_proxy.db");
   database::createTables ("matchmaking_proxy.db");
   using namespace boost::asio;
-  io_context ioContext (1);
-  signal_set signals (ioContext, SIGINT, SIGTERM);
-  signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
-  thread_pool pool{ 2 };
+  auto ioContext = io_context{};
+  auto pool = thread_pool{ 2 };
   auto const matchmakingGamePort = 4242;
   auto const userGameViaMatchmakingPort = 3232;
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
@@ -72,10 +70,11 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
   auto matchmakingOption = MatchmakingOption{};
+  matchmakingOption.timeToAcceptInvite = std::chrono::seconds{ 3333 };
   auto handlecustomMessageCalled = false;
-  matchmakingOption.handleCustomMessageFromUser = [&handlecustomMessageCalled, &ioContext] (auto &, auto &, auto &) {
+  matchmakingOption.handleCustomMessageFromUser = [&handlecustomMessageCalled, &ioContext, &server] (auto &, auto &, auto &) {
     handlecustomMessageCalled = true;
-    ioContext.stop ();
+    co_spawn (ioContext, server.asyncStopRunning (), my_web_socket::printException);
   };
   co_spawn (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ("matchmaking_proxy.db"), my_web_socket::printException);
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
@@ -109,15 +108,16 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
     CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer1.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer1.at (3) == "ProxyStarted|{}");
-    CHECK (messagesFromGamePlayer2.size () == 4);
+    CHECK (messagesFromGamePlayer2.size () == 5);
     CHECK (boost::starts_with (messagesFromGamePlayer2.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer2.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer2.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer2.at (3) == "ProxyStarted|{}");
-    REQUIRE (handlecustomMessageCalled);
+    CHECK (messagesFromGamePlayer2.at (4) == "ProxyStopped|{}");
+    CHECK (handlecustomMessageCalled);
   }
-  ioContext.stop ();
-  // ioContext.reset ();
+  matchmakingGame.shutDownUsingMockServerIoContext ();
+  userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
 }
 BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
 TEST_CASE ("Sandbox", "[.][Sandbox]")
@@ -132,10 +132,8 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   database::createEmptyDatabase (pathToMatchmakingDatabase.string ());
   database::createTables (pathToMatchmakingDatabase.string ());
   using namespace boost::asio;
-  io_context ioContext (1);
-  signal_set signals (ioContext, SIGINT, SIGTERM);
-  signals.async_wait ([&] (auto, auto) { ioContext.stop (); });
-  thread_pool pool{ 2 };
+  auto ioContext = io_context{};
+  auto pool = thread_pool{ 2 };
   auto const userMatchmakingPort = 55555;
   auto const gameMatchmakingPort = 12312;
   auto const matchmakingGamePort = 4242;
@@ -199,18 +197,18 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
       std::cout << "no handle for custom message: '" << message << "'" << std::endl;
   };
   co_spawn (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, pathToMatchmakingDatabase, POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking (pathToMatchmakingDatabase, handleMessageFromGame), my_web_socket::printException);
-  SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
+  SECTION ("start connect LoggedInPlayers leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
     size_t gameOver = 0;
-    auto handleMsgFromGamePlayer1 = [&gameOver] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
+    auto handleMsgFromGamePlayer1 = [&gameOver, &server] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
       if (boost::starts_with (msg, "LoggedInPlayers"))
         {
           gameOver++;
         }
       if (gameOver == 3)
         {
-          _ioContext.stop ();
+          co_spawn (_ioContext, server.asyncStopRunning (), my_web_socket::printException);
         }
     };
     co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGamePlayer1, { objectToStringWithObjectName (user_matchmaking::SubscribeGetLoggedInPlayers{ 42 }), { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
@@ -231,6 +229,4 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   }
   SECTION ("just run the server", "[.debuging matchmaking]") { ioContext.run (); }
   std::filesystem::remove (pathToMatchmakingDatabase);
-  ioContext.stop ();
-  // ioContext.reset ();
 }

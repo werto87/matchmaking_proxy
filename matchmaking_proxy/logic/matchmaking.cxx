@@ -621,8 +621,8 @@ auto const cancelLoginAccount = [] (MatchmakingData &matchmakingData) {
 
 auto const createAccount = [] (PasswordHashed const &passwordHash, MatchmakingData &matchmakingData) {
   matchmakingData.user.accountName = passwordHash.accountName;
-  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ passwordHash.accountName }));
   database::createAccount (matchmakingData.user.accountName.value (), passwordHash.hashedPassword, matchmakingData.fullPathIncludingDatabaseName.string ());
+  matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountSuccess{ passwordHash.accountName }));
 };
 
 boost::asio::awaitable<std::string>
@@ -704,6 +704,11 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                     }
                 }
               sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames, matchmakingData);
+            }
+          else
+            {
+              userGameLobby->cancelTimer ();
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
             }
         }
     }
@@ -1310,7 +1315,10 @@ sendMessageToUsers (std::string message, std::vector<std::string> accountNames, 
 {
   for (auto const &accountToSendMessageTo : accountNames)
     {
-      for (auto &matchmaking : matchmakingData.stateMachines | std::ranges::views::filter ([&accountToSendMessageTo] (auto const &matchmaking) { return matchmaking->sm->matchmakingData.user.accountName == accountToSendMessageTo; }))
+      for (auto &matchmaking : matchmakingData.stateMachines | std::ranges::views::filter ([&accountToSendMessageTo] (auto const &matchmaking) {
+                                 //
+                                 return matchmaking->sm->matchmakingData.user.accountName == accountToSendMessageTo;
+                               }))
         {
           matchmaking->sm->impl.process_event (SendMessageToUser{ message });
         }

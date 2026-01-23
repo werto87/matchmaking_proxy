@@ -34,7 +34,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
 {
   if (sodium_init () < 0)
     {
-      std::cout << "sodium_init <= 0" << std::endl;
+      std::osyncstream (std::cout) << "sodium_init <= 0" << std::endl;
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }

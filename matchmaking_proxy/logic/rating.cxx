@@ -15,6 +15,8 @@
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <stdlib.h>
+#include <syncstream>
+
 namespace matchmaking_proxy
 {
 size_t
@@ -34,7 +36,7 @@ averageRating (std::string const &fullPathIncludingDatabaseName, std::vector<std
       }
     else
       {
-        std::cout << "Can not find user in database but he is in ranked queue";
+        std::osyncstream (std::cout) << "Can not find user in database but he is in ranked queue";
         abort ();
       }
   });

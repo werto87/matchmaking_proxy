@@ -17,8 +17,10 @@
 #include <memory>
 #include <sodium.h>
 #include <string>
+#include <syncstream>
 #include <thread>
 #include <utility>
+
 namespace matchmaking_proxy
 {
 std::string inline pw_to_hash (std::string const &password)
@@ -27,7 +29,7 @@ std::string inline pw_to_hash (std::string const &password)
   // TODO find a way to cancel this
   if (crypto_pwhash_str (hashed_password.data (), password.data (), password.size (), hash_opt, hash_memory) != 0)
     {
-      std::cout << "out of memory" << std::endl;
+      std::osyncstream (std::cout) << "out of memory" << std::endl;
       std::terminate ();
     }
   auto result = std::string{};

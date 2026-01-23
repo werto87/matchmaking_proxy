@@ -8,6 +8,7 @@
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <sqlite3.h>
 #include <stdio.h>
+#include <syncstream>
 
 namespace matchmaking_proxy
 {
@@ -51,12 +52,12 @@ createTables (std::string const &fullPathIncludingDatabaseName)
     }
   catch (soci::soci_error const &error)
     {
-      std::cout << error.get_error_message () << std::endl;
+      std::osyncstream (std::cout) << error.get_error_message () << std::endl;
     }
 }
 
 boost::optional<Account>
-createAccount (std::string const &accountName, std::string const &password,std::string const& fullPathIncludingDatabaseName, size_t startRating)
+createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, size_t startRating)
 {
   soci::session sql (soci::sqlite3, fullPathIncludingDatabaseName.c_str ());
   return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));

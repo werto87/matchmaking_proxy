@@ -49,11 +49,11 @@ connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToS
         }
       catch (std::exception const &e)
         {
-          std::cout << "connectWebsocketSSL () connect  Exception : " << e.what () << std::endl;
+          std::osyncstream (std::cout) << "connectWebsocketSSL () connect  Exception : " << e.what () << std::endl;
         }
     }
   catch (std::exception const &e)
     {
-      std::cout << "exception: " << e.what () << std::endl;
+      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
     }
 }

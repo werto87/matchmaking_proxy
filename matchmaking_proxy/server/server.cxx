@@ -52,9 +52,9 @@ tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds con
         }
       catch (std::exception &e)
         {
-          std::cout << "exception : " << e.what () << std::endl;
+          std::osyncstream (std::cout) << "exception : " << e.what () << std::endl;
         }
-      std::cout << "trying again in: " << timeToWaitBeforeCallingFunctionAgain.count () << " seconds" << std::endl;
+      std::osyncstream (std::cout) << "trying again in: " << timeToWaitBeforeCallingFunctionAgain.count () << " seconds" << std::endl;
       auto timer = CoroTimer{ co_await boost::asio::this_coro::executor };
       timer.expires_after (timeToWaitBeforeCallingFunctionAgain);
       co_await timer.async_wait ();
@@ -96,19 +96,19 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
       ctx.set_default_verify_paths ();
       co_await tryUntilNoException (
           [&pathToChainFile, &ctx] () {
-            std::cout << "load fullchain: " << pathToChainFile << std::endl;
+            std::osyncstream (std::cout) << "load fullchain: " << pathToChainFile << std::endl;
             ctx.use_certificate_chain_file (pathToChainFile.string ());
           },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToPrivateFile, &ctx] () {
-            std::cout << "load privkey: " << pathToPrivateFile << std::endl;
+            std::osyncstream (std::cout) << "load privkey: " << pathToPrivateFile << std::endl;
             ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
           },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToTmpDhFile, &ctx] () {
-            std::cout << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
+            std::osyncstream (std::cout) << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
             ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
           },
           pollingSleepTimer);
@@ -178,13 +178,13 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
             }
           catch (std::exception const &e)
             {
-              std::cout << "Server::userMatchmaking () connect  Exception : " << e.what () << std::endl;
+              std::osyncstream (std::cout) << "Server::userMatchmaking () connect  Exception : " << e.what () << std::endl;
             }
         }
     }
   catch (std::exception const &e)
     {
-      std::cout << "exception: " << e.what () << std::endl;
+      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
     }
 }
 
@@ -223,7 +223,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
         {
           try
             {
-              std::cout << "wait for game over" << std::endl;
+              std::osyncstream (std::cout) << "wait for game over" << std::endl;
               auto socket = co_await gameMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::WebSocket{ std::move (socket) };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
@@ -250,13 +250,13 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
             }
           catch (std::exception const &e)
             {
-              std::cout << "Server::gameMatchmaking () connect  Exception : " << e.what () << std::endl;
+              std::osyncstream (std::cout) << "Server::gameMatchmaking () connect  Exception : " << e.what () << std::endl;
             }
         }
     }
   catch (std::exception const &e)
     {
-      std::cout << "exception: " << e.what () << std::endl;
+      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
     }
 }
 }

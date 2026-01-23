@@ -134,13 +134,13 @@ GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::func
         }
       else
         {
-          std::cout << "error in timer boost::system::errc: " << e.code () << std::endl;
+          std::osyncstream (std::cout) << "error in timer boost::system::errc: " << e.code () << std::endl;
           abort ();
         }
     }
   catch (std::exception &e)
     {
-      std::cout << "runTimer exception: " << e.what () << std::endl;
+      std::osyncstream (std::cout) << "runTimer exception: " << e.what () << std::endl;
       abort ();
     }
 }

@@ -133,7 +133,7 @@ struct my_logger
   {
     if constexpr (boost::fusion::traits::is_sequence<TEvent>::value)
       {
-        std::cout << "\n[" << aux::get_type_name<SM> () << "]"
+        std::osyncstream (std::cout) << "\n[" << aux::get_type_name<SM> () << "]"
                   << "[process_event] '" << objectToStringWithObjectName (event) << "'" << std::endl;
       }
     else
@@ -210,15 +210,15 @@ MatchmakingGame::process_event (std::string const &event)
               typeFound = true;
               boost::system::error_code ec{};
               sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-              if (ec) std::cout << "read_json error: " << ec.message () << std::endl;
+              if (ec) std::osyncstream (std::cout) << "read_json error: " << ec.message () << std::endl;
               return;
             }
         });
-        if (not typeFound) std::cout << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+        if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
       }
     else
       {
-        std::cout << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
+        std::osyncstream (std::cout) << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
       }
   }
 }

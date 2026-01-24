@@ -8,6 +8,14 @@ add_library(matchmaking_proxy)
 
 add_library(myproject::matchmaking_proxy ALIAS matchmaking_proxy)
 
+set(Logging)
+if(LOG_BOOST_ASIO)
+  list(APPEND Logging BOOST_ASIO_ENABLE_HANDLER_TRACKING)
+endif()
+
+target_compile_definitions(matchmaking_proxy PUBLIC 
+${Logging}
+)
 
 find_package(confu_soci)
 

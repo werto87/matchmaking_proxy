@@ -162,7 +162,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                                     {
                                                       my_web_socket::coSpawnTraced (
                                                           _ioContext,
-                                                          [&matchmaking, &_matchmakings] () -> boost::asio::awaitable<void> {
+                                                          [matchmaking, &_matchmakings] () -> boost::asio::awaitable<void> {
                                                             auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                                                             co_await matchmaking->get ()->cleanUp ();
                                                             _matchmakings.erase (matchmaking);

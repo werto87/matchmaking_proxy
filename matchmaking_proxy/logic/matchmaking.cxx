@@ -180,9 +180,8 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
               });
               if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
             }
-
           using namespace boost::asio::experimental::awaitable_operators;
-          co_await (matchmakingData.matchmakingGame->readLoop ([&] (std::string const &readResult) {
+          my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor, matchmakingData.matchmakingGame->readLoop ([&] (std::string const &readResult) {
             if ("LeaveGameSuccess|{}" == readResult)
               {
                 sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
@@ -191,7 +190,8 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
               {
                 matchmakingData.sendMsgToUser (readResult);
               }
-          }) && matchmakingData.matchmakingGame->writeLoop ());
+          }) && matchmakingData.matchmakingGame->writeLoop (),
+                                        "matchmaking_proxy connectToGame read && write", [&deps, &subs, &sm] (auto) { sm.process_event (ConnectionToGameLost{}, deps, subs); });
         }
       catch (std::exception const &e)
         {
@@ -289,12 +289,12 @@ createGame (user_matchmaking::CreateGame, auto &&, auto &&deps, auto &&)
 };
 
 auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void {
-  my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs),"matchmaking_proxy hashPassword"); // NOLINT(clang-analyzer-core.NullDereference) //TODO check if this is really a false positive
+  my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), "matchmaking_proxy hashPassword"); // NOLINT(clang-analyzer-core.NullDereference) //TODO check if this is really a false positive
 };
-auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs),"matchmaking_proxy doCheckPassword"); };
-auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData),"matchmaking_proxy wantsToJoinGame"); };
-auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs),"matchmaking_proxy connectToGame"); };
-auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs),"matchmaking_proxy createGame"); };
+auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), "matchmaking_proxy doCheckPassword"); };
+auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), "matchmaking_proxy wantsToJoinGame"); };
+auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), "matchmaking_proxy connectToGame"); };
+auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs), "matchmaking_proxy createGame"); };
 
 bool
 isInRatingrange (size_t userRating, size_t lobbyAverageRating, size_t allowedRatingDifference)
@@ -337,7 +337,7 @@ matchingLobby (std::filesystem::path const &fullPathToDatabaseIncludingDatabaseN
 auto const sendToUser = [] (SendMessageToUser const &sendMessageToUser, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (sendMessageToUser.msg); };
 auto const ratingChanged = [] (user_matchmaking::RatingChanged const &ratingChangedEv, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (ratingChangedEv)); };
 
-auto const leaveGame = [] (MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.matchmakingGame->webSocket->get_executor (), matchmakingData.matchmakingGame->asyncClose (),"matchmaking_proxy leaveGame matchmakingGame->asyncClose ()"); };
+auto const leaveGame = [] (MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.matchmakingGame->webSocket->get_executor (), matchmakingData.matchmakingGame->asyncClose (), "matchmaking_proxy leaveGame matchmakingGame->asyncClose ()"); };
 
 auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
   if (auto userGameLobby = std::ranges::find_if (matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName.value ()] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies.end ())

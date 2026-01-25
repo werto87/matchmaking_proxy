@@ -19,6 +19,7 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
+#include <my_web_socket/coSpawnTraced.hxx>
 #include <my_web_socket/mockServer.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
@@ -29,6 +30,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
 // TODO this test crashes when using gcc release and disabling my_web_socket log in conanfile.py
 TEST_CASE ("1000 messages from one player", "[!benchmark]")
 {
@@ -55,7 +57,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   auto const PATH_TO_DH_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  co_spawn (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ("matchmaking_proxy.db"), my_web_socket::printException);
+  my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) && server.gameMatchmaking ("matchmaking_proxy.db"), "test");
   auto messagesFromGamePlayer1 = std::vector<std::string>{};
   size_t messagesSend = 0;
   auto handleMsgFromGame = [&messagesSend, &server, &matchmakingGame, &userGameViaMatchmaking] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
@@ -71,11 +73,11 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
         ++messagesSend;
         if (messagesSend == 1000)
           {
-            co_spawn (_ioContext, server.asyncStopRunning (), my_web_socket::printException);
+            my_web_socket::coSpawnTraced (_ioContext, server.asyncStopRunning (), "test");
           }
       }
   };
-  co_spawn (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), my_web_socket::printException);
+  my_web_socket::coSpawnTraced (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), "test");
   ioContext.run ();
   CHECK (messagesSend == 1000);
   matchmakingGame.shutDownUsingMockServerIoContext ();

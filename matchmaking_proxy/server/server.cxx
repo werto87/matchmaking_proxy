@@ -162,18 +162,22 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                                     {
                                                       my_web_socket::coSpawnTraced (
                                                           _ioContext,
-                                                          [matchmaking, &_matchmakings, hasToDoCleanUpWithWebSocket, myWebsocketItr, &_sslWebSockets] () -> boost::asio::awaitable<void> {
+                                                          [matchmaking, &_matchmakings, hasToDoCleanUpWithWebSocket, myWebsocketItr, &_sslWebSockets, &_running] () -> boost::asio::awaitable<void> {
                                                             auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
-                                                            co_await matchmaking->get ()->cleanUp ();
-                                                            _matchmakings.erase (matchmaking);
-                                                            if (loggedInPlayerLostConnection)
+                                                            /*_running.load () can change before this co_spawn and after co_await*/
+                                                            if (_running.load ()) co_await matchmaking->get ()->cleanUp ();
+                                                            if (_running.load ())
                                                               {
-                                                                for (auto &_matchmaking : _matchmakings)
+                                                                _matchmakings.erase (matchmaking);
+                                                                if (loggedInPlayerLostConnection)
                                                                   {
-                                                                    _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                                                    for (auto &_matchmaking : _matchmakings)
+                                                                      {
+                                                                        _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                                                      }
                                                                   }
+                                                                if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                                                               }
-                                                            if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                                                           },
                                                           "matchmaking_porxy userMatchmaking cleanUp");
                                                     }

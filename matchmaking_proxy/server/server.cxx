@@ -162,7 +162,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                                     {
                                                       my_web_socket::coSpawnTraced (
                                                           _ioContext,
-                                                          [matchmaking, &_matchmakings] () -> boost::asio::awaitable<void> {
+                                                          [matchmaking, &_matchmakings, hasToDoCleanUpWithWebSocket, myWebsocketItr, &_sslWebSockets] () -> boost::asio::awaitable<void> {
                                                             auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
                                                             co_await matchmaking->get ()->cleanUp ();
                                                             _matchmakings.erase (matchmaking);
@@ -173,10 +173,10 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                                                     _matchmaking->proccessSendLoggedInPlayersToUser ();
                                                                   }
                                                               }
+                                                            if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                                                           },
                                                           "matchmaking_porxy userMatchmaking cleanUp");
                                                     }
-                                                  if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                                                 }
                                             });
             }

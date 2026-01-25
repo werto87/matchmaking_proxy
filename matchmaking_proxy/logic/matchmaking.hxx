@@ -1,11 +1,13 @@
 #ifndef AB446319_39F6_4D7F_9EC5_860337CA5001
 #define AB446319_39F6_4D7F_9EC5_860337CA5001
 
+#include <boost/asio/awaitable.hpp>
 #include <expected>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+
 namespace matchmaking_proxy
 {
 struct MatchmakingData;
@@ -35,7 +37,7 @@ public:
 
   bool hasProxyToGame () const;
 
-  void cleanUp ();
+  [[nodiscard]] boost::asio::awaitable<void> cleanUp ();
 
   void proccessSendTopRatedPlayersToUser ();
 

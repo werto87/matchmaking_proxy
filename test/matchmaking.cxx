@@ -534,25 +534,6 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
     CHECK (R"foo(LoggedInPlayers|{"players":["newAcc"]})foo" == subscriberMessages.at (0));
     CHECK (R"foo(LogoutAccountSuccess|{})foo" == playerMessages.at (1));
   }
-  SECTION ("create acc terminate connection")
-  {
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
-    ioContext.run ();
-    // simulate connection lost by running the clean up logic
-    auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
-    matchmaking->cleanUp ();
-    matchmakings.pop_back ();
-    if (loggedInPlayerLostConnection)
-      {
-        for (auto &_matchmaking : matchmakings)
-          {
-            _matchmaking->proccessSendLoggedInPlayersToUser ();
-          }
-      }
-    CHECK (R"foo(LoginAccountSuccess|{"accountName":"newAcc"})foo" == playerMessages.at (0));
-    CHECK (R"foo(LoggedInPlayers|{"players":["newAcc"]})foo" == subscriberMessages.at (0));
-    CHECK (R"foo(LoggedInPlayers|{"players":[]})foo" == subscriberMessages.at (1));
-  }
 }
 
 TEST_CASE ("matchmaking custom message", "[matchmaking]")

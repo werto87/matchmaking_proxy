@@ -105,11 +105,12 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
     auto messagesFromGamePlayer2 = std::vector<std::string>{};
     my_web_socket::coSpawnTraced (ioContext, connectWebsocketSSL (handleMsgFromGame, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer2), "test");
     ioContext.run ();
-    CHECK (messagesFromGamePlayer1.size () == 4);
+    CHECK (messagesFromGamePlayer1.size () == 5);
     CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer1.at (1) == "JoinMatchMakingQueueSuccess|{}");
     CHECK (messagesFromGamePlayer1.at (2) == "AskIfUserWantsToJoinGame|{}");
     CHECK (messagesFromGamePlayer1.at (3) == "ProxyStarted|{}");
+    CHECK (messagesFromGamePlayer1.at (4) == "ProxyStopped|{}");
     CHECK (messagesFromGamePlayer2.size () == 5);
     CHECK (boost::starts_with (messagesFromGamePlayer2.at (0), "LoginAsGuestSuccess"));
     CHECK (messagesFromGamePlayer2.at (1) == "JoinMatchMakingQueueSuccess|{}");

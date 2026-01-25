@@ -155,21 +155,26 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                                            "matchmaking_porxy", [hasToDoCleanUpWithWebSocket, &_sslWebSockets = sslWebSockets, &_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running, myWebsocketItr] (auto) {
+                                            "matchmaking_porxy userMatchmaking read && write", [&_ioContext = ioContext, hasToDoCleanUpWithWebSocket, &_sslWebSockets = sslWebSockets, &_matchmakings = matchmakings, matchmaking, hasToDoCleanUpWithMatchmaking, &_running = running, myWebsocketItr] (auto) {
                                               if (_running.load ())
                                                 {
                                                   if (hasToDoCleanUpWithMatchmaking)
                                                     {
-                                                      auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
-                                                      matchmaking->get ()->cleanUp ();
-                                                      _matchmakings.erase (matchmaking);
-                                                      if (loggedInPlayerLostConnection)
-                                                        {
-                                                          for (auto &_matchmaking : _matchmakings)
-                                                            {
-                                                              _matchmaking->proccessSendLoggedInPlayersToUser ();
-                                                            }
-                                                        }
+                                                      my_web_socket::coSpawnTraced (
+                                                          _ioContext,
+                                                          [&matchmaking, &_matchmakings] () -> boost::asio::awaitable<void> {
+                                                            auto loggedInPlayerLostConnection = matchmaking->get ()->loggedInWithAccountName ().has_value ();
+                                                            co_await matchmaking->get ()->cleanUp ();
+                                                            _matchmakings.erase (matchmaking);
+                                                            if (loggedInPlayerLostConnection)
+                                                              {
+                                                                for (auto &_matchmaking : _matchmakings)
+                                                                  {
+                                                                    _matchmaking->proccessSendLoggedInPlayersToUser ();
+                                                                  }
+                                                              }
+                                                          },
+                                                          "matchmaking_porxy userMatchmaking cleanUp");
                                                     }
                                                   if (hasToDoCleanUpWithWebSocket) _sslWebSockets.erase (myWebsocketItr);
                                                 }
@@ -190,12 +195,12 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
 boost::asio::awaitable<void>
 Server::asyncStopRunning ()
 {
+  running.store (false, std::memory_order_release);
   auto keepMatchmakingsAliveUntilStopRunningReturns = matchmakings;
   for (auto matchmaking : keepMatchmakingsAliveUntilStopRunningReturns)
     {
-      matchmaking->cleanUp ();
+      co_await matchmaking->cleanUp ();
     }
-  running.store (false, std::memory_order_release);
   boost::system::error_code ec;
   userMatchmakingAcceptor->cancel (ec);
   userMatchmakingAcceptor->close (ec);
@@ -239,7 +244,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
                 auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
               }) && myWebsocket->writeLoop (),
-                                            "matchmaking_porxy", [myWebsocketItr, hasToDoWebSocketsCleanup, &_webSockets = webSockets, &_running = running] (auto) {
+                                            "matchmaking_porxy gameMatchmaking read && write", [myWebsocketItr, hasToDoWebSocketsCleanup, &_webSockets = webSockets, &_running = running] (auto) {
                                               if (hasToDoWebSocketsCleanup and _running.load ())
                                                 {
                                                   _webSockets.erase (myWebsocketItr);

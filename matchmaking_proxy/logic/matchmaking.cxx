@@ -1244,7 +1244,6 @@ Matchmaking::hasProxyToGame () const
 {
   return sm->impl.is (state<ProxyToGame>);
 }
-
 void
 Matchmaking::disconnectFromProxy ()
 {
@@ -1334,10 +1333,13 @@ sendToAllAccountsInUsersCreateGameLobby (std::string const &message, Matchmaking
     }
 }
 
-void
+boost::asio::awaitable<void>
 Matchmaking::cleanUp ()
 {
-  disconnectFromProxy ();
+  if (hasProxyToGame ())
+    {
+      co_await sm->matchmakingData.matchmakingGame->asyncClose ();
+    }
   if (auto userGameLobby = std::ranges::find_if (sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) { return std::ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); userGameLobby != sm->matchmakingData.gameLobbies.end ())
     {
       userGameLobby->removeUser (sm->matchmakingData.user.accountName.value ());

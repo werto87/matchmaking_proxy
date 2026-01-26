@@ -194,6 +194,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
     {
       std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
     }
+  std::osyncstream (std::cout) << "exit matchmaking_proxy userMatchmaking /n";
 }
 
 boost::asio::awaitable<void>
@@ -265,5 +266,6 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
     {
       std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
     }
+  std::osyncstream (std::cout) << "exit matchmaking_proxy gameMatchmaking /n";
 }
 }

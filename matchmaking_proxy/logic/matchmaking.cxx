@@ -147,50 +147,56 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           co_await ws.async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
           static size_t id = 0;
           matchmakingData.matchmakingGame = std::make_unique<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++));
-          co_await matchmakingData.matchmakingGame->asyncWriteOneMessage (objectToStringWithObjectName (connectToGameEv));
-          auto connectToGameResult = co_await matchmakingData.matchmakingGame->asyncReadOneMessage ();
-          std::vector<std::string> splitMessage{};
-          boost::algorithm::split (splitMessage, connectToGameResult, boost::is_any_of ("|"));
-          if (splitMessage.size () == 2)
-            {
-              auto const &typeToSearch = splitMessage.at (0);
-              auto const &objectAsString = splitMessage.at (1);
-              bool typeFound = false;
-              boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
-                if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-                  {
-                    typeFound = true;
-                    boost::system::error_code ec{};
-                    try
-                      {
-                        sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
-                      }
-                    catch (std::exception const &e)
-                      {
-                        auto errorHandleMessageFromGame = std::stringstream{};
-                        errorHandleMessageFromGame << "exception: " << e.what () << '\n';
-                        errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
-                        errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
-                        std::osyncstream (std::cout) << errorHandleMessageFromGame.str () << std::endl;
-                        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
-                      }
-                    if (ec) std::osyncstream (std::cout) << "read_json error: " << ec.message () << std::endl;
-                  }
-              });
-              if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
-            }
           using namespace boost::asio::experimental::awaitable_operators;
-          my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor, matchmakingData.matchmakingGame->readLoop ([&] (std::string const &readResult) {
-            if ("LeaveGameSuccess|{}" == readResult)
+          my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor, matchmakingData.matchmakingGame->readLoop ([&, firstRead = true] (std::string const &message) mutable {
+            if (firstRead)
               {
-                sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+                firstRead = false;
+                std::vector<std::string> splitMessage{};
+                boost::algorithm::split (splitMessage, message, boost::is_any_of ("|"));
+                if (splitMessage.size () == 2)
+                  {
+                    auto const &typeToSearch = splitMessage.at (0);
+                    auto const &objectAsString = splitMessage.at (1);
+                    bool typeFound = false;
+                    boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
+                      if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+                        {
+                          typeFound = true;
+                          boost::system::error_code ec{};
+                          try
+                            {
+                              sm.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)), deps, subs);
+                            }
+                          catch (std::exception const &e)
+                            {
+                              auto errorHandleMessageFromGame = std::stringstream{};
+                              errorHandleMessageFromGame << "exception: " << e.what () << '\n';
+                              errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
+                              errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
+                              std::osyncstream (std::cout) << errorHandleMessageFromGame.str () << std::endl;
+                              matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
+                            }
+                          if (ec) std::osyncstream (std::cout) << "read_json error: " << ec.message () << std::endl;
+                        }
+                    });
+                    if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+                  }
               }
             else
               {
-                matchmakingData.sendMsgToUser (readResult);
+                if ("LeaveGameSuccess|{}" == message)
+                  {
+                    sm.process_event (matchmaking_game::LeaveGameSuccess{}, deps, subs);
+                  }
+                else
+                  {
+                    matchmakingData.sendMsgToUser (message);
+                  }
               }
           }) && matchmakingData.matchmakingGame->writeLoop (),
                                         "matchmaking_proxy connectToGame read && write", [&deps, &subs, &sm] (auto) { sm.process_event (ConnectionToGameLost{}, deps, subs); });
+          co_await matchmakingData.matchmakingGame->asyncWriteOneMessage (objectToStringWithObjectName (connectToGameEv));
         }
       catch (std::exception const &e)
         {

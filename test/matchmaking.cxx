@@ -19,10 +19,11 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   SECTION ("CreateAccount", "[matchmaking]")
   {
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
@@ -51,10 +52,11 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
@@ -79,7 +81,7 @@ TEST_CASE ("matchmaking LoggedIn -> LoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
@@ -325,7 +327,7 @@ TEST_CASE ("matchmaking LoggedIn -> NotLoggedIn", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
@@ -373,7 +375,7 @@ TEST_CASE ("matchmaking currentStatesAsString", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
@@ -385,7 +387,7 @@ TEST_CASE ("matchmaking GetMatchmakingLogic", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
@@ -398,7 +400,7 @@ TEST_CASE ("matchmaking error handling proccessEvent no transition", "[matchmaki
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
@@ -418,7 +420,7 @@ TEST_CASE ("matchmaking GetTopRatedPlayers", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
@@ -433,7 +435,7 @@ TEST_CASE ("matchmaking GetTopRatedPlayers no accounts", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
@@ -449,10 +451,11 @@ TEST_CASE ("matchmaking subscribe get top rated players", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::SubscribeGetTopRatedPlayers{ 5 })));
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
   ioContext.run ();
@@ -467,10 +470,11 @@ TEST_CASE ("matchmaking GetLoggedInPlayers no player logged in", "[matchmaking]"
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::GetLoggedInPlayers{ 5 })));
   CHECK (messages.at (0) == R"foo(LoggedInPlayers|{"players":[]})foo");
 }
@@ -482,10 +486,11 @@ TEST_CASE ("matchmaking GetLoggedInPlayers 1 player logged in", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
   ioContext.run ();
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::GetLoggedInPlayers{ 5 })));
@@ -500,13 +505,16 @@ TEST_CASE ("matchmaking subscribe logged in players", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto subscriberMessages = std::vector<std::string>{};
-  auto &subscriber = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&subscriberMessages] (std::string message) { subscriberMessages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto subscriber = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&subscriberMessages] (std::string message) { subscriberMessages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (subscriber);
   REQUIRE (subscriber->processEvent (objectToStringWithObjectName (user_matchmaking::SubscribeGetLoggedInPlayers{ 5 })));
   auto playerMessages = std::vector<std::string>{};
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&playerMessages] (std::string message) { playerMessages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&playerMessages] (std::string message) { playerMessages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   SECTION ("create acc")
   {
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
@@ -543,13 +551,14 @@ TEST_CASE ("matchmaking custom message", "[matchmaking]")
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   std::list<GameLobby> gameLobbies{};
   auto messages = std::vector<std::string>{};
   auto matchmakingOption = MatchmakingOption{};
   auto called = false;
   matchmakingOption.handleCustomMessageFromUser = [&called] (std::string const &, std::string const &, MatchmakingData &) { called = true; };
-  auto &matchmaking = matchmakings.emplace_back (std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, matchmakingOption, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" }));
+  auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, matchmakingOption, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  matchmakings.emplace_back (matchmaking);
   REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CustomMessage{})));
   REQUIRE (called);
 }

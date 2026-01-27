@@ -8,29 +8,34 @@ add_executable(
   startGame.cxx
   database.cxx
   testCertServer.cxx
-  )
+  integration.cxx
+)
 add_subdirectory(benchmark)
 find_package(Catch2)
 find_package(modern_durak_game_option)
 find_package(modern_durak_game_shared)
+find_package(modern_durak_game)
 
 target_link_libraries(_test myproject_options myproject_warnings
-                      modern_durak_game_option::modern_durak_game_option
-                      matchmaking_proxy Catch2::Catch2WithMain
-                      modern_durak_game_shared::modern_durak_game_shared
-                      )
+  modern_durak_game_option::modern_durak_game_option
+  matchmaking_proxy Catch2::Catch2WithMain
+  modern_durak_game_shared::modern_durak_game_shared
+  modern_durak_game::modern_durak_game
+)
 target_compile_definitions(
   _test
   PUBLIC $<$<CONFIG:DEBUG>:DEBUG>
-        #  MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
-        #  MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
+  #  MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
+  #  MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
 )
-  target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(_test PRIVATE
+  PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}"
+)
 
 
 target_include_directories(_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_test(NAME _test COMMAND _test -r junit)
-if (CMAKE_BINARY_DIR)
-    target_compile_definitions(_test PRIVATE PATH_TO_BINARY="${CMAKE_BINARY_DIR}")
-    target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
+if(CMAKE_BINARY_DIR)
+  target_compile_definitions(_test PRIVATE PATH_TO_BINARY="${CMAKE_BINARY_DIR}")
+  target_compile_definitions(_test PRIVATE PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}")
 endif()

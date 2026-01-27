@@ -26,7 +26,7 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
   SECTION ("join queue and leave queue")
@@ -65,7 +65,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
   auto messageReceived2 = false;
@@ -522,7 +522,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
   auto messageReceived2 = false;
@@ -622,7 +622,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
   auto messageReceived2 = false;
@@ -744,7 +744,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
   std::list<GameLobby> gameLobbies{};
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
   auto messageReceived2 = false;

@@ -1,17 +1,17 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/database/database.hxx"
-#include "matchmaking_proxy/logic/matchmakingGameData.hxx"
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/logic/matchmakingGameAllowedTypes.hxx"
+#include "matchmaking_proxy/logic/matchmakingGameData.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "rating.hxx"
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/fusion/support/is_sequence.hpp>
 #include <boost/hana/fwd/for_each.hpp>
-#include <boost/system/system_error.hpp>
 #include <boost/optional/optional.hpp>
 #include <boost/sml.hpp>
+#include <boost/system/system_error.hpp>
 #include <confu_json/to_object.hxx>
 #include <confu_json/util.hxx>
 #include <confu_soci/convenienceFunctionForSoci.hxx>
@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
 // TODO  figure out if we can remove this
 namespace meta
 {
@@ -46,9 +47,23 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameData &matchmaki
 {
   for (size_t i = 0; i < accounts.size (); ++i)
     {
-      if (auto matchmakingItr = std::ranges::find_if (matchmakingGameData.stateMachines, [accountName = accounts.at (i).accountName] (auto const &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }); matchmakingItr != matchmakingGameData.stateMachines.end ())
+      if (auto matchmakingWeakPtrItr = std::ranges::find_if (matchmakingGameData.stateMachines,
+                                                             [accountName = accounts.at (i).accountName] (auto const &matchmakingWeakPtr) {
+                                                               if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                                                 {
+                                                                   return matchmaking->isLoggedInWithAccountName (accountName);
+                                                                 }
+                                                               else
+                                                                 {
+                                                                   return false;
+                                                                 }
+                                                             });
+          matchmakingWeakPtrItr != matchmakingGameData.stateMachines.end ())
         { // TODO handle error
-          std::ignore = matchmakingItr->get ()->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
+          if (auto matchmaking = matchmakingWeakPtrItr->lock ())
+            {
+              std::ignore = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::RatingChanged{ accounts.at (i).rating, accountsWithNewRating.at (i).rating }));
+            }
         }
       soci::session sql (soci::sqlite3, matchmakingGameData.fullPathIncludingDatabaseName.string ());
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
@@ -75,16 +90,56 @@ auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, Matchmaki
   matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
 };
 
-auto const isLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { return std::ranges::find (matchmakingGameData.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName); }) != matchmakingGameData.stateMachines.end (); };
-auto const hasProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { return std::ranges::find (matchmakingGameData.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &matchmaking) { return matchmaking->isLoggedInWithAccountName (accountName) && matchmaking->hasProxyToGame (); }) != matchmakingGameData.stateMachines.end (); };
+auto const isLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
+  return std::ranges::find (matchmakingGameData.stateMachines, true,
+                            [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
+                              if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                {
+                                  return matchmaking->isLoggedInWithAccountName (accountName);
+                                }
+                              else
+                                {
+                                  return false;
+                                }
+                            })
+         != matchmakingGameData.stateMachines.end ();
+};
+auto const hasProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
+  return std::ranges::find (matchmakingGameData.stateMachines, true,
+                            [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
+                              if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                {
+                                  return matchmaking->isLoggedInWithAccountName (accountName) && matchmaking->hasProxyToGame ();
+                                }
+                              else
+                                {
+                                  return false;
+                                }
+                            })
+         != matchmakingGameData.stateMachines.end ();
+};
 
 auto const userLeftGameErrorNotLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not logged in" })); };
 auto const userLeftGameErrorUserHasNoProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not in proxy state" })); };
 
 auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
-  if (auto matchmaking = std::ranges::find (matchmakingGameData.stateMachines, true, [accountName = userLeftGame.accountName] (const auto &_matchmaking) { return _matchmaking->isLoggedInWithAccountName (accountName); }); matchmaking == matchmakingGameData.stateMachines.end ())
+  if (auto matchmakingWeakPtrItr = std::ranges::find (matchmakingGameData.stateMachines, true,
+                                                      [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
+                                                        if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                                          {
+                                                            return matchmaking->isLoggedInWithAccountName (accountName);
+                                                          }
+                                                        else
+                                                          {
+                                                            return false;
+                                                          }
+                                                      });
+      matchmakingWeakPtrItr == matchmakingGameData.stateMachines.end ())
     {
-      matchmaking->get ()->disconnectFromProxy ();
+      if (auto matchmaking = matchmakingWeakPtrItr->lock ())
+        {
+          return matchmaking->disconnectFromProxy ();
+        }
     }
   matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
 };
@@ -97,9 +152,12 @@ auto const customMessage = [] (matchmaking_game::CustomMessage const &_customMes
 };
 
 auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameData) {
-  for (auto &matchmaking : matchmakingGameData.stateMachines)
+  for (auto matchmakingWeakPtrItr : matchmakingGameData.stateMachines)
     {
-      matchmaking->proccessSendTopRatedPlayersToUser ();
+      if (auto matchmaking = matchmakingWeakPtrItr.lock ())
+        {
+          return matchmaking->proccessSendTopRatedPlayersToUser ();
+        }
     }
 };
 

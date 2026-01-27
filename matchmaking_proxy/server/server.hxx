@@ -30,9 +30,9 @@ public:
   boost::asio::awaitable<void> asyncStopRunning ();
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
-  std::list<std::shared_ptr<Matchmaking>> matchmakings{};
-  std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>> webSockets{};
-  std::list<std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>> sslWebSockets{};
+  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
+  std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>> webSockets{};
+  std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>> sslWebSockets{};
 
   std::unique_ptr<boost::asio::ip::tcp::acceptor> userMatchmakingAcceptor{};
   std::unique_ptr<boost::asio::ip::tcp::acceptor> gameMatchmakingAcceptor{};

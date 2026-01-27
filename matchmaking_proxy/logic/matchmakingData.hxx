@@ -5,10 +5,10 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/beast/websocket.hpp>
 #include <filesystem>
+#include <iostream>
 #include <list>
 #include <matchmaking_proxy/server/matchmakingOption.hxx>
 #include <my_web_socket/myWebSocket.hxx>
-#include <iostream>
 
 namespace matchmaking_proxy
 {
@@ -29,7 +29,7 @@ struct SubscribedToGetLoggedInPlayers
 
 struct MatchmakingData
 {
-  MatchmakingData (boost::asio::io_context &ioContext_, std::list<std::shared_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_, std::filesystem::path const &fullPathIncludingDatabaseName_);
+  MatchmakingData (boost::asio::io_context &ioContext_, std::list<std::weak_ptr<Matchmaking>> &stateMachines_, std::function<void (std::string const &msg)> sendMsgToUser_, std::list<GameLobby> &gameLobbies_, boost::asio::thread_pool &pool_, MatchmakingOption const &matchmakingOption_, boost::asio::ip::tcp::endpoint const &matchmakingGameEndpoint_, boost::asio::ip::tcp::endpoint const &userGameViaMatchmakingEndpoint_, std::filesystem::path const &fullPathIncludingDatabaseName_);
 
   MatchmakingData (MatchmakingData &&matchmakingData) = default;
 
@@ -38,7 +38,7 @@ struct MatchmakingData
 
   boost::asio::io_context &ioContext;
   std::unique_ptr<my_web_socket::CoroTimer> cancelCoroutineTimer{ std::make_unique<my_web_socket::CoroTimer> (my_web_socket::CoroTimer{ ioContext }) };
-  std::list<std::shared_ptr<Matchmaking>> &stateMachines;
+  std::list<std::weak_ptr<Matchmaking>> &stateMachines;
   std::function<void (std::string const &msg)> sendMsgToUser{};
   User user{};
   std::list<GameLobby> &gameLobbies;

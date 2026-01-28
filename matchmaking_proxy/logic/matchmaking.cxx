@@ -148,7 +148,12 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                                                          });
       matchmakingForAccount != matchmakingData.stateMachines.end ())
     {
-      auto matchmakingForAccountSptr = *matchmakingForAccount;
+      auto matchmaking = matchmakingForAccount->lock ();
+      if (not matchmaking)
+        {
+          std::osyncstream (std::cout) << "can not connect to game matchmaking already dead\n";
+          co_return;
+        }
       try
         {
           co_await ws.next_layer ().async_connect (matchmakingData.userGameViaMatchmakingEndpoint);
@@ -206,7 +211,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                   }
               }
           }) && matchmakingData.matchmakingGame->writeLoop (),
-                                        "matchmaking_proxy connectToGame read && write", [&deps, &subs, &sm] (auto) { sm.process_event (ConnectionToGameLost{}, deps, subs); });
+                                        "matchmaking_proxy connectToGame read && write", [matchmaking, &deps, &subs, &sm] (auto) { sm.process_event (ConnectionToGameLost{}, deps, subs); });
           co_await matchmakingData.matchmakingGame->asyncWriteOneMessage (objectToStringWithObjectName (connectToGameEv));
         }
       catch (std::exception const &e)

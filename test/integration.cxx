@@ -239,11 +239,11 @@ someTestCase (auto handleMessageFromMatchmaking, Login const &login)
       [&] () -> boost::asio::awaitable<void> {
         co_await tearDownSignal->async_receive (boost::asio::use_awaitable);
         co_await myWebSocket->asyncClose ();
-        my_web_socket::coSpawnTraced (*localBackend.gameServerContext, localBackend.gameServer->asyncStopRunning (), "matchmaking asyncStopRunning ()");
-        my_web_socket::coSpawnTraced (*localBackend.matchmakingServerContext, localBackend.matchmakingServer->asyncStopRunning (), "matchmaking asyncStopRunning ()");
+        my_web_socket::coSpawnTraced (*localBackend.gameServerContext, localBackend.gameServer->asyncStopRunning (), "game asyncStopRunning");
+        my_web_socket::coSpawnTraced (*localBackend.matchmakingServerContext, localBackend.matchmakingServer->asyncStopRunning (), "matchmaking asyncStopRunning");
         localBackend.pool->join ();
       },
-      "matchmaking asyncStopRunning ()");
+      "tear down");
   ioContext.run ();
   REQUIRE (matchmakingFinished);
   REQUIRE (gameFinished);
@@ -346,6 +346,35 @@ TEST_CASE ("matchmaking server and game server tear down after")
               myWebSocket->queueMessage (objectToStringWithObjectName (user_matchmaking::CreateGame{}));
             }
           else if (boost::starts_with (message, "StartGameSuccess|"))
+            {
+              doneSignal->try_send (boost::system::error_code{});
+            }
+        },
+        user_matchmaking::CreateAccount{ "abc", "abc" });
+  }
+  SECTION ("DurakGameOverLose")
+  {
+    someTestCase (
+        [] (auto message, auto &doneSignal, auto myWebSocket) {
+          if (boost::starts_with (message, "LoginAccountSuccess|"))
+            {
+              myWebSocket->queueMessage (objectToStringWithObjectName (user_matchmaking::CreateGameLobby{ "abc", "" }));
+            }
+          else if (boost::starts_with (message, "JoinGameLobbySuccess|"))
+            {
+              auto gameOption = shared_class::GameOption{};
+              gameOption.create3CardsVs3CardsPuzzle = true;
+              myWebSocket->queueMessage (objectToStringWithObjectName (user_matchmaking_game::GameOptionAsString{ boost::json::serialize (confu_json::to_json (gameOption)) }));
+            }
+          else if (boost::starts_with (message, "GameOptionAsString|"))
+            {
+              myWebSocket->queueMessage (objectToStringWithObjectName (user_matchmaking::CreateGame{}));
+            }
+          else if (boost::starts_with (message, "StartGameSuccess|"))
+            {
+              myWebSocket->queueMessage (objectToStringWithObjectName (shared_class::DurakLeaveGame{}));
+            }
+          else if (boost::starts_with (message, "DurakGameOverLose|"))
             {
               doneSignal->try_send (boost::system::error_code{});
             }

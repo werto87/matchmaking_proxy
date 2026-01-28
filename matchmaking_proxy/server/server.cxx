@@ -223,7 +223,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
                 auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
               }) && myWebSocket->writeLoop (),
-                                            "matchmaking_porxy gameMatchmaking read && write");
+                                            "matchmaking_porxy gameMatchmaking read && write", [myWebSocket] (auto) {});
             }
           catch (std::exception const &e)
             {

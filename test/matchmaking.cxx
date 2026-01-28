@@ -440,7 +440,7 @@ TEST_CASE ("matchmaking GetTopRatedPlayers no accounts", "[matchmaking]")
   auto messages = std::vector<std::string>{};
   auto matchmaking = Matchmaking{ MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" } };
   auto result = matchmaking.processEvent (objectToStringWithObjectName (user_matchmaking::GetTopRatedPlayers{ 1 })); // cppcheck-suppress danglingTemporaryLifetime //false positive
-  // TODO this is a bug in soci (works in msvc!) this will fail. the returned vector should be empty something like ""players":[]"
+  // TODO this is a bug in soci this will fail. the returned vector should be empty something like ""players":[]"
   REQUIRE (messages.at (0) == R"MyStringLiteral(TopRatedPlayers|{"players":[]})MyStringLiteral");
 }
 

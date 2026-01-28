@@ -180,8 +180,7 @@ boost::asio::awaitable<void>
 Server::asyncStopRunning ()
 {
   running.store (false, std::memory_order_release);
-  auto keepMatchmakingsAliveUntilStopRunningReturns = matchmakings;
-  for (auto matchmakingWeakPtr : keepMatchmakingsAliveUntilStopRunningReturns)
+  for (auto matchmakingWeakPtr : matchmakings)
     {
       if (auto matchmaking = matchmakingWeakPtr.lock ()) co_await matchmaking->asyncCloseMatchmakingToGame ();
     }
@@ -190,13 +189,11 @@ Server::asyncStopRunning ()
   userMatchmakingAcceptor->close (ec);
   gameMatchmakingAcceptor->cancel (ec);
   gameMatchmakingAcceptor->close (ec);
-  auto keepWebsocketsAliveUntilStopRunningReturns = webSockets;
-  for (auto webSocketWeakPtr : keepWebsocketsAliveUntilStopRunningReturns)
+  for (auto webSocketWeakPtr : webSockets)
     {
       if (auto webSocket = webSocketWeakPtr.lock ()) co_await webSocket->asyncClose ();
     }
-  auto keepSSLWebsocketsAliveUntilStopRunningReturns = sslWebSockets;
-  for (auto sslWebSocketWeakPtr : keepSSLWebsocketsAliveUntilStopRunningReturns)
+  for (auto sslWebSocketWeakPtr : sslWebSockets)
     {
       if (auto webSocket = sslWebSocketWeakPtr.lock ()) co_await webSocket->asyncClose ();
     }

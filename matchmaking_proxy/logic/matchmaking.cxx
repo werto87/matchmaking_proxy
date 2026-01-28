@@ -88,6 +88,10 @@ struct SendLoggedInPlayersToUser
 {
 };
 
+struct WaitForConnectToGame
+{
+};
+
 boost::asio::awaitable<void> startGame (auto gameLobbyItr, MatchmakingData &matchmakingData);
 
 template <typename Matchmaking, typename Event>
@@ -1116,9 +1120,10 @@ public:
 , state<LoggedIn>                             + event<u_m::WantsToJoinGame>                                                       / wantsToJoinAGameWrapper
 , state<LoggedIn>                             + event<u_m::LeaveQuickGameQueue>                                                   / leaveMatchMakingQueue
 , state<LoggedIn>                             + event<u_m::JoinMatchMakingQueue>                                                  / joinMatchMakingQueue
-, state<LoggedIn>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame
-, state<LoggedIn>                             + event<u_m::ConnectGameError>                                                      / connectToGameError
-, state<LoggedIn>                             + event<m_g::ConnectToGameSuccess>                                                  / proxyStarted                            = state<ProxyToGame>
+, state<LoggedIn>                             + event<m_g::ConnectToGame>                                                         / doConnectToGame                         =state<WaitForConnectToGame>
+// WaitForConnectToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------
+, state<WaitForConnectToGame>                 + event<u_m::ConnectGameError>                                                      / connectToGameError
+, state<WaitForConnectToGame>                 + event<m_g::ConnectToGameSuccess>                                                  / proxyStarted                            = state<ProxyToGame>
 // ProxyToGame------------------------------------------------------------------------------------------------------------------------------------------------------------------
 , state<ProxyToGame>                          + event<ConnectionToGameLost>                                                       / proxyStopped                            = state<LoggedIn>
 , state<ProxyToGame>                          + event<m_g::LeaveGameSuccess>                                                      / leaveGame
@@ -1435,7 +1440,6 @@ Matchmaking::cleanUp ()
 [[nodiscard]] boost::asio::awaitable<void>
 Matchmaking::asyncCloseMatchmakingToGame ()
 {
-  co_await sm->matchmakingData.matchmakingGame->asyncClose ();
+  if (sm->matchmakingData.matchmakingGame) co_await sm->matchmakingData.matchmakingGame->asyncClose ();
 }
-
 }

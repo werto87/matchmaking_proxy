@@ -233,21 +233,14 @@ someTestCase (auto handleMessageFromMatchmaking, Login const &login)
     {
       std::osyncstream (std::cout) << "Exception :" << e.what () << std::endl;
     }
+
   my_web_socket::coSpawnTraced (
       ioContext,
       [&] () -> boost::asio::awaitable<void> {
         co_await tearDownSignal->async_receive (boost::asio::use_awaitable);
         co_await myWebSocket->asyncClose ();
-        steady_timer timer{ ioContext };
-        using namespace std::chrono_literals;
-        timer.expires_after (500ms);
-        co_await timer.async_wait (use_awaitable);
-        co_await localBackend.matchmakingServer->asyncStopRunning ();
-        timer.expires_after (500ms);
-        co_await timer.async_wait (use_awaitable);
-        co_await localBackend.gameServer->asyncStopRunning ();
-        timer.expires_after (500ms);
-        co_await timer.async_wait (use_awaitable);
+        my_web_socket::coSpawnTraced (*localBackend.gameServerContext, localBackend.gameServer->asyncStopRunning (), "matchmaking asyncStopRunning ()");
+        my_web_socket::coSpawnTraced (*localBackend.matchmakingServerContext, localBackend.matchmakingServer->asyncStopRunning (), "matchmaking asyncStopRunning ()");
         localBackend.pool->join ();
       },
       "matchmaking asyncStopRunning ()");

@@ -156,7 +156,7 @@ auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameD
     {
       if (auto matchmaking = matchmakingWeakPtrItr.lock ())
         {
-          return matchmaking->proccessSendTopRatedPlayersToUser ();
+          matchmaking->proccessSendTopRatedPlayersToUser ();
         }
     }
 };

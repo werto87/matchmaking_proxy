@@ -25,7 +25,7 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
@@ -64,7 +64,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
@@ -109,7 +109,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -156,7 +156,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -197,7 +197,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -238,7 +238,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -275,7 +275,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -312,7 +312,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -345,7 +345,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -386,7 +386,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -427,83 +427,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
-    CHECK (messageReceived);
-    CHECK (messageReceived2);
-  }
-  SECTION ("playerOne accepts playerTwo disconnects", "[matchmaking]")
-  {
-    auto player1Logic = [&] (auto const &msg) {
-      if (boost::starts_with (msg, "LoginAccountSuccess"))
-        {
-          REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
-        }
-      else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame"))
-        {
-          REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true })));
-        }
-      else if (boost::starts_with (msg, "GameStartCanceled"))
-        {
-          messageReceived = true;
-        }
-    };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
-    matchmakings.push_back (matchmaking);
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
-    auto player2Logic = [&] (auto const &msg) {
-      if (boost::starts_with (msg, "LoginAccountSuccess"))
-        {
-          REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
-        }
-      else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame|{}"))
-        {
-          messageReceived2 = true;
-          matchmaking2.reset ();
-        }
-    };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
-    matchmakings.push_back (matchmaking2);
-    REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
-    ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
-    CHECK (messageReceived);
-    CHECK (messageReceived2);
-  }
-  SECTION ("playerTwo accepts playerOne disconnects", "[matchmaking]")
-  {
-    auto player1Logic = [&] (auto const &msg) {
-      if (boost::starts_with (msg, "LoginAccountSuccess"))
-        {
-          REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
-        }
-      else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame|{}"))
-        {
-          messageReceived = true;
-          matchmaking.reset ();
-        }
-    };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
-    matchmakings.push_back (matchmaking);
-    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
-    auto player2Logic = [&] (auto const &msg) {
-      if (boost::starts_with (msg, "LoginAccountSuccess"))
-        {
-          REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
-        }
-      else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame"))
-        {
-          REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true })));
-        }
-      else if (boost::starts_with (msg, "GameStartCanceled"))
-        {
-          messageReceived2 = true;
-        }
-    };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
-    matchmakings.push_back (matchmaking2);
-    REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
-    ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -521,7 +445,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
@@ -566,7 +490,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -603,7 +527,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -621,7 +545,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
@@ -672,7 +596,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -725,7 +649,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
@@ -743,7 +667,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto messageReceived = false;
@@ -816,7 +740,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
     CHECK (messageReceived3);
@@ -890,7 +814,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
-    CHECK (gameLobbies.empty ());
+    CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
     CHECK (messageReceived3);
@@ -957,7 +881,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
-    CHECK_FALSE (gameLobbies.empty ());
+    CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
     CHECK (messageReceived3);

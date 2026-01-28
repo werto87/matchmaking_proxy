@@ -37,7 +37,9 @@ public:
 
   bool hasProxyToGame () const;
 
-  [[nodiscard]] boost::asio::awaitable<void> cleanUp ();
+  void cleanUp ();
+
+  [[nodiscard]] boost::asio::awaitable<void> asyncCloseMatchmakingToGame ();
 
   void proccessSendTopRatedPlayersToUser ();
 

@@ -238,16 +238,16 @@ someTestCase (auto handleMessageFromMatchmaking, Login const &login)
       [&] () -> boost::asio::awaitable<void> {
         co_await tearDownSignal->async_receive (boost::asio::use_awaitable);
         co_await myWebSocket->asyncClose ();
-        // steady_timer timer{ ioContext };
-        // using namespace std::chrono_literals;
-        // timer.expires_after (500ms);
-        // co_await timer.async_wait (use_awaitable);
-        // co_await localBackend.matchmakingServer->asyncStopRunning ();
-        // timer.expires_after (500ms);
-        // co_await timer.async_wait (use_awaitable);
-        // co_await localBackend.gameServer->asyncStopRunning ();
-        // timer.expires_after (500ms);
-        // co_await timer.async_wait (use_awaitable);
+        steady_timer timer{ ioContext };
+        using namespace std::chrono_literals;
+        timer.expires_after (500ms);
+        co_await timer.async_wait (use_awaitable);
+        co_await localBackend.matchmakingServer->asyncStopRunning ();
+        timer.expires_after (500ms);
+        co_await timer.async_wait (use_awaitable);
+        co_await localBackend.gameServer->asyncStopRunning ();
+        timer.expires_after (500ms);
+        co_await timer.async_wait (use_awaitable);
         localBackend.pool->join ();
       },
       "matchmaking asyncStopRunning ()");

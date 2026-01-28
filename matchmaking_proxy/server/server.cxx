@@ -116,7 +116,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
       boost::certify::enable_native_https_server_verification (ctx);
 #endif
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
-      std::list<GameLobby> gameLobbies{};
+      auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
       while (running.load ())
         {
           try
@@ -152,21 +152,15 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                   }
               }) && myWebsocket->writeLoop (),
                                             "matchmaking_porxy userMatchmaking read && write", [&matchmakings = matchmakings, matchmaking, ex = myWebsocket->webSocket->get_executor ()] (auto) {
-                                              my_web_socket::coSpawnTraced (
-                                                  ex,
-                                                  [matchmaking, &matchmakings] () -> boost::asio::awaitable<void> {
-                                                    auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
-                                                    /*_running.load () can change before this co_spawn and after co_await*/
-                                                    co_await matchmaking->cleanUp ();
-                                                    if (loggedInPlayerLostConnection)
-                                                      {
-                                                        for (auto matchmakingWeakPtr : matchmakings)
-                                                          {
-                                                            if (auto otherMatchmaking = matchmakingWeakPtr.lock ()) otherMatchmaking->proccessSendLoggedInPlayersToUser ();
-                                                          }
-                                                      }
-                                                  },
-                                                  "matchmaking_porxy userMatchmaking cleanUp");
+                                              auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
+                                              matchmaking->cleanUp ();
+                                              if (loggedInPlayerLostConnection)
+                                                {
+                                                  for (auto matchmakingWeakPtr : matchmakings)
+                                                    {
+                                                      if (auto otherMatchmaking = matchmakingWeakPtr.lock ()) otherMatchmaking->proccessSendLoggedInPlayersToUser ();
+                                                    }
+                                                }
                                             });
             }
           catch (std::exception const &e)
@@ -189,7 +183,7 @@ Server::asyncStopRunning ()
   auto keepMatchmakingsAliveUntilStopRunningReturns = matchmakings;
   for (auto matchmakingWeakPtr : keepMatchmakingsAliveUntilStopRunningReturns)
     {
-      if (auto matchmaking = matchmakingWeakPtr.lock ()) co_await matchmaking->cleanUp ();
+      if (auto matchmaking = matchmakingWeakPtr.lock ()) co_await matchmaking->asyncCloseMatchmakingToGame ();
     }
   boost::system::error_code ec;
   userMatchmakingAcceptor->cancel (ec);

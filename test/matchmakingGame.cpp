@@ -27,7 +27,7 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies=std::make_shared<std::list<GameLobby>>();
   auto messages1 = std::vector<std::string>{};
   auto messages2 = std::vector<std::string>{};
 
@@ -53,7 +53,7 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 44444 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", fmt::fg (fmt::color::violet), "0" };
   auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 33333 }, { .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "MOCK_userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
   boost::asio::thread_pool pool{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies=std::make_shared<std::list<GameLobby>>();
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto matchmaking = std::shared_ptr<Matchmaking>{};
   auto matchmaking2 = std::shared_ptr<Matchmaking>{};
@@ -73,7 +73,7 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   matchmakings.push_back (matchmaking2);
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
   ioContext.run ();
-  auto matchmakingGameTmp = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
+  auto matchmakingGameTmp = MatchmakingGame{ MatchmakingGameData{ "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "player1" }, { "player2" }, {} }));
   CHECK (messages2.size () == 5);
   CHECK (messages2.at (1) == "TopRatedPlayers|{\"players\":[{\"RatedPlayer\":{\"name\":\"player2\",\"rating\":1500}}]}");
@@ -92,7 +92,7 @@ TEST_CASE ("matchmaking game custom message", "[matchmaking game]")
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
-  std::list<GameLobby> gameLobbies{};
+  auto gameLobbies=std::make_shared<std::list<GameLobby>>();
   auto called = false;
   auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {}, [&called] (std::string const &, std::string const &, MatchmakingGameData &) { called = true; } } };
   matchmakingGame.process_event (objectToStringWithObjectName (matchmaking_game::CustomMessage{}));

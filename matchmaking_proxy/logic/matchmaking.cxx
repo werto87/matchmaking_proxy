@@ -1381,7 +1381,7 @@ startGame (auto gameLobbyItr, MatchmakingData &matchmakingData)
     matchmakingData.gameLobbies->erase (gameLobbyItr);
     my_web_socket::coSpawnTraced (ex, myWebSocket->asyncClose (), "matchmaking_proxy startGame asyncClose");
   }) && myWebSocket->writeLoop (),
-                                "sendCombinationSolvedToMatchmaking", [myWebSocket] (auto) { /*let the websocket survive until here*/ });
+                                "sendCombinationSolvedToMatchmaking");
   auto startGame = matchmaking_game::StartGame{};
   startGame.players = gameLobbyItr->accountNames;
   startGame.gameOptionAsString = gameLobbyItr->gameOptionAsString;

@@ -166,7 +166,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
           co_await ws.async_handshake (matchmakingData.userGameViaMatchmakingEndpoint.address ().to_string () + std::to_string (matchmakingData.userGameViaMatchmakingEndpoint.port ()), "/");
           static size_t id = 0;
-          matchmakingData.matchmakingGame = std::make_unique<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++));
+          matchmakingData.matchmakingGame = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++));
           using namespace boost::asio::experimental::awaitable_operators;
           my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor, matchmakingData.matchmakingGame->readLoop ([&, firstRead = true] (std::string const &message) mutable {
             if (firstRead)
@@ -361,7 +361,7 @@ matchingLobby (std::filesystem::path const &fullPathToDatabaseIncludingDatabaseN
 auto const sendToUser = [] (SendMessageToUser const &sendMessageToUser, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (sendMessageToUser.msg); };
 auto const ratingChanged = [] (user_matchmaking::RatingChanged const &ratingChangedEv, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (ratingChangedEv)); };
 
-auto const leaveGame = [] (MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.matchmakingGame->webSocket->get_executor (), matchmakingData.matchmakingGame->asyncClose (), "matchmaking_proxy leaveGame matchmakingGame->asyncClose ()"); };
+auto const leaveGame = [] (MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.ioContext, matchmakingData.matchmakingGame->asyncClose (), "matchmaking_proxy leaveGame matchmakingGame->asyncClose ()"); };
 
 auto const leaveMatchMakingQueue = [] (MatchmakingData &matchmakingData) {
   if (auto userGameLobby = std::ranges::find_if (*matchmakingData.gameLobbies, [accountName = matchmakingData.user.accountName.value ()] (auto const &gameLobby) { return gameLobby.lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers && std::ranges::find_if (gameLobby.accountNames, [&accountName] (auto const &nameToCheck) { return nameToCheck == accountName; }) != gameLobby.accountNames.end (); }); userGameLobby != matchmakingData.gameLobbies->end ())

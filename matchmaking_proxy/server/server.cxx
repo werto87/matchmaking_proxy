@@ -151,7 +151,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                       }
                   }
               }) && myWebsocket->writeLoop (),
-                                            "matchmaking_porxy userMatchmaking read && write", [&matchmakings = matchmakings, matchmaking, ex = myWebsocket->webSocket->get_executor ()] (auto) {
+                                            "matchmaking_proxy userMatchmaking read && write", [&matchmakings = matchmakings, matchmaking, &ioContext = ioContext] (auto) {
                                               auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
                                               matchmaking->cleanUp ();
                                               if (loggedInPlayerLostConnection)

@@ -43,7 +43,7 @@ struct MatchmakingData
   User user{};
   std::shared_ptr<std::list<GameLobby>> gameLobbies;
   boost::asio::thread_pool &pool;
-  std::unique_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> matchmakingGame{};
+  std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> matchmakingGame{};
   MatchmakingOption matchmakingOption{};
   boost::asio::ip::tcp::endpoint matchmakingGameEndpoint{};
   boost::asio::ip::tcp::endpoint userGameViaMatchmakingEndpoint{};

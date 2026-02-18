@@ -39,7 +39,7 @@ class MatchmakingProxy(ConanFile):
         if self.options.with_ssl_verification:
             self.requires("certify/cci.20201114@modern-durak")
         self.requires("libsodium/1.0.18")
-        self.requires("confu_json/1.1.1@modern-durak", force=True)
+        self.requires("confu_json/1.2.0", force=True)
         self.requires("confu_algorithm/1.2.1")
         self.requires("sml/1.1.12")
         self.requires("login_matchmaking_game_shared/latest")
@@ -48,7 +48,7 @@ class MatchmakingProxy(ConanFile):
         self.requires("openssl/3.5.2",force=True)
 
         ### only for testing please do not put this in the package build recept ###
-        self.requires("modern_durak_game/6.6.3")
+        self.requires("modern_durak_game/6.7.0")
         self.requires("modern_durak_game_shared/latest")
         self.requires("modern_durak_game_option/latest")
         self.requires("catch2/2.13.9")

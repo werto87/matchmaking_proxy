@@ -38,7 +38,7 @@ using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
 typedef boost::asio::use_awaitable_t<>::as_default_on_t<boost::asio::basic_waitable_timer<boost::asio::chrono::system_clock>> CoroTimer;
 namespace matchmaking_proxy
 {
-Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_, boost::asio::ip::tcp::endpoint const &userMatchmakingEndpoint, boost::asio::ip::tcp::endpoint const &gameMatchmakingEndpoint) : ioContext{ ioContext_ }, pool{ pool_ }, userMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, userMatchmakingEndpoint) }, gameMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, gameMatchmakingEndpoint) } {}
+Server::Server (boost::asio::io_context &ioContext_, boost::asio::thread_pool &pool_, boost::asio::ip::tcp::endpoint const &userMatchmakingEndpoint, boost::asio::ip::tcp::endpoint const &gameMatchmakingEndpoint) : ioContext{ ioContext_ }, pool{ pool_ }, userMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, userMatchmakingEndpoint) }, gameMatchmakingAcceptor{ std::make_unique<boost::asio::ip::tcp::acceptor> (ioContext, gameMatchmakingEndpoint) }, maintainTimer{ std::make_shared<my_web_socket::CoroTimer> (ioContext) } {}
 
 boost::asio::awaitable<void>
 tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds const &timeToWaitBeforeCallingFunctionAgain)
@@ -80,8 +80,22 @@ messageTypeSupportedByMatchmaking (std::string const &msg)
 }
 
 boost::asio::awaitable<void>
+maintain (auto maintainTimer, auto webSockets, auto sslWebSockets, auto matchmakings)
+{
+  for (;;)
+    {
+      maintainTimer->expires_after (std::chrono::seconds{ 10 });
+      co_await maintainTimer->async_wait ();
+      std::erase_if (*webSockets, [] (auto const &webSocketWeakPtr) { return webSocketWeakPtr.expired (); });
+      std::erase_if (*sslWebSockets, [] (auto const &webSocketWeakPtr) { return webSocketWeakPtr.expired (); });
+      std::erase_if (*matchmakings, [] (auto const &matchmakingWeakPtr) { return matchmakingWeakPtr.expired (); });
+    }
+}
+
+boost::asio::awaitable<void>
 Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
 {
+  my_web_socket::coSpawnTraced (ioContext, maintain (maintainTimer, webSockets, sslWebSockets, matchmakings), "matchmaking_proxy Server::userMatchmaking maintain");
   try
     {
       net::ssl::context ctx (net::ssl::context::tls_server);
@@ -129,13 +143,13 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               co_await connection.async_accept (use_awaitable);
               static size_t id = 0;
               auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++));
-              sslWebSockets.emplace_back (myWebsocket);
+              sslWebSockets->emplace_back (myWebsocket);
               my_web_socket::coSpawnTraced (ioContext, myWebsocket->sendPingToEndpoint (), "matchmaking_proxy Server::userMatchmaking sendPingToEndpoint");
               tcp::resolver resolv{ ioContext };
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
-              matchmakings.emplace_back (matchmaking);
+              auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, *matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
+              matchmakings->emplace_back (matchmaking);
               using namespace boost::asio::experimental::awaitable_operators;
               my_web_socket::coSpawnTraced (ioContext, myWebsocket->readLoop ([myWebsocket, matchmaking] (const std::string &msg) {
                 if (matchmaking->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
@@ -156,7 +170,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
                                               matchmaking->cleanUp ();
                                               if (loggedInPlayerLostConnection)
                                                 {
-                                                  for (auto matchmakingWeakPtr : matchmakings)
+                                                  for (auto matchmakingWeakPtr : *matchmakings)
                                                     {
                                                       if (auto otherMatchmaking = matchmakingWeakPtr.lock ()) otherMatchmaking->proccessSendLoggedInPlayersToUser ();
                                                     }
@@ -180,7 +194,7 @@ boost::asio::awaitable<void>
 Server::asyncStopRunning ()
 {
   running.store (false, std::memory_order_release);
-  for (auto matchmakingWeakPtr : matchmakings)
+  for (auto matchmakingWeakPtr : *matchmakings)
     {
       if (auto matchmaking = matchmakingWeakPtr.lock ()) co_await matchmaking->asyncCloseMatchmakingToGame ();
     }
@@ -189,11 +203,12 @@ Server::asyncStopRunning ()
   userMatchmakingAcceptor->close (ec);
   gameMatchmakingAcceptor->cancel (ec);
   gameMatchmakingAcceptor->close (ec);
-  for (auto webSocketWeakPtr : webSockets)
+  maintainTimer->cancel ();
+  for (auto webSocketWeakPtr : *webSockets)
     {
       if (auto webSocket = webSocketWeakPtr.lock ()) co_await webSocket->asyncClose ();
     }
-  for (auto sslWebSocketWeakPtr : sslWebSockets)
+  for (auto sslWebSocketWeakPtr : *sslWebSockets)
     {
       if (auto webSocket = sslWebSocketWeakPtr.lock ()) co_await webSocket->asyncClose ();
     }
@@ -216,10 +231,10 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
               co_await connection.async_accept ();
               static size_t id = 0;
               auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++));
-              webSockets.emplace_back (myWebSocket);
+              webSockets->emplace_back (myWebSocket);
               using namespace boost::asio::experimental::awaitable_operators;
               my_web_socket::coSpawnTraced (ioContext, myWebSocket->readLoop ([myWebSocket, &matchmakings = matchmakings, fullPathIncludingDatabaseName, handleCustomMessageFromGame] (const std::string &msg) {
-                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, matchmakings, [myWebSocket] (std::string const &_msg) { myWebSocket->queueMessage (_msg); }, handleCustomMessageFromGame };
+                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, *matchmakings, [myWebSocket] (std::string const &_msg) { myWebSocket->queueMessage (_msg); }, handleCustomMessageFromGame };
                 auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
                 matchmakingGame.process_event (msg);
               }) && myWebSocket->writeLoop (),

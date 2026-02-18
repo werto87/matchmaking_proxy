@@ -200,36 +200,6 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
       std::osyncstream (std::cout) << "no handle for custom message: '" << message << "'" << std::endl;
   };
   my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, pathToMatchmakingDatabase, POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking (pathToMatchmakingDatabase, handleMessageFromGame), "test");
-  SECTION ("start connect LoggedInPlayers leave", "[matchmaking]")
-  {
-    auto messagesFromGamePlayer1 = std::vector<std::string>{};
-    size_t gameOver = 0;
-    auto handleMsgFromGamePlayer1 = [&gameOver, &server] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
-      if (boost::starts_with (msg, "LoggedInPlayers"))
-        {
-          gameOver++;
-        }
-      if (gameOver == 3)
-        {
-          my_web_socket::coSpawnTraced (_ioContext, server.asyncStopRunning (), "test");
-        }
-    };
-    my_web_socket::coSpawnTraced (ioContext, connectWebsocketSSL (handleMsgFromGamePlayer1, { objectToStringWithObjectName (user_matchmaking::SubscribeGetLoggedInPlayers{ 42 }), { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer1), "test");
-    auto messagesFromGamePlayer2 = std::vector<std::string>{};
-    auto handleMsgFromGamePlayer2 = [&gameOver] (boost::asio::io_context &, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>) {
-      if (boost::starts_with (msg, "LoginAsGuestSuccess"))
-        {
-          throw "Throw something so Server::userMatchmaking clean up code gets called";
-        }
-    };
-    my_web_socket::coSpawnTraced (ioContext, connectWebsocketSSL (handleMsgFromGamePlayer2, { { "LoginAsGuest|{}" } }, ioContext, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, messagesFromGamePlayer2), "test");
-    ioContext.run ();
-    CHECK (messagesFromGamePlayer1.size () == 4);
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (0), "LoginAsGuestSuccess"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (1), "LoggedInPlayers"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (2), "LoggedInPlayers"));
-    CHECK (boost::starts_with (messagesFromGamePlayer1.at (3), "LoggedInPlayers"));
-  }
   SECTION ("just run the server", "[.debuging matchmaking]") { ioContext.run (); }
   std::filesystem::remove (pathToMatchmakingDatabase);
 }

@@ -30,13 +30,16 @@ public:
   boost::asio::awaitable<void> asyncStopRunning ();
   boost::asio::io_context &ioContext;
   boost::asio::thread_pool &pool;
-  std::list<std::weak_ptr<Matchmaking>> matchmakings{};
-  std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>> webSockets{};
-  std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>> sslWebSockets{};
+  std::shared_ptr<std::list<std::weak_ptr<Matchmaking>>> matchmakings{ std::make_shared<std::list<std::weak_ptr<Matchmaking>>> () };
+  std::shared_ptr<std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>>> webSockets{ std::make_shared<std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::WebSocket>>>> () };
+  std::shared_ptr<std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>>> sslWebSockets{ std::make_shared<std::list<std::weak_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>>>> () };
 
   std::unique_ptr<boost::asio::ip::tcp::acceptor> userMatchmakingAcceptor{};
   std::unique_ptr<boost::asio::ip::tcp::acceptor> gameMatchmakingAcceptor{};
   std::atomic_bool running{ true };
+
+private:
+  std::shared_ptr<my_web_socket::CoroTimer> maintainTimer{};
 };
 }
 #endif /* AD140436_3FBA_4D63_8C0E_9113B92859E0 */

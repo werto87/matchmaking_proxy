@@ -69,12 +69,14 @@ messageTypeSupportedByMatchmaking (std::string const &msg)
   if (splitMesssage.size () == 2)
     {
       auto const &typeToSearch = splitMesssage.at (0);
-      boost::hana::for_each (user_matchmaking::userMatchmaking, [&] (const auto &x) {
-        if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-          {
-            isSupportedType = true;
-          }
-      });
+      boost::hana::for_each (user_matchmaking::userMatchmaking,
+                             [&] (const auto &x)
+                               {
+                                 if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+                                   {
+                                     isSupportedType = true;
+                                   }
+                               });
     }
   return isSupportedType;
 }
@@ -109,22 +111,25 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
         }
       ctx.set_default_verify_paths ();
       co_await tryUntilNoException (
-          [&pathToChainFile, &ctx] () {
-            std::osyncstream (std::cout) << "load fullchain: " << pathToChainFile << std::endl;
-            ctx.use_certificate_chain_file (pathToChainFile.string ());
-          },
+          [&pathToChainFile, &ctx] ()
+            {
+              std::osyncstream (std::cout) << "load fullchain: " << pathToChainFile << std::endl;
+              ctx.use_certificate_chain_file (pathToChainFile.string ());
+            },
           pollingSleepTimer);
       co_await tryUntilNoException (
-          [&pathToPrivateFile, &ctx] () {
-            std::osyncstream (std::cout) << "load privkey: " << pathToPrivateFile << std::endl;
-            ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
-          },
+          [&pathToPrivateFile, &ctx] ()
+            {
+              std::osyncstream (std::cout) << "load privkey: " << pathToPrivateFile << std::endl;
+              ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
+            },
           pollingSleepTimer);
       co_await tryUntilNoException (
-          [&pathToTmpDhFile, &ctx] () {
-            std::osyncstream (std::cout) << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
-            ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
-          },
+          [&pathToTmpDhFile, &ctx] ()
+            {
+              std::osyncstream (std::cout) << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
+              ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
+            },
           pollingSleepTimer);
 #ifdef MATCHMAKING_PROXY_ENABLE_SSL_VERIFICATION
       boost::certify::enable_native_https_server_verification (ctx);
@@ -151,31 +156,25 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, *matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
               matchmakings->emplace_back (matchmaking);
               using namespace boost::asio::experimental::awaitable_operators;
-              my_web_socket::coSpawnTraced (ioContext, myWebsocket->readLoop ([myWebsocket, matchmaking] (const std::string &msg) {
-                if (matchmaking->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
-                  {
-                    matchmaking->sendMessageToGame (msg);
-                  }
-                else
-                  {
-                    auto const &processEventResult = matchmaking->processEvent (msg);
-                    if (not processEventResult)
-                      {
-                        myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, processEventResult.error () }));
-                      }
-                  }
-              }) && myWebsocket->writeLoop (),
-                                            "matchmaking_proxy userMatchmaking read && write", [&matchmakings = matchmakings, matchmaking, &ioContext = ioContext] (auto) {
-                                              auto loggedInPlayerLostConnection = matchmaking->loggedInWithAccountName ().has_value ();
-                                              matchmaking->cleanUp ();
-                                              if (loggedInPlayerLostConnection)
-                                                {
-                                                  for (auto matchmakingWeakPtr : *matchmakings)
-                                                    {
-                                                      if (auto otherMatchmaking = matchmakingWeakPtr.lock ()) otherMatchmaking->proccessSendLoggedInPlayersToUser ();
-                                                    }
-                                                }
-                                            });
+              my_web_socket::coSpawnTraced (ioContext,
+                                            myWebsocket->readLoop (
+                                                [myWebsocket, matchmaking] (const std::string &msg)
+                                                  {
+                                                    if (matchmaking->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
+                                                      {
+                                                        matchmaking->sendMessageToGame (msg);
+                                                      }
+                                                    else
+                                                      {
+                                                        auto const &processEventResult = matchmaking->processEvent (msg);
+                                                        if (not processEventResult)
+                                                          {
+                                                            myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, processEventResult.error () }));
+                                                          }
+                                                      }
+                                                  })
+                                                && myWebsocket->writeLoop (),
+                                            "matchmaking_proxy userMatchmaking read && write", [matchmaking] (auto) { matchmaking->cleanUp (); });
             }
           catch (std::exception const &e)
             {
@@ -233,11 +232,15 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
               auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++));
               webSockets->emplace_back (myWebSocket);
               using namespace boost::asio::experimental::awaitable_operators;
-              my_web_socket::coSpawnTraced (ioContext, myWebSocket->readLoop ([myWebSocket, &matchmakings = matchmakings, fullPathIncludingDatabaseName, handleCustomMessageFromGame] (const std::string &msg) {
-                auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, *matchmakings, [myWebSocket] (std::string const &_msg) { myWebSocket->queueMessage (_msg); }, handleCustomMessageFromGame };
-                auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
-                matchmakingGame.process_event (msg);
-              }) && myWebSocket->writeLoop (),
+              my_web_socket::coSpawnTraced (ioContext,
+                                            myWebSocket->readLoop (
+                                                [myWebSocket, &matchmakings = matchmakings, fullPathIncludingDatabaseName, handleCustomMessageFromGame] (const std::string &msg)
+                                                  {
+                                                    auto matchmakingGameData = MatchmakingGameData{ fullPathIncludingDatabaseName, *matchmakings, [myWebSocket] (std::string const &_msg) { myWebSocket->queueMessage (_msg); }, handleCustomMessageFromGame };
+                                                    auto matchmakingGame = MatchmakingGame{ matchmakingGameData };
+                                                    matchmakingGame.process_event (msg);
+                                                  })
+                                                && myWebSocket->writeLoop (),
                                             "matchmaking_porxy gameMatchmaking read && write");
             }
           catch (std::exception const &e)

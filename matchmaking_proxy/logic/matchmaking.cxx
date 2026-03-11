@@ -1520,19 +1520,28 @@ sendToAllAccountsInUsersCreateGameLobby (std::string const &message, Matchmaking
 void
 Matchmaking::cleanUp ()
 {
-  if (auto userGameLobby = std::ranges::find_if (*sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) { return std::ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); userGameLobby != sm->matchmakingData.gameLobbies->end ())
+  if (loggedInWithAccountName ().has_value ())
     {
-      userGameLobby->removeUser (sm->matchmakingData.user.accountName.value ());
-      if (userGameLobby->accountNames.empty ())
+      if (auto userGameLobby = std::ranges::find_if (*sm->matchmakingData.gameLobbies, [&accountName = sm->matchmakingData.user.accountName] (GameLobby const &gameLobby) { return std::ranges::find (gameLobby.accountNames, accountName) != gameLobby.accountNames.end (); }); userGameLobby != sm->matchmakingData.gameLobbies->end ())
         {
-          sm->matchmakingData.gameLobbies->erase (userGameLobby);
+          userGameLobby->removeUser (sm->matchmakingData.user.accountName.value ());
+          if (userGameLobby->accountNames.empty ())
+            {
+              sm->matchmakingData.gameLobbies->erase (userGameLobby);
+            }
+          else
+            {
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, sm->matchmakingData);
+              userGameLobby->cancelTimer ();
+            }
         }
-      else
+      for (auto matchmakingWeakPtr : sm->matchmakingData.stateMachines)
         {
-          sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, sm->matchmakingData);
-          userGameLobby->cancelTimer ();
+          if (auto otherMatchmaking = matchmakingWeakPtr.lock ()) otherMatchmaking->proccessSendLoggedInPlayersToUser ();
         }
     }
+  disconnectFromProxy ();
+  sm->matchmakingData.user.accountName.reset ();
 }
 
 [[nodiscard]] boost::asio::awaitable<void>

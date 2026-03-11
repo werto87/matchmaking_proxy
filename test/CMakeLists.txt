@@ -8,19 +8,16 @@ add_executable(
   startGame.cxx
   database.cxx
   testCertServer.cxx
-  integration.cxx
 )
 add_subdirectory(benchmark)
 find_package(Catch2)
 find_package(modern_durak_game_option)
 find_package(modern_durak_game_shared)
-find_package(modern_durak_game)
 
 target_link_libraries(_test myproject_options myproject_warnings
   modern_durak_game_option::modern_durak_game_option
   matchmaking_proxy Catch2::Catch2WithMain
   modern_durak_game_shared::modern_durak_game_shared
-  modern_durak_game::modern_durak_game
 )
 target_compile_definitions(
   _test

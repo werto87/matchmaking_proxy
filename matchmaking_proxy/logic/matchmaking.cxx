@@ -764,6 +764,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName.value ());
               auto accountNames = std::move (userGameLobby->accountNames);
+              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames, matchmakingData);
               matchmakingData.gameLobbies->erase (userGameLobby);
               for (auto const &userName : accountNames)
                 {
@@ -795,7 +796,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                       std::osyncstream (std::cout) << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
                     }
                 }
-              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames, matchmakingData);
+              
             }
           else
             {

@@ -167,8 +167,10 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   }
   SECTION ("playerOne accept playerTwo declined", "[matchmaking]")
   {
+    auto playerOneMessages = std::vector<std::string>{};
     auto player1Logic = [&] (auto const &msg)
       {
+        playerOneMessages.push_back (msg);
         if (boost::starts_with (msg, "LoginAccountSuccess"))
           {
             REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
@@ -206,6 +208,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     ioContext.run ();
     CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
+    CHECK (playerOneMessages.at (3) == "GameStartCanceled|{}");
     CHECK (messageReceived2);
   }
   SECTION ("playerTwo accept playerOne declined", "[matchmaking]")

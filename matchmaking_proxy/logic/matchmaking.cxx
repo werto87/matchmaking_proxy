@@ -453,7 +453,7 @@ auto const logoutAccount = [] (MatchmakingData &matchmakingData)
 auto const cancelCreateAccount = [] (MatchmakingData &matchmakingData)
   {
     matchmakingData.cancelAndResetTimer ();
-    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountCancel{}));
+    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountCancelSuccess{}));
   };
 
 auto const joinChannel = [] (user_matchmaking::JoinChannel const &joinChannelObject, MatchmakingData &matchmakingData)
@@ -701,7 +701,7 @@ auto const broadCastMessage = [] (user_matchmaking::BroadCastMessage const &broa
 auto const cancelLoginAccount = [] (MatchmakingData &matchmakingData)
   {
     matchmakingData.cancelAndResetTimer ();
-    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountCancel{}));
+    matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountCancelSuccess{}));
   };
 
 auto const createAccount = [] (PasswordHashed const &passwordHash, MatchmakingData &matchmakingData)

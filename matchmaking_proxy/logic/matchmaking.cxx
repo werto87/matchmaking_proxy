@@ -263,21 +263,52 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
             auto notReadyUsers = std::vector<std::string>{};
             std::ranges::copy_if (gameLobby->accountNames, std::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return std::ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
             sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers, matchmakingData);
-            for (auto const &notReadyUser : notReadyUsers)
+            if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
               {
-                if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
+                matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
+                for (auto const &notReadyUser : notReadyUsers)
                   {
                     gameLobby->removeUser (notReadyUser);
                   }
-              }
-            if (gameLobby->accountNames.empty ())
-              {
+                auto const lobbyType = gameLobby->lobbyAdminType;
+                auto accountNames = std::move (gameLobby->accountNames);
+                sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames, matchmakingData);
                 matchmakingData.gameLobbies->erase (gameLobby);
+                for (auto const &userName : accountNames)
+                  {
+                    if (auto matchmakingWeakPtrItr = std::ranges::find_if (matchmakingData.stateMachines,
+                                                                           [&userName] (auto &matchmakingWeakPtr)
+                                                                             {
+                                                                               if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                                                                 {
+                                                                                   return matchmaking->isLoggedInWithAccountName (userName);
+                                                                                 }
+                                                                               else
+                                                                                 {
+                                                                                   return false;
+                                                                                 }
+                                                                             });
+                        matchmakingWeakPtrItr != matchmakingData.stateMachines.end ())
+                      {
+                        if (auto matchmaking = matchmakingWeakPtrItr->lock ())
+                          {
+                            auto processEventExpect = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ lobbyType == GameLobby::LobbyType::MatchMakingSystemRanked }));
+                            if (not processEventExpect.has_value ())
+                              {
+                                std::osyncstream (std::cout) << processEventExpect.error () << std::endl;
+                              }
+                          }
+                      }
+                    else
+                      {
+                        std::osyncstream (std::cout) << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
+                      }
+                  }
               }
             else
               {
-                sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), gameLobby->readyUsers, matchmakingData);
-                gameLobby->readyUsers.clear ();
+                gameLobby->cancelTimer ();
+                sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), gameLobby->accountNames, matchmakingData);
               }
           },
         matchmakingData.matchmakingOption.timeToAcceptInvite);

@@ -62,7 +62,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccountCancel{})));
     ioContext.run ();
-    CHECK (messages.at (0) == "CreateAccountCancel|{}");
+    CHECK (messages.at (0) == "CreateAccountCancelSuccess|{}");
   }
   SECTION ("LoginAccountCancel", "[matchmaking]")
   {
@@ -70,7 +70,7 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LoginAccount{ "oldAcc", "abc" })));
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LoginAccountCancel{})));
     ioContext.run ();
-    CHECK (messages.at (0) == "LoginAccountCancel|{}");
+    CHECK (messages.at (0) == "LoginAccountCancelSuccess|{}");
   }
 }
 

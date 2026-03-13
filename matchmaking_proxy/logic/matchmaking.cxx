@@ -737,15 +737,8 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                             {
                               userGameLobby->cancelTimer ();
                               sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), userGameLobby->accountNames, matchmakingData);
-                              try
-                                {
-                                  std::rethrow_exception (ep);
-                                }
-                              catch (std::exception const &e)
-                                {
-                                  sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Can not connect to game" }), userGameLobby->accountNames, matchmakingData);
-                                  matchmakingData.gameLobbies->erase (userGameLobby);
-                                }
+                              sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Can not connect to game" }), userGameLobby->accountNames, matchmakingData);
+                              matchmakingData.gameLobbies->erase (userGameLobby);
                             }
                         });
                 }

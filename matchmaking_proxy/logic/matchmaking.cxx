@@ -743,7 +743,6 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                                 }
                               catch (std::exception const &e)
                                 {
-                                  std::osyncstream (std::cerr) << "wantsToJoinGame exception: " << e.what () << "\n";
                                   sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Can not connect to game" }), userGameLobby->accountNames, matchmakingData);
                                   matchmakingData.gameLobbies->erase (userGameLobby);
                                 }

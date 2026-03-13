@@ -1179,7 +1179,7 @@ public:
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / (createAccount,possibleTopRatedPlayersChanged)                           = state<LoggedIn>
 , state<WaitingForPasswordHashed>             + event<u_m::CreateAccountCancel>                                                   / cancelCreateAccount                     = state<NotLoggedIn>
 // WaitingForPasswordCheck-----------------------------------------------------------------------------------------------------------------------------------------------------------
-, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ alreadyLoggedIn ]                    / loginAccountErrorAccountAlreadyLoggedIn = state<WaitingForUserWantsToRelogGameLobby>
+, state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ alreadyLoggedIn ]                    / loginAccountErrorAccountAlreadyLoggedIn = state<NotLoggedIn>
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                     [ userInGameLobby ]                    / wantsToRelogToGameLobby                 = state<WaitingForUserWantsToRelogGameLobby>
 , state<WaitingForPasswordCheck>              + event<PasswordMatches>                                                            / loginAccountSuccess                     = state<LoggedIn>
 , state<WaitingForPasswordCheck>              + event<u_m::LoginAccountCancel>                                                    / cancelLoginAccount                      = state<NotLoggedIn>

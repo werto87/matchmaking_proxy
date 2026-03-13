@@ -733,7 +733,6 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                       co_await boost::asio::this_coro::executor, [&matchmakingData, userGameLobby] () -> boost::asio::awaitable<void> { co_await startGame (userGameLobby, matchmakingData); }, "matchmaking_proxy startGame",
                       [userGameLobby, &matchmakingData] (auto const ep)
                         {
-                          // ConnectGameError
                           if (ep)
                             {
                               userGameLobby->cancelTimer ();
@@ -763,6 +762,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
             {
               matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
               userGameLobby->removeUser (matchmakingData.user.accountName.value ());
+              auto const lobbyType = userGameLobby->lobbyAdminType;
               auto accountNames = std::move (userGameLobby->accountNames);
               sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceled{}), accountNames, matchmakingData);
               matchmakingData.gameLobbies->erase (userGameLobby);
@@ -784,7 +784,7 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                     {
                       if (auto matchmaking = matchmakingWeakPtrItr->lock ())
                         {
-                          auto processEventExpect = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{}));
+                          auto processEventExpect = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ lobbyType == GameLobby::LobbyType::MatchMakingSystemRanked }));
                           if (not processEventExpect.has_value ())
                             {
                               std::osyncstream (std::cout) << processEventExpect.error () << std::endl;
@@ -796,7 +796,6 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                       std::osyncstream (std::cout) << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
                     }
                 }
-              
             }
           else
             {

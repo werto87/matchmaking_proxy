@@ -518,6 +518,47 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
     CHECK (messageReceived);
     CHECK (messageReceived2);
   }
+  SECTION ("player one accepts player 2 declines", "[matchmaking]")
+  {
+    auto player1Logic = [&] (auto const &msg)
+      {
+        if (boost::starts_with (msg, "LoginAccountSuccess"))
+          {
+            REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ true })));
+          }
+        else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame|{}"))
+          {
+            REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true })));
+            REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false })));
+          }
+        else if (boost::starts_with (msg, "JoinMatchMakingQueueSuccess|{}"))
+          {
+            messageReceived = true;
+          }
+      };
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, pathToMatchmakingDatabase.string () });
+    matchmakings.push_back (matchmaking);
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
+    auto player2Logic = [&] (auto const &msg)
+      {
+        if (boost::starts_with (msg, "LoginAccountSuccess"))
+          {
+            REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ true })));
+          }
+        else if (boost::starts_with (msg, "GameStartCanceledRemovedFromQueue|{}"))
+          {
+            messageReceived2 = true;
+          }
+      };
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, pathToMatchmakingDatabase.string () });
+    matchmakings.push_back (matchmaking2);
+    REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
+    ioContext.run ();
+    CHECK_FALSE (gameLobbies->empty ());
+    CHECK (gameLobbies->front ().lobbyAdminType == matchmaking_proxy::GameLobby::LobbyType::MatchMakingSystemRanked);
+    CHECK (messageReceived);
+    CHECK (messageReceived2);
+  }
   SECTION ("UserStatistics", "[matchmaking]")
   {
     auto player1Logic = [&] (auto const &msg)

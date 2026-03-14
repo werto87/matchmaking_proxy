@@ -334,8 +334,10 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   }
   SECTION ("playerTwo and playerOne do not answer", "[matchmaking]")
   {
+    auto player1Messages = std::vector<std::string>{};
     auto player1Logic = [&] (auto const &msg)
       {
+        player1Messages.push_back (msg);
         if (boost::starts_with (msg, "LoginAccountSuccess"))
           {
             REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
@@ -348,8 +350,10 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
+    auto player2Messages = std::vector<std::string>{};
     auto player2Logic = [&] (auto const &msg)
       {
+        player2Messages.push_back (msg);
         if (boost::starts_with (msg, "LoginAccountSuccess"))
           {
             REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
@@ -366,6 +370,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     CHECK (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (messageReceived2);
+    CHECK (player1Messages.size () == player2Messages.size ());
   }
   SECTION ("playerOne declines playerTwo still tries to join", "[matchmaking]")
   {

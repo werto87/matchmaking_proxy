@@ -261,11 +261,11 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
         [gameLobby, &matchmakingData] ()
           {
             auto notReadyUsers = std::vector<std::string>{};
+            sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), gameLobby->accountNames, matchmakingData);
             std::ranges::copy_if (gameLobby->accountNames, std::back_inserter (notReadyUsers), [usersWhichAccepted = gameLobby->readyUsers] (std::string const &accountNamesGamelobby) mutable { return std::ranges::find_if (usersWhichAccepted, [accountNamesGamelobby] (std::string const &userWhoAccepted) { return accountNamesGamelobby == userWhoAccepted; }) == usersWhichAccepted.end (); });
-            sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::AskIfUserWantsToJoinGameTimeOut{}), notReadyUsers, matchmakingData);
             if (gameLobby->lobbyAdminType != GameLobby::LobbyType::FirstUserInLobbyUsers)
               {
-                matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}));
+                sendMessageToUsers (objectToStringWithObjectName (user_matchmaking::GameStartCanceledRemovedFromQueue{}), notReadyUsers, matchmakingData);
                 for (auto const &notReadyUser : notReadyUsers)
                   {
                     gameLobby->removeUser (notReadyUser);

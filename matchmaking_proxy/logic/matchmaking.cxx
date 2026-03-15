@@ -1048,6 +1048,18 @@ auto const getTopRatedPlayers = [] (auto const &_getTopRatedPlayers, Matchmaking
     matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
   };
 
+auto const getRatedPlayer = [] (user_matchmaking::GetRatedPlayer const &_getRatedPlayer, MatchmakingData &matchmakingData)
+  {
+    if (auto const &accountOptional = database::getRatingForName (_getRatedPlayer.name, matchmakingData.fullPathIncludingDatabaseName.string ()))
+      {
+        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RatedPlayer{ accountOptional->accountName, accountOptional->rating }));
+      }
+    else
+      {
+        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::GetRatedPlayerError{ std::format ("could not find player with name '{}'", _getRatedPlayer.name) }));
+      }
+  };
+
 auto const getLoggedInPlayers = [] (auto const &_getLoggedInPlayers, MatchmakingData &matchmakingData)
   {
     auto playerCount = uint64_t{};
@@ -1244,6 +1256,7 @@ public:
 , state<GlobalState>                          + event<u_m::GetMatchmakingLogic>                                                   / matchmakingLogic
 , state<GlobalState>                          + event<u_m::RatingChanged>                                                         / ratingChanged
 , state<GlobalState>                          + event<u_m::GetUserStatistics>                                                     / userStatistics
+, state<GlobalState>                          + event<u_m::GetRatedPlayer>                                                        / getRatedPlayer
 , state<GlobalState>                          + event<u_m::GetTopRatedPlayers>                                                    / getTopRatedPlayers
 , state<GlobalState>                          + event<u_m::SubscribeGetTopRatedPlayers>                                           / subscribeGetTopRatedPlayers
 , state<GlobalState>                          + event<u_m::UnSubscribeGetTopRatedPlayers>                                         / unSubscribeGetTopRatedPlayers

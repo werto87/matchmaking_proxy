@@ -70,5 +70,12 @@ getTopRatedAccounts (uint64_t count, std::string const &fullPathIncludingDatabas
   return confu_soci::findStructsOrderBy<database::Account> (sql, count, "rating", confu_soci::OrderMethod::Descending);
 }
 
+boost::optional<Account>
+getRatingForName (std::string const &name, std::string const &fullPathIncludingDatabaseName)
+{
+  auto sql = soci::session{ soci::sqlite3, fullPathIncludingDatabaseName.c_str () };
+  return confu_soci::findStruct<database::Account> (sql, "accountName", name);
+}
+
 }
 }

@@ -1044,7 +1044,25 @@ auto const getTopRatedPlayers = [] (auto const &_getTopRatedPlayers, Matchmaking
       }
     auto result = user_matchmaking::TopRatedPlayers{};
     auto topRatedAccounts = database::getTopRatedAccounts (playerCount, matchmakingData.fullPathIncludingDatabaseName.string ());
-    std::ranges::transform (topRatedAccounts, std::back_inserter (result.players), [] (auto &&account) { return user_matchmaking::RatedPlayer{ account.accountName, account.rating }; });
+    std::ranges::transform (topRatedAccounts, std::back_inserter (result.players), [] (auto &&account) { return user_matchmaking::RatedPlayer{ account.accountName, account.rating, 0 }; });
+    for (auto i = uint64_t{}; i < result.players.size (); i++)
+      {
+        if (i == 0)
+          {
+            result.players.at (i).rank = i + 1;
+          }
+        else
+          {
+            if (result.players.at (i - 1).rating == result.players.at (i).rating)
+              {
+                result.players.at (i).rank = result.players.at (i - 1).rank;
+              }
+            else
+              {
+                result.players.at (i).rank = i + 1;
+              }
+          }
+      }
     matchmakingData.sendMsgToUser (objectToStringWithObjectName (result));
   };
 
@@ -1052,7 +1070,7 @@ auto const getRatedPlayer = [] (user_matchmaking::GetRatedPlayer const &_getRate
   {
     if (auto const &accountOptional = database::getRatingForName (_getRatedPlayer.name, matchmakingData.fullPathIncludingDatabaseName.string ()))
       {
-        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RatedPlayer{ accountOptional->accountName, accountOptional->rating }));
+        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RatedPlayer{ accountOptional->accountName, accountOptional->rating, 0 }));
       }
     else
       {

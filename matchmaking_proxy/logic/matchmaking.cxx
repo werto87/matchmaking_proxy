@@ -1068,9 +1068,10 @@ auto const getTopRatedPlayers = [] (auto const &_getTopRatedPlayers, Matchmaking
 
 auto const getRatedPlayer = [] (user_matchmaking::GetRatedPlayer const &_getRatedPlayer, MatchmakingData &matchmakingData)
   {
-    if (auto const &accountOptional = database::getRatingForName (_getRatedPlayer.name, matchmakingData.fullPathIncludingDatabaseName.string ()))
+    if (auto const &optionalAccountAndRank = database::getRatingAndRankForName (_getRatedPlayer.name, matchmakingData.fullPathIncludingDatabaseName.string ()))
       {
-        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RatedPlayer{ accountOptional->accountName, accountOptional->rating, 0 }));
+        auto const &[account, rank] = optionalAccountAndRank.value ();
+        matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::RatedPlayer{ account.accountName, account.rating, rank }));
       }
     else
       {

@@ -74,13 +74,21 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   matchmakings.push_back (matchmaking2);
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
   ioContext.run ();
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player1" })));
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player2" })));
   auto matchmakingGameTmp = MatchmakingGame{ MatchmakingGameData{ "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "player1" }, { "player2" }, {} }));
-  CHECK (messages2.size () == 5);
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player1" })));
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player2" })));
+  CHECK (messages2.size () == 9);
   CHECK (messages2.at (1) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"player2","rating":1500,"rank":1}}]})MyStringLiteral");
   CHECK (messages2.at (2) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"player2","rating":1500,"rank":1}},{"RatedPlayer":{"name":"player1","rating":1500,"rank":1}}]})MyStringLiteral");
-  CHECK (messages2.at (3) == R"MyStringLiteral(RatingChanged|{"oldRating":1500,"newRating":1490})MyStringLiteral");
-  CHECK (messages2.at (4) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"player1","rating":1510,"rank":1}},{"RatedPlayer":{"name":"player2","rating":1490,"rank":2}}]})MyStringLiteral");
+  CHECK (messages2.at (3) == R"MyStringLiteral(RatedPlayer|{"name":"player1","rating":1500,"rank":1})MyStringLiteral");
+  CHECK (messages2.at (4) == R"MyStringLiteral(RatedPlayer|{"name":"player2","rating":1500,"rank":1})MyStringLiteral");
+  CHECK (messages2.at (5) == R"MyStringLiteral(RatingChanged|{"oldRating":1500,"newRating":1490})MyStringLiteral");
+  CHECK (messages2.at (6) == R"MyStringLiteral(TopRatedPlayers|{"players":[{"RatedPlayer":{"name":"player1","rating":1510,"rank":1}},{"RatedPlayer":{"name":"player2","rating":1490,"rank":2}}]})MyStringLiteral");
+  CHECK (messages2.at (7) == R"MyStringLiteral(RatedPlayer|{"name":"player1","rating":1510,"rank":1})MyStringLiteral");
+  CHECK (messages2.at (8) == R"MyStringLiteral(RatedPlayer|{"name":"player2","rating":1490,"rank":2})MyStringLiteral");
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
 }

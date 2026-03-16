@@ -70,11 +70,20 @@ getTopRatedAccounts (uint64_t count, std::string const &fullPathIncludingDatabas
   return confu_soci::findStructsOrderBy<database::Account> (sql, count, "rating", confu_soci::OrderMethod::Descending);
 }
 
-boost::optional<Account>
-getRatingForName (std::string const &name, std::string const &fullPathIncludingDatabaseName)
+boost::optional<std::tuple<Account, uint64_t>>
+getRatingAndRankForName (std::string const &name, std::string const &fullPathIncludingDatabaseName)
 {
   auto sql = soci::session{ soci::sqlite3, fullPathIncludingDatabaseName.c_str () };
-  return confu_soci::findStruct<database::Account> (sql, "accountName", name);
+  if (auto const &account = confu_soci::findStruct<database::Account> (sql, "accountName", name))
+    {
+      auto playersWithHigherRating = uint64_t{};
+      sql << "SELECT COUNT(*) FROM Account WHERE rating > :rating", soci::use (account->rating), soci::into (playersWithHigherRating);
+      return std::tuple<Account, uint64_t>{ account.value (), playersWithHigherRating + 1 }; // if there is a player with higher rating we are rank 2 and not 1
+    }
+  else
+    {
+      return {};
+    }
 }
 
 }

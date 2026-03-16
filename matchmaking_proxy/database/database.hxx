@@ -18,7 +18,7 @@ void createTables (std::string const &fullPathIncludingDatabaseName);
 
 std::vector<Account> getTopRatedAccounts (uint64_t count, std::string const &fullPathIncludingDatabaseName);
 
-boost::optional<Account> getRatingForName (std::string const &name, std::string const &fullPathIncludingDatabaseName);
+boost::optional<std::tuple<Account, uint64_t>> getRatingAndRankForName (std::string const &name, std::string const &fullPathIncludingDatabaseName);
 
 boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, size_t startRating = 1500);
 }

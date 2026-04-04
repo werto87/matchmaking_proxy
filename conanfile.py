@@ -2,23 +2,23 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 from conan.tools.files import collect_libs, rmdir
 
+
 class MatchmakingProxy(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators =  "CMakeDeps"
+    generators = "CMakeDeps"
+    python_requires = "shared/1.0.0"
+
 
     options = {
         "with_ssl_verification": [True, False],
     }
-    default_options = {
-        "with_ssl_verification": True
-    }
+    default_options = {"with_ssl_verification": True}
 
     def generate(self):
         tc = CMakeToolchain(self)
-        tc.user_presets_path = False #workaround because this leads to useless options in cmake-tools configure
+        tc.user_presets_path = False  # workaround because this leads to useless options in cmake-tools configure
         tc.variables["WITH_SSL_VERIFICATION"] = self.options.with_ssl_verification
         tc.generate()
-
 
     def configure(self):
         # We can control the options of our dependencies based on current options
@@ -28,33 +28,39 @@ class MatchmakingProxy(ConanFile):
         self.options["my_web_socket"].log_write = True
         self.options["my_web_socket"].log_read = True
         self.options["my_web_socket"].log_boost_asio = False
-        
-        
-
 
     def requirements(self):
-        self.requires("boost/1.90.0", force=True)
-        self.requires("confu_soci/1.0.0")
-        self.requires("magic_enum/0.9.6")
-        if self.options.with_ssl_verification:
-            self.requires("certify/cci.20201114@modern-durak")
-        self.requires("libsodium/1.0.18")
-        self.requires("confu_json/1.2.1", force=True)
-        self.requires("confu_algorithm/1.2.1")
-        self.requires("sml/1.1.12")
-        self.requires("login_matchmaking_game_shared/latest")
-        self.requires("my_web_socket/5.0.0")
-        self.requires("sqlite3/3.44.2")
-        self.requires("openssl/3.5.2",force=True)
+        sharedConan = self.python_requires["shared"].module.SharedConan
+        all_deps = {**sharedConan.COMMON, **sharedConan.BACKEND}
+        deps_to_use = [
+            "boost",
+            "confu_soci",
+            "magic_enum",
+            "libsodium",
+            "confu_json",
+            "confu_algorithm",
+            "sml",
+            "login_matchmaking_game_shared",
+            "my_web_socket",
+            "sqlite3",
+            "openssl",
+            "certify",
+        ]
+        for pkg_name in deps_to_use:
+            version, isModernDurak = all_deps[pkg_name]
+            if pkg_name == "certify":
+                if self.options.with_ssl_verification:
+                    self.requires(
+                        f"{pkg_name}/{version}{'@modern-durak' if isModernDurak else ''}"
+                    )
+            else:
+                self.requires(
+                    f"{pkg_name}/{version}{'@modern-durak' if isModernDurak else ''}"
+                )
+
 
         ### only for testing please do not put this in the package build recept ###
-
-        self.requires("modern_durak_game_shared/latest")
-        self.requires("modern_durak_game_option/latest")
+        self.requires("modern_durak_game_shared/latest@modern-durak")
+        self.requires("modern_durak_game_option/latest@modern-durak")
         self.requires("catch2/2.13.9")
         ###########################################################################
-
-
-
-  
-

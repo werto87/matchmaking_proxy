@@ -10,3 +10,4 @@ database/*
 compile_commands.json
 CMakeUserPresets.json
 .editorconfig
+.vs

@@ -94,6 +94,14 @@ maintain (auto maintainTimer, auto webSockets, auto sslWebSockets, auto matchmak
     }
 }
 
+void
+logUserMatchmakingAction (size_t connectionId, std::string const &action)
+{
+  // #ifdef MATCHMAKING_PROXY_LOG_USER_MATCHMAKING_ACTION
+  std::osyncstream (std::cout) << std::format ("matchmaking_proxy Server::userMatchmaking connectionId: '{}' calling: '{}'", connectionId, action) << std::endl;
+  // #endif
+}
+
 boost::asio::awaitable<void>
 Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem::path pathToPrivateFile, std::filesystem::path pathToTmpDhFile, std::filesystem::path fullPathIncludingDatabaseName, std::chrono::seconds pollingSleepTimer, MatchmakingOption matchmakingOption, std::string gameHost, std::string gamePort, std::string userGameViaMatchmakingPort, bool sslContextVerifyNone)
 {
@@ -136,22 +144,28 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
 #endif
       ctx.set_options (SSL_SESS_CACHE_OFF | SSL_OP_NO_TICKET); //  disable ssl cache. It has a bad support in boost asio/beast and I do not know if it helps in performance in our usecase
       auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
+      size_t connectionId = 0;
       while (running.load ())
         {
           try
             {
+              connectionId++;
+              logUserMatchmakingAction (connectionId, "auto socket = co_await userMatchmakingAcceptor->async_accept ();");
               auto socket = co_await userMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::SSLWebSocket{ std::move (socket), ctx };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
               connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
+              logUserMatchmakingAction (connectionId, "co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);");
               co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
+              logUserMatchmakingAction (connectionId, "co_await connection.async_accept (use_awaitable);");
               co_await connection.async_accept (use_awaitable);
-              static size_t id = 0;
-              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (id++));
+              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (connectionId));
               sslWebSockets->emplace_back (myWebsocket);
               my_web_socket::coSpawnTraced (ioContext, myWebsocket->sendPingToEndpoint (), "matchmaking_proxy Server::userMatchmaking sendPingToEndpoint");
               tcp::resolver resolv{ ioContext };
+              logUserMatchmakingAction (connectionId, "auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);");
               auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
+              logUserMatchmakingAction (connectionId, "auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);");
               auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
               auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, *matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
               matchmakings->emplace_back (matchmaking);

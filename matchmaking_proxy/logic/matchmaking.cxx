@@ -22,7 +22,7 @@
 #include <my_web_socket/coSpawnTraced.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <ranges>
-#include <syncstream>
+#include <spdlog/spdlog.h>
 using namespace boost::sml;
 
 #if defined(_MSC_VER)
@@ -156,7 +156,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       auto matchmaking = matchmakingForAccount->lock ();
       if (not matchmaking)
         {
-          std::osyncstream (std::cout) << "can not connect to game matchmaking already dead\n";
+          spdlog::warn ("can not connect to game matchmaking already dead");
           co_return;
         }
       try
@@ -166,7 +166,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       catch (std::exception const &e)
         {
           sm.process_event (user_matchmaking::ConnectGameError{ e.what () }, deps, subs);
-          std::osyncstream (std::cout) << "try to make connection to game exception: " << e.what () << std::endl;
+          spdlog::error ("try to make connection to game exception: {}", e.what ());
           throw;
         }
       try
@@ -179,7 +179,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       catch (std::exception const &e)
         {
           sm.process_event (user_matchmaking::ConnectGameError{ e.what () }, deps, subs);
-          std::osyncstream (std::cout) << "handshake with game exception: " << e.what () << std::endl;
+          spdlog::error ("handshake with game exception: {}", e.what ());
           throw;
         }
       static size_t id = 0;
@@ -218,13 +218,13 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
                                                                                            errorHandleMessageFromGame << "exception: " << e.what () << '\n';
                                                                                            errorHandleMessageFromGame << "objectAsString: '" << objectAsString << "'\n";
                                                                                            errorHandleMessageFromGame << "example for " << confu_json::type_name<std::decay_t<decltype (x)>> () << ": '" << confu_json::to_json<> (x) << "'\n";
-                                                                                           std::osyncstream (std::cout) << errorHandleMessageFromGame.str () << std::endl;
+                                                                                           spdlog::info ("{}", errorHandleMessageFromGame.str ());
                                                                                            matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::StartGameError{ "Error in Communication between Matchmaking and Game" }));
                                                                                          }
-                                                                                       if (ec) std::osyncstream (std::cout) << "read_json error: " << ec.message () << std::endl;
+                                                                                       if (ec) spdlog::error ("read_json error: {}", ec.message ());
                                                                                      }
                                                                                  });
-                                                        if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+                                                        if (not typeFound) spdlog::info ("could not find a match for typeToSearch in matchmakingGame '{}'", typeToSearch);
                                                       }
                                                   }
                                                 else
@@ -246,7 +246,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
       catch (std::exception const &e)
         {
           sm.process_event (ConnectionToGameLost{}, deps, subs);
-          std::osyncstream (std::cout) << "connection to game lost: " << e.what () << std::endl;
+          spdlog::error ("connection to game lost: {}", e.what ());
           throw e;
         }
     }
@@ -295,13 +295,13 @@ auto const askUsersToJoinGame = [] (std::list<GameLobby>::iterator &gameLobby, M
                             auto processEventExpect = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ lobbyType == GameLobby::LobbyType::MatchMakingSystemRanked }));
                             if (not processEventExpect.has_value ())
                               {
-                                std::osyncstream (std::cout) << processEventExpect.error () << std::endl;
+                                spdlog::error ("{}", processEventExpect.error ());
                               }
                           }
                       }
                     else
                       {
-                        std::osyncstream (std::cout) << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
+                        spdlog::info ("player in game lobby but has no matchmaking. player name: {}", userName);
                       }
                   }
               }
@@ -810,13 +810,13 @@ wantsToJoinGame (user_matchmaking::WantsToJoinGame wantsToJoinGameEv, Matchmakin
                           auto processEventExpect = matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{ lobbyType == GameLobby::LobbyType::MatchMakingSystemRanked }));
                           if (not processEventExpect.has_value ())
                             {
-                              std::osyncstream (std::cout) << processEventExpect.error () << std::endl;
+                              spdlog::error ("{}", processEventExpect.error ());
                             }
                         }
                     }
                   else
                     {
-                      std::osyncstream (std::cout) << std::format ("player in game lobby but has no matchmaking. player name: {}", userName) << std::endl;
+                      spdlog::info ("player in game lobby but has no matchmaking. player name: {}", userName);
                     }
                 }
             }
@@ -1304,12 +1304,11 @@ struct my_logger
   {
     if constexpr (boost::fusion::traits::is_sequence<TEvent>::value)
       {
-        std::osyncstream (std::cout) << "\n[" << aux::get_type_name<SM> () << "]"
-                                     << "[process_event] '" << objectToStringWithObjectName (event) << "'" << std::endl;
+        spdlog::info ("[{}][process_event] '{}'", aux::get_type_name<SM> (), objectToStringWithObjectName (event));
       }
     else
       {
-        printf ("[%s][process_event] %s\n", aux::get_type_name<SM> (), aux::get_type_name<TEvent> ());
+        spdlog::info ("[{}][process_event] {}", aux::get_type_name<SM> (), aux::get_type_name<TEvent> ());
       }
   }
 
@@ -1516,16 +1515,16 @@ startGame (auto gameLobbyItr, MatchmakingData &matchmakingData)
                                               }
                                             else if (typeToSearch == "CustomMessage")
                                               {
-                                                std::osyncstream (std::cout) << "Can not handle custom from game before game starts. Not handled custom message: '" << startServerAnswer << "'" << std::endl;
+                                                spdlog::warn ("Can not handle custom message from game before game starts. Not handled custom message: '{}'", startServerAnswer);
                                               }
                                             else
                                               {
-                                                std::osyncstream (std::cout) << "Game server answered with: " << startServerAnswer << " expected StartGameSuccess|{} or StartGameError|{} " << std::endl;
+                                                spdlog::info ("Game server answered with: {} expected StartGameSuccess|{{}} or StartGameError|{{}}", startServerAnswer);
                                               }
                                           }
                                         else
                                           {
-                                            std::osyncstream (std::cout) << "Game server answered with: " << startServerAnswer << " expected StartGameSuccess|{} or StartGameError|{} " << std::endl;
+                                            spdlog::info ("Game server answered with: {} expected StartGameSuccess|{{}} or StartGameError|{{}}", startServerAnswer);
                                           }
                                         matchmakingData.gameLobbies->erase (gameLobbyItr);
                                         my_web_socket::coSpawnTraced (ex, myWebSocket->asyncClose (), "matchmaking_proxy startGame asyncClose");

@@ -32,6 +32,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <spdlog/spdlog.h>
 using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
@@ -52,9 +53,9 @@ tryUntilNoException (std::function<void ()> const &fun, std::chrono::seconds con
         }
       catch (std::exception &e)
         {
-          std::osyncstream (std::cout) << "exception : " << e.what () << std::endl;
+          spdlog::error ("exception: {}", e.what ());
         }
-      std::osyncstream (std::cout) << "trying again in: " << timeToWaitBeforeCallingFunctionAgain.count () << " seconds" << std::endl;
+      spdlog::info ("trying again in: {} seconds", timeToWaitBeforeCallingFunctionAgain.count ());
       auto timer = CoroTimer{ co_await boost::asio::this_coro::executor };
       timer.expires_after (timeToWaitBeforeCallingFunctionAgain);
       co_await timer.async_wait ();
@@ -98,7 +99,7 @@ void
 logUserMatchmakingAction (size_t connectionId, std::string const &action)
 {
   // #ifdef MATCHMAKING_PROXY_LOG_USER_MATCHMAKING_ACTION
-  std::osyncstream (std::cout) << std::format ("matchmaking_proxy Server::userMatchmaking connectionId: '{}' calling: '{}'", connectionId, action) << std::endl;
+  spdlog::info ("matchmaking_proxy Server::userMatchmaking connectionId: '{}' calling: '{}'", connectionId, action);
   // #endif
 }
 
@@ -121,21 +122,21 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
       co_await tryUntilNoException (
           [&pathToChainFile, &ctx] ()
             {
-              std::osyncstream (std::cout) << "load fullchain: " << pathToChainFile << std::endl;
+              spdlog::info("load fullchain: {}", pathToChainFile.string ());
               ctx.use_certificate_chain_file (pathToChainFile.string ());
             },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToPrivateFile, &ctx] ()
             {
-              std::osyncstream (std::cout) << "load privkey: " << pathToPrivateFile << std::endl;
+              spdlog::info("load privkey: {}", pathToPrivateFile.string ());
               ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
             },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToTmpDhFile, &ctx] ()
             {
-              std::osyncstream (std::cout) << "load Diffie-Hellman: " << pathToTmpDhFile << std::endl;
+              spdlog::info("load Diffie-Hellman: {}", pathToTmpDhFile.string ());
               ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
             },
           pollingSleepTimer);
@@ -192,15 +193,15 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
             }
           catch (std::exception const &e)
             {
-              std::osyncstream (std::cout) << "Server::userMatchmaking () connect  Exception : " << e.what () << std::endl;
+              spdlog::error("Server::userMatchmaking() connect exception: {}", e.what());
             }
         }
     }
   catch (std::exception const &e)
     {
-      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
+      spdlog::error("exception: {}", e.what());
     }
-  std::osyncstream (std::cout) << "exit matchmaking_proxy userMatchmaking \n";
+  spdlog::info("exit matchmaking_proxy userMatchmaking");
 }
 
 boost::asio::awaitable<void>
@@ -236,7 +237,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
         {
           try
             {
-              std::osyncstream (std::cout) << "wait for game over" << std::endl;
+              spdlog::info("wait for game over");
               auto socket = co_await gameMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::WebSocket{ std::move (socket) };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
@@ -259,14 +260,14 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
             }
           catch (std::exception const &e)
             {
-              std::osyncstream (std::cout) << "Server::gameMatchmaking () connect  Exception : " << e.what () << std::endl;
+              spdlog::error("Server::gameMatchmaking() connect exception: {}", e.what());
             }
         }
     }
   catch (std::exception const &e)
     {
-      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
+      spdlog::error("exception: {}", e.what());
     }
-  std::osyncstream (std::cout) << "exit matchmaking_proxy gameMatchmaking \n";
+  spdlog::info("exit matchmaking_proxy gameMatchmaking");
 }
 }

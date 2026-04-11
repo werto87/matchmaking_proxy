@@ -14,7 +14,7 @@
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <vector> // for allocator
-
+#include <spdlog/spdlog.h>
 using namespace matchmaking_proxy;
 
 boost::asio::awaitable<void>
@@ -49,11 +49,11 @@ connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToS
         }
       catch (std::exception const &e)
         {
-          std::osyncstream (std::cout) << "connectWebsocketSSL () connect  Exception : " << e.what () << std::endl;
+          spdlog::error("connectWebsocketSSL() connect exception: {}", e.what());
         }
     }
   catch (std::exception const &e)
     {
-      std::osyncstream (std::cout) << "exception: " << e.what () << std::endl;
+      spdlog::error("exception: {}", e.what());
     }
 }

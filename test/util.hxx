@@ -5,7 +5,7 @@
 #include <iostream> // for operator<<, ostream
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <my_web_socket/myWebSocket.hxx>
-#include <syncstream>
+#include <spdlog/spdlog.h>
 #include <vector> // for allocator
 
 using namespace matchmaking_proxy;

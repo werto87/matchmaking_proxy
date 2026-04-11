@@ -10,6 +10,7 @@
 #include <exception>
 #include <iostream>
 #include <my_web_socket/coSpawnTraced.hxx>
+#include <spdlog/spdlog.h>
 #include <string>
 namespace boost
 {
@@ -134,13 +135,13 @@ GameLobby::runTimer (std::shared_ptr<boost::asio::system_timer> timer, std::func
         }
       else
         {
-          std::osyncstream (std::cout) << "error in timer boost::system::errc: " << e.code () << std::endl;
+          spdlog::error ("error in timer boost::system::errc: {}", e.code ().message ());
           abort ();
         }
     }
   catch (std::exception &e)
     {
-      std::osyncstream (std::cout) << "runTimer exception: " << e.what () << std::endl;
+      spdlog::error("runTimer exception: {}", e.what());
       abort ();
     }
 }
@@ -151,7 +152,7 @@ GameLobby::startTimerToAcceptTheInvite (boost::asio::io_context &io_context, std
   waitingForAnswerToStartGame = true;
   _timer = std::make_shared<boost::asio::system_timer> (io_context);
   _timer->expires_after (timeToAcceptInvite);
-  my_web_socket::coSpawnTraced (_timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); },"matchmaking_proxy startTimerToAcceptTheInvite");
+  my_web_socket::coSpawnTraced (_timer->get_executor (), [=, this] () { return runTimer (_timer, gameInviteOver); }, "matchmaking_proxy startTimerToAcceptTheInvite");
 }
 
 void

@@ -51,7 +51,7 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
 {
   if (sodium_init () < 0)
     {
-      std::osyncstream (std::cout) << "sodium_init <= 0" << std::endl;
+      spdlog::error("sodium_init <= 0");
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
@@ -127,7 +127,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
 {
   if (sodium_init () < 0)
     {
-      std::osyncstream (std::cout) << "sodium_init <= 0" << std::endl;
+      spdlog::error("sodium_init <= 0");
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
@@ -151,7 +151,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   matchmakingOption.handleCustomMessageFromUser = [] (std::string const &messageType, std::string const &message, MatchmakingData &matchmakingData) {
     boost::system::error_code ec{};
     auto messageAsObject = confu_json::read_json (message, ec);
-    if (ec) std::osyncstream (std::cout) << "no handle for custom message: '" << message << "'" << std::endl;
+    if (ec) spdlog::warn("no handler for custom message: '{}'", message);
     else if (messageType == "GetCombinationSolved")
       {
         auto combinationSolved = confu_json::to_object<shared_class::GetCombinationSolved> (messageAsObject);
@@ -177,7 +177,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   auto const &handleMessageFromGame = [] (std::string const &messageType, std::string const &message, MatchmakingGameData &matchmakingGameData) {
     boost::system::error_code ec{};
     auto messageAsObject = confu_json::read_json (message, ec);
-    if (ec) std::osyncstream (std::cout) << "no handle for custom message: '" << message << "'" << std::endl;
+    if (ec) spdlog::warn("no handler for custom message: '{}'", message);
     else if (messageType == "CombinationSolved")
       {
         auto combinationSolved = confu_json::to_object<shared_class::CombinationSolved> (messageAsObject);
@@ -197,7 +197,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
         if (auto accountResult = confu_soci::findStruct<account_with_combinationsSolved::Account> (sql, "accountName", combinationSolved.accountName)) confu_soci::updateStruct (sql, account_with_combinationsSolved::Account{ accountResult.value ().accountName, accountResult.value ().password, accountResult.value ().rating, accountResult.value ().combinationsSolved + 1 });
       }
     else
-      std::osyncstream (std::cout) << "no handle for custom message: '" << message << "'" << std::endl;
+      spdlog::warn("no handler for custom message: '{}'", message);
   };
   my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, pathToMatchmakingDatabase, POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking (pathToMatchmakingDatabase, handleMessageFromGame), "test");
   SECTION ("just run the server", "[.debuging matchmaking]") { ioContext.run (); }

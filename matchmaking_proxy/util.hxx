@@ -7,8 +7,8 @@
 #include <exception>
 #include <iostream>
 #include <random>
+#include <spdlog/spdlog.h>
 #include <string>
-#include <syncstream>
 namespace matchmaking_proxy
 {
 
@@ -19,7 +19,7 @@ objectToStringWithObjectName (TypeToSend const &typeToSend)
   std::stringstream ss{};
   ss << confu_json::type_name<TypeToSend> () << '|' << confu_json::to_json (typeToSend);
 #ifdef MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
-  std::osyncstream (std::cout) << "objectToStringWithObjectName: " << ss.str () << std::endl;
+  spdlog::info ("objectToStringWithObjectName: {}", ss.str ());
 #endif
   return ss.str ();
 }
@@ -33,8 +33,8 @@ stringToObject (std::string const &objectAsString)
   auto jsonValue = confu_json::read_json (objectAsString, ec);
   if (ec)
     {
-      std::osyncstream (std::cerr) << "error while parsing string: error code: " << ec << std::endl;
-      std::osyncstream (std::cerr) << "error while parsing string: stringToParse: " << objectAsString << std::endl;
+      spdlog::error ("error while parsing string: error code: {}", ec.to_string());
+      spdlog::error ("error while parsing string: stringToParse: {}", objectAsString);
     }
   else
     {

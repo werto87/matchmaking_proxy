@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <spdlog/spdlog.h>
 
 // TODO  figure out if we can remove this
 namespace meta
@@ -34,13 +35,17 @@ using namespace boost::sml;
 namespace matchmaking_proxy
 {
 
-auto const accountNamesToAccounts = [] (std::string const &fullPathIncludingDatabaseName, std::vector<std::string> const &accountNames) {
-  return accountNames | std::ranges::views::transform ([&fullPathIncludingDatabaseName] (auto const &accountName) {
-           soci::session sql (soci::sqlite3, fullPathIncludingDatabaseName);
-           return confu_soci::findStruct<database::Account> (sql, "accountName", accountName);
-         })
-         | std::ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | std::ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | std::ranges::to<std::vector<database::Account>> ();
-};
+auto const accountNamesToAccounts = [] (std::string const &fullPathIncludingDatabaseName, std::vector<std::string> const &accountNames)
+  {
+    return accountNames
+           | std::ranges::views::transform (
+               [&fullPathIncludingDatabaseName] (auto const &accountName)
+                 {
+                   soci::session sql (soci::sqlite3, fullPathIncludingDatabaseName);
+                   return confu_soci::findStruct<database::Account> (sql, "accountName", accountName);
+                 })
+           | std::ranges::views::filter ([] (boost::optional<database::Account> const &optionalAccount) { return optionalAccount.has_value (); }) | std::ranges::views::transform ([] (auto const &optionalAccount) { return optionalAccount.value (); }) | std::ranges::to<std::vector<database::Account>> ();
+  };
 
 void
 sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameData &matchmakingGameData, std::vector<database::Account> const &accounts, const std::vector<database::Account> &accountsWithNewRating)
@@ -48,16 +53,17 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameData &matchmaki
   for (size_t i = 0; i < accounts.size (); ++i)
     {
       if (auto matchmakingWeakPtrItr = std::ranges::find_if (matchmakingGameData.stateMachines,
-                                                             [accountName = accounts.at (i).accountName] (auto const &matchmakingWeakPtr) {
-                                                               if (auto matchmaking = matchmakingWeakPtr.lock ())
-                                                                 {
-                                                                   return matchmaking->isLoggedInWithAccountName (accountName);
-                                                                 }
-                                                               else
-                                                                 {
-                                                                   return false;
-                                                                 }
-                                                             });
+                                                             [accountName = accounts.at (i).accountName] (auto const &matchmakingWeakPtr)
+                                                               {
+                                                                 if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                                                   {
+                                                                     return matchmaking->isLoggedInWithAccountName (accountName);
+                                                                   }
+                                                                 else
+                                                                   {
+                                                                     return false;
+                                                                   }
+                                                               });
           matchmakingWeakPtrItr != matchmakingGameData.stateMachines.end ())
         { // TODO handle error
           if (auto matchmaking = matchmakingWeakPtrItr->lock ())
@@ -69,97 +75,106 @@ sendRatingChangeToUserAndUpdateAccountInDatabase (MatchmakingGameData &matchmaki
       confu_soci::upsertStruct (sql, accountsWithNewRating.at (i));
     }
 }
-auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, MatchmakingGameData &matchmakingGameData) {
-  if (_gameOver.ratedGame)
-    {
-      if (_gameOver.draws.empty ())
-        {
-          auto losers = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.losers);
-          auto winners = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.winners);
-          auto [losersWithNewRating, winnersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
-          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, winners, winnersWithNewRating);
-          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, losers, losersWithNewRating);
-        }
-      else
-        {
-          auto draw = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws);
-          auto drawNewRating = calcRatingDraw (accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws));
-          sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, draw, drawNewRating);
-        }
-    }
-  matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
-};
+auto const gameOver = [] (matchmaking_game::GameOver const &_gameOver, MatchmakingGameData &matchmakingGameData)
+  {
+    if (_gameOver.ratedGame)
+      {
+        if (_gameOver.draws.empty ())
+          {
+            auto losers = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.losers);
+            auto winners = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.winners);
+            auto [losersWithNewRating, winnersWithNewRating] = calcRatingLoserAndWinner (losers, winners);
+            sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, winners, winnersWithNewRating);
+            sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, losers, losersWithNewRating);
+          }
+        else
+          {
+            auto draw = accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws);
+            auto drawNewRating = calcRatingDraw (accountNamesToAccounts (matchmakingGameData.fullPathIncludingDatabaseName.string (), _gameOver.draws));
+            sendRatingChangeToUserAndUpdateAccountInDatabase (matchmakingGameData, draw, drawNewRating);
+          }
+      }
+    matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::GameOverSuccess{}));
+  };
 
-auto const isLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
-  return std::ranges::find (matchmakingGameData.stateMachines, true,
-                            [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
-                              if (auto matchmaking = matchmakingWeakPtr.lock ())
+auto const isLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData)
+  {
+    return std::ranges::find (matchmakingGameData.stateMachines, true,
+                              [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr)
                                 {
-                                  return matchmaking->isLoggedInWithAccountName (accountName);
-                                }
-                              else
+                                  if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                    {
+                                      return matchmaking->isLoggedInWithAccountName (accountName);
+                                    }
+                                  else
+                                    {
+                                      return false;
+                                    }
+                                })
+           != matchmakingGameData.stateMachines.end ();
+  };
+auto const hasProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData)
+  {
+    return std::ranges::find (matchmakingGameData.stateMachines, true,
+                              [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr)
                                 {
-                                  return false;
-                                }
-                            })
-         != matchmakingGameData.stateMachines.end ();
-};
-auto const hasProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
-  return std::ranges::find (matchmakingGameData.stateMachines, true,
-                            [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
-                              if (auto matchmaking = matchmakingWeakPtr.lock ())
-                                {
-                                  return matchmaking->isLoggedInWithAccountName (accountName) && matchmaking->hasProxyToGame ();
-                                }
-                              else
-                                {
-                                  return false;
-                                }
-                            })
-         != matchmakingGameData.stateMachines.end ();
-};
+                                  if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                    {
+                                      return matchmaking->isLoggedInWithAccountName (accountName) && matchmaking->hasProxyToGame ();
+                                    }
+                                  else
+                                    {
+                                      return false;
+                                    }
+                                })
+           != matchmakingGameData.stateMachines.end ();
+  };
 
 auto const userLeftGameErrorNotLoggedIn = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not logged in" })); };
 auto const userLeftGameErrorUserHasNoProxy = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) { matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameError{ userLeftGame.accountName, "User not in proxy state" })); };
 
-auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData) {
-  if (auto matchmakingWeakPtrItr = std::ranges::find (matchmakingGameData.stateMachines, true,
-                                                      [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr) {
-                                                        if (auto matchmaking = matchmakingWeakPtr.lock ())
+auto const cancelProxyToGame = [] (matchmaking_game::UserLeftGame const &userLeftGame, MatchmakingGameData &matchmakingGameData)
+  {
+    if (auto matchmakingWeakPtrItr = std::ranges::find (matchmakingGameData.stateMachines, true,
+                                                        [accountName = userLeftGame.accountName] (const auto &matchmakingWeakPtr)
                                                           {
-                                                            return matchmaking->isLoggedInWithAccountName (accountName);
-                                                          }
-                                                        else
-                                                          {
-                                                            return false;
-                                                          }
-                                                      });
-      matchmakingWeakPtrItr == matchmakingGameData.stateMachines.end ())
-    {
-      if (auto matchmaking = matchmakingWeakPtrItr->lock ())
-        {
-          return matchmaking->disconnectFromProxy ();
-        }
-    }
-  matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
-};
+                                                            if (auto matchmaking = matchmakingWeakPtr.lock ())
+                                                              {
+                                                                return matchmaking->isLoggedInWithAccountName (accountName);
+                                                              }
+                                                            else
+                                                              {
+                                                                return false;
+                                                              }
+                                                          });
+        matchmakingWeakPtrItr == matchmakingGameData.stateMachines.end ())
+      {
+        if (auto matchmaking = matchmakingWeakPtrItr->lock ())
+          {
+            return matchmaking->disconnectFromProxy ();
+          }
+      }
+    matchmakingGameData.sendToGame (objectToStringWithObjectName (matchmaking_game::UserLeftGameSuccess{ userLeftGame.accountName }));
+  };
 
-auto const customMessage = [] (matchmaking_game::CustomMessage const &_customMessage, MatchmakingGameData &matchmakingGameData) {
-  if (matchmakingGameData.handleCustomMessageFromGame)
-    {
-      matchmakingGameData.handleCustomMessageFromGame (_customMessage.messageType, _customMessage.message, matchmakingGameData);
-    }
-};
+auto const customMessage = [] (matchmaking_game::CustomMessage const &_customMessage, MatchmakingGameData &matchmakingGameData)
+  {
+    if (matchmakingGameData.handleCustomMessageFromGame)
+      {
+        matchmakingGameData.handleCustomMessageFromGame (_customMessage.messageType, _customMessage.message, matchmakingGameData);
+      }
+  };
 
-auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameData) {
-  for (auto matchmakingWeakPtrItr : matchmakingGameData.stateMachines)
-    {
-      if (auto matchmaking = matchmakingWeakPtrItr.lock ())
-        {
-          matchmaking->proccessSendTopRatedPlayersToUser ();
-        }
-    }
-};
+auto const sendTopRatedPlayersToUser = [] (MatchmakingGameData &matchmakingGameData)
+  {
+    for (auto matchmakingWeakPtrItr : matchmakingGameData.stateMachines)
+      {
+        if (auto matchmaking = matchmakingWeakPtrItr.lock ())
+          {
+            matchmaking->proccessSendTopRatedPlayersToUser ();
+          }
+      }
+  };
 
 class MatchmakingGameStateMachine
 {
@@ -191,12 +206,11 @@ struct my_logger
   {
     if constexpr (boost::fusion::traits::is_sequence<TEvent>::value)
       {
-        std::osyncstream (std::cout) << "\n[" << aux::get_type_name<SM> () << "]"
-                  << "[process_event] '" << objectToStringWithObjectName (event) << "'" << std::endl;
+        spdlog::info("[{}][process_event] '{}'", aux::get_type_name<SM>(), objectToStringWithObjectName(event));
       }
     else
       {
-        printf ("[%s][process_event] %s\n", aux::get_type_name<SM> (), aux::get_type_name<TEvent> ());
+        spdlog::info("[{}][process_event] {}", aux::get_type_name<SM>(), aux::get_type_name<TEvent>());
       }
   }
 
@@ -262,21 +276,23 @@ MatchmakingGame::process_event (std::string const &event)
         auto const &typeToSearch = splitMesssage.at (0);
         auto const &objectAsString = splitMesssage.at (1);
         bool typeFound = false;
-        boost::hana::for_each (matchmaking_game::matchmakingGame, [&] (const auto &x) {
-          if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
-            {
-              typeFound = true;
-              boost::system::error_code ec{};
-              sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-              if (ec) std::osyncstream (std::cout) << "read_json error: " << ec.message () << std::endl;
-              return;
-            }
-        });
-        if (not typeFound) std::osyncstream (std::cout) << "could not find a match for typeToSearch in matchmakingGame '" << typeToSearch << "'" << std::endl;
+        boost::hana::for_each (matchmaking_game::matchmakingGame,
+                               [&] (const auto &x)
+                                 {
+                                   if (typeToSearch == confu_json::type_name<typename std::decay<decltype (x)>::type> ())
+                                     {
+                                       typeFound = true;
+                                       boost::system::error_code ec{};
+                                       sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
+                                       if (ec) spdlog::error("read_json error: {}", ec.message());
+                                       return;
+                                     }
+                                 });
+        if (not typeFound) spdlog::warn ("could not find a match for typeToSearch in matchmakingGame '{}'", typeToSearch);
       }
     else
       {
-        std::osyncstream (std::cout) << "Not supported event. event syntax: EventName|JsonObject" << std::endl;
+        spdlog::warn("Not supported event. event syntax: EventName|JsonObject");
       }
   }
 }

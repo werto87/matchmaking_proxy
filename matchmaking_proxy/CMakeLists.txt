@@ -32,6 +32,7 @@ find_package(Boost)
 find_package(magic_enum)
 find_package(my_web_socket)
 find_package(confu_algorithm)
+find_package(spdlog)
 target_link_libraries(
   matchmaking_proxy
   PUBLIC confu_soci::confu_soci
@@ -43,6 +44,7 @@ target_link_libraries(
          magic_enum::magic_enum
          my_web_socket::my_web_socket
          confu_algorithm::confu_algorithm
+         spdlog::spdlog
 )
 if(WITH_SSL_VERIFICATION)
   target_link_libraries(matchmaking_proxy PUBLIC certify::core)

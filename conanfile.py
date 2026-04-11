@@ -45,6 +45,11 @@ class MatchmakingProxy(ConanFile):
             "sqlite3",
             "openssl",
             "certify",
+            "spdlog",
+            #deps for testing
+            "modern_durak_game_shared",
+            "modern_durak_game_option"
+            ##################
         ]
         for pkg_name in deps_to_use:
             version, isModernDurak = all_deps[pkg_name]
@@ -60,7 +65,5 @@ class MatchmakingProxy(ConanFile):
 
 
         ### only for testing please do not put this in the package build recept ###
-        self.requires("modern_durak_game_shared/latest@modern-durak")
-        self.requires("modern_durak_game_option/latest@modern-durak")
         self.requires("catch2/2.13.9")
         ###########################################################################

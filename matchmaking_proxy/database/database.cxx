@@ -8,7 +8,7 @@
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <sqlite3.h>
 #include <stdio.h>
-#include <syncstream>
+#include <spdlog/spdlog.h>
 
 namespace matchmaking_proxy
 {
@@ -52,7 +52,7 @@ createTables (std::string const &fullPathIncludingDatabaseName)
     }
   catch (soci::soci_error const &error)
     {
-      std::osyncstream (std::cout) << error.get_error_message () << std::endl;
+      spdlog::error("{}", error.get_error_message());
     }
 }
 

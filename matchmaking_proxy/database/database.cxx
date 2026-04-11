@@ -23,7 +23,7 @@ createEmptyDatabase (std::string const &fullPathIncludingDatabaseName)
   rc = sqlite3_open (fullPathIncludingDatabaseName.c_str (), &db);
   if (rc)
     {
-      fprintf (stderr, "Can't open database: %s\n", sqlite3_errmsg (db));
+      spdlog::error("Can't open database: {}", sqlite3_errmsg(db));
       return;
     }
   sqlite3_close (db);

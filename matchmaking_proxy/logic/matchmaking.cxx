@@ -1316,21 +1316,21 @@ struct my_logger
   void
   log_guard (const TGuard &, const TEvent &, bool result)
   {
-    printf ("[%s][guard]\t  '%s' %s\n", aux::get_type_name<SM> (), aux::get_type_name<TGuard> (), (result ? "[OK]" : "[Reject]"));
+    spdlog::info ("[{}][guard]\t'{}' {}", aux::get_type_name<SM> (), aux::get_type_name<TGuard> (), (result ? "[OK]" : "[Reject]"));
   }
 
   template <class SM, class TAction, class TEvent>
   void
   log_action (const TAction &, const TEvent &)
   {
-    printf ("[%s][action]\t '%s' \n", aux::get_type_name<SM> (), aux::get_type_name<TAction> ());
+    spdlog::info ("[{}][action]\t '{}'", aux::get_type_name<SM> (), aux::get_type_name<TAction> ());
   }
 
   template <class SM, class TSrcState, class TDstState>
   void
   log_state_change (const TSrcState &src, const TDstState &dst)
   {
-    printf ("[%s][transition]\t  '%s' -> '%s'\n", aux::get_type_name<SM> (), src.c_str (), dst.c_str ());
+    spdlog::info ("[{}][transition]\t '{}' -> '{}'", aux::get_type_name<SM> (), src, dst);
   }
 };
 struct Matchmaking::StateMachineWrapper

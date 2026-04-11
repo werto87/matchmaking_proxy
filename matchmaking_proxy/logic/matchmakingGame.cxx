@@ -20,10 +20,10 @@
 #include <ranges>
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
+#include <spdlog/spdlog.h>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <spdlog/spdlog.h>
 
 // TODO  figure out if we can remove this
 namespace meta
@@ -215,25 +215,36 @@ struct my_logger
   }
 
   template <class SM, class TGuard, class TEvent>
-  void
-  log_guard (const TGuard &, const TEvent &, bool result)
-  {
-    printf ("[%s][guard]\t  '%s' %s\n", aux::get_type_name<SM> (), aux::get_type_name<TGuard> (), (result ? "[OK]" : "[Reject]"));
-  }
+void log_guard(const TGuard&, const TEvent&, bool result)
+{
+    spdlog::info(
+        "[{}][guard]\t'{}' {}",
+        aux::get_type_name<SM>(),
+        aux::get_type_name<TGuard>(),
+        (result ? "[OK]" : "[Reject]")
+    );
+}
 
-  template <class SM, class TAction, class TEvent>
-  void
-  log_action (const TAction &, const TEvent &)
-  {
-    printf ("[%s][action]\t '%s' \n", aux::get_type_name<SM> (), aux::get_type_name<TAction> ());
-  }
+template <class SM, class TAction, class TEvent>
+void log_action(const TAction&, const TEvent&)
+{
+    spdlog::info(
+        "[{}][action]\t'{}'",
+        aux::get_type_name<SM>(),
+        aux::get_type_name<TAction>()
+    );
+}
 
-  template <class SM, class TSrcState, class TDstState>
-  void
-  log_state_change (const TSrcState &src, const TDstState &dst)
-  {
-    printf ("[%s][transition]\t  '%s' -> '%s'\n", aux::get_type_name<SM> (), src.c_str (), dst.c_str ());
-  }
+template <class SM, class TSrcState, class TDstState>
+void log_state_change(const TSrcState& src, const TDstState& dst)
+{
+    spdlog::info(
+        "[{}][transition]\t'{}' -> '{}'",
+        aux::get_type_name<SM>(),
+        src,
+        dst
+    );
+}
 };
 struct MatchmakingGame::StateMachineWrapper
 {
@@ -284,7 +295,7 @@ MatchmakingGame::process_event (std::string const &event)
                                        typeFound = true;
                                        boost::system::error_code ec{};
                                        sm->impl.process_event (confu_json::to_object<std::decay_t<decltype (x)>> (confu_json::read_json (objectAsString, ec)));
-                                       if (ec) spdlog::error("read_json error: {}", ec.message());
+                                       if (ec) spdlog::error ("read_json error: {}", ec.message ());
                                        return;
                                      }
                                  });
@@ -292,7 +303,7 @@ MatchmakingGame::process_event (std::string const &event)
       }
     else
       {
-        spdlog::warn("Not supported event. event syntax: EventName|JsonObject");
+        spdlog::warn ("Not supported event. event syntax: EventName|JsonObject");
       }
   }
 }

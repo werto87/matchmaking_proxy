@@ -183,7 +183,7 @@ connectToGame (matchmaking_game::ConnectToGame connectToGameEv, auto &&sm, auto 
           throw;
         }
       static size_t id = 0;
-      matchmakingData.matchmakingGame = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "connectToGame", fmt::fg (fmt::color::cadet_blue), std::to_string (id++));
+      matchmakingData.matchmakingGame = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "connectToGame", std::to_string (id++));
       using namespace boost::asio::experimental::awaitable_operators;
       try
         {
@@ -1475,7 +1475,7 @@ startGame (auto gameLobbyItr, MatchmakingData &matchmakingData)
   ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
   co_await ws.async_handshake (matchmakingData.matchmakingGameEndpoint.address ().to_string () + std::to_string (matchmakingData.matchmakingGameEndpoint.port ()), "/");
   static size_t id = 0;
-  auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "sendStartGameToServer", fmt::fg (fmt::color::cornflower_blue), std::to_string (id++));
+  auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "sendStartGameToServer",  std::to_string (id++));
   using namespace boost::asio::experimental::awaitable_operators;
   my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor,
                                 myWebSocket->readLoop (

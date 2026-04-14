@@ -40,7 +40,7 @@ connectWebsocketSSL (auto handleMsgFromGame, std::vector<std::string> messageToS
               co_await connection.async_write (boost::asio::buffer (message), use_awaitable);
             }
           static size_t id = 0;
-          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "connectWebsocketSSL", fmt::fg (fmt::color::chocolate), std::to_string (id++));
+          auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "connectWebsocketSSL",  std::to_string (id++));
           using namespace boost::asio::experimental::awaitable_operators;
           co_await (myWebsocket->readLoop ([myWebsocket, handleMsgFromGame, &ioContext, &messagesFromGame] (const std::string &msg) {
             messagesFromGame.push_back (msg);

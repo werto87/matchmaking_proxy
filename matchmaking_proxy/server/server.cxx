@@ -160,7 +160,7 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
               logUserMatchmakingAction (connectionId, "co_await connection.async_accept (use_awaitable);");
               co_await connection.async_accept (use_awaitable);
-              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", fmt::fg (fmt::color::red), std::to_string (connectionId));
+              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking",std::to_string (connectionId));
               sslWebSockets->emplace_back (myWebsocket);
               my_web_socket::coSpawnTraced (ioContext, myWebsocket->sendPingToEndpoint (), "matchmaking_proxy Server::userMatchmaking sendPingToEndpoint");
               tcp::resolver resolv{ ioContext };
@@ -244,7 +244,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
               connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
               co_await connection.async_accept ();
               static size_t id = 0;
-              auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (connection), "gameMatchmaking", fmt::fg (fmt::color::blue_violet), std::to_string (id++));
+              auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (connection), "gameMatchmaking", std::to_string (id++));
               webSockets->emplace_back (myWebSocket);
               using namespace boost::asio::experimental::awaitable_operators;
               my_web_socket::coSpawnTraced (ioContext,

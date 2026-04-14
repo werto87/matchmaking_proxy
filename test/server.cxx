@@ -26,7 +26,6 @@
 #include <deque>
 #include <exception>
 #include <filesystem>
-#include <fmt/color.h>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -62,8 +61,8 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
   auto pool = thread_pool{ 2 };
   auto const matchmakingGamePort = 4242;
   auto const userGameViaMatchmakingPort = 3232;
-  auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game",  "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking",  "0" };
   auto server = Server{ ioContext, pool, { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { boost::asio::ip::make_address ("127.0.0.1"), 0 } };
   auto const userMatchmakingPort = server.userMatchmakingAcceptor.get ()->local_endpoint ().port ();
   auto const PATH_TO_CHAIN_FILE = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/localhost.pem" };

@@ -12,7 +12,6 @@
 #include <deque>
 #include <exception>
 #include <filesystem>
-#include <fmt/color.h>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -50,8 +49,8 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   auto const matchmakingGamePort = 44444;
   auto const userGameViaMatchmakingPort = 33333;
   auto server = Server{ ioContext, pool, { boost::asio::ip::make_address ("127.0.0.1"), userMatchmakingPort }, { boost::asio::ip::make_address ("127.0.0.1"), gameMatchmakingPort } };
-  auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game", fmt::fg (fmt::color::violet), "0" };
-  auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking", fmt::fg (fmt::color::lawn_green), "0" };
+  auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, { .requestResponse = { { "LeaveGame|{}", "LeaveGameSuccess|{}" } }, .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "matchmaking_game",  "0" };
+  auto userGameViaMatchmaking = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, { .requestResponse = {}, .requestStartsWithResponse = { { R"foo(ConnectToGame)foo", "ConnectToGameSuccess|{}" } } }, "userGameViaMatchmaking",  "0" };
   auto const PATH_TO_CHAIN_FILE = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/localhost.pem" };
   auto const PATH_TO_PRIVATE_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/localhost-key.pem" };
   auto const PATH_TO_DH_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/dhparam.pem" };

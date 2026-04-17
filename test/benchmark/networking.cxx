@@ -59,7 +59,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) && server.gameMatchmaking ("matchmaking_proxy.db"), "test");
   auto messagesFromGamePlayer1 = std::vector<std::string>{};
   size_t messagesSend = 0;
-  auto handleMsgFromGame = [&messagesSend, &server, &matchmakingGame, &userGameViaMatchmaking] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
+  auto handleMsgFromGame = [&messagesSend, &server] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket) {
     if (boost::starts_with (msg, "LoginAsGuestSuccess"))
       {
         for (uint64_t i = 0; i < 1000; ++i)

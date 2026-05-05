@@ -28,11 +28,11 @@
 #include <my_web_socket/coSpawnTraced.hxx>
 #include <my_web_socket/myWebSocket.hxx>
 #include <openssl/ssl3.h>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <spdlog/spdlog.h>
 using namespace boost::beast;
 using namespace boost::asio;
 using tcp = boost::asio::ip::tcp; // from <boost/asio/ip/tcp.hpp>
@@ -122,21 +122,21 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
       co_await tryUntilNoException (
           [&pathToChainFile, &ctx] ()
             {
-              spdlog::info("load fullchain: {}", pathToChainFile.string ());
+              spdlog::info ("load fullchain: {}", pathToChainFile.string ());
               ctx.use_certificate_chain_file (pathToChainFile.string ());
             },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToPrivateFile, &ctx] ()
             {
-              spdlog::info("load privkey: {}", pathToPrivateFile.string ());
+              spdlog::info ("load privkey: {}", pathToPrivateFile.string ());
               ctx.use_private_key_file (pathToPrivateFile.string (), boost::asio::ssl::context::pem);
             },
           pollingSleepTimer);
       co_await tryUntilNoException (
           [&pathToTmpDhFile, &ctx] ()
             {
-              spdlog::info("load Diffie-Hellman: {}", pathToTmpDhFile.string ());
+              spdlog::info ("load Diffie-Hellman: {}", pathToTmpDhFile.string ());
               ctx.use_tmp_dh_file (pathToTmpDhFile.string ());
             },
           pollingSleepTimer);
@@ -153,55 +153,74 @@ Server::userMatchmaking (std::filesystem::path pathToChainFile, std::filesystem:
               connectionId++;
               logUserMatchmakingAction (connectionId, "auto socket = co_await userMatchmakingAcceptor->async_accept ();");
               auto socket = co_await userMatchmakingAcceptor->async_accept ();
-              auto connection = my_web_socket::SSLWebSocket{ std::move (socket), ctx };
-              connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
-              connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
-              logUserMatchmakingAction (connectionId, "co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);");
-              co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);
-              logUserMatchmakingAction (connectionId, "co_await connection.async_accept (use_awaitable);");
-              co_await connection.async_accept (use_awaitable);
-              auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking",std::to_string (connectionId));
-              sslWebSockets->emplace_back (myWebsocket);
-              my_web_socket::coSpawnTraced (ioContext, myWebsocket->sendPingToEndpoint (), "matchmaking_proxy Server::userMatchmaking sendPingToEndpoint");
-              tcp::resolver resolv{ ioContext };
-              logUserMatchmakingAction (connectionId, "auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);");
-              auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
-              logUserMatchmakingAction (connectionId, "auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);");
-              auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
-              auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, *matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
-              matchmakings->emplace_back (matchmaking);
-              using namespace boost::asio::experimental::awaitable_operators;
-              my_web_socket::coSpawnTraced (ioContext,
-                                            myWebsocket->readLoop (
-                                                [myWebsocket, matchmaking] (const std::string &msg)
-                                                  {
-                                                    if (matchmaking->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
-                                                      {
-                                                        matchmaking->sendMessageToGame (msg);
-                                                      }
-                                                    else
-                                                      {
-                                                        auto const &processEventResult = matchmaking->processEvent (msg);
-                                                        if (not processEventResult)
+              my_web_socket::coSpawnTraced (
+                  ioContext,
+                  [=, &_pool = pool, _matchmakings = matchmakings, &_ioContext = ioContext, _sslWebSockets = sslWebSockets, mySocket = std::move (socket), &ctx, &gameLobbies] () mutable -> boost::asio::awaitable<void>
+                    {
+                      auto connection = my_web_socket::SSLWebSocket{ std::move (mySocket), ctx };
+                      connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
+                      connection.set_option (websocket::stream_base::decorator ([] (websocket::response_type &res) { res.set (http::field::server, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-server-async"); }));
+                      logUserMatchmakingAction (connectionId, "co_await connection.next_layer ().async_handshake (ssl::stream_base::server, use_awaitable);");
+                      using namespace boost::asio::experimental::awaitable_operators;
+                      if (auto result = co_await (connection.next_layer ().async_handshake (ssl::stream_base::server, as_tuple (use_awaitable)) || my_web_socket::CoroTimer{ co_await this_coro::executor, std::chrono::seconds{ 10 } }.async_wait (as_tuple (use_awaitable))); result.index () == 1)
+                        {
+                          spdlog::info ("{} handshake timed out", connectionId);
+                          boost::beast::get_lowest_layer (connection).cancel ();
+                          boost::beast::get_lowest_layer (connection).close ();
+                          co_return;
+                        }
+                      logUserMatchmakingAction (connectionId, "co_await connection.async_accept (use_awaitable);");
+                      if (auto result = co_await (connection.async_accept (as_tuple (use_awaitable)) || my_web_socket::CoroTimer{ co_await this_coro::executor, std::chrono::seconds{ 10 } }.async_wait (as_tuple (use_awaitable))); result.index () == 1)
+                        {
+                          spdlog::info ("{} websocket accept timed out", connectionId);
+                          boost::beast::get_lowest_layer (connection).cancel ();
+                          boost::beast::get_lowest_layer (connection).close ();
+                          co_return;
+                        }
+                      auto myWebsocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> (std::move (connection), "userMatchmaking", std::to_string (connectionId));
+                      _sslWebSockets->emplace_back (myWebsocket);
+                      my_web_socket::coSpawnTraced (_ioContext, myWebsocket->sendPingToEndpoint (), "matchmaking_proxy Server::userMatchmaking sendPingToEndpoint");
+                      tcp::resolver resolv{ _ioContext };
+                      logUserMatchmakingAction (connectionId, "auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);");
+                      auto resolvedGameMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, gamePort, use_awaitable);
+                      logUserMatchmakingAction (connectionId, "auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);");
+                      auto resolvedUserGameViaMatchmakingEndpoint = co_await resolv.async_resolve (ip::tcp::v4 (), gameHost, userGameViaMatchmakingPort, use_awaitable);
+                      auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ _ioContext, *_matchmakings, [myWebsocket] (std::string message) { myWebsocket->queueMessage (std::move (message)); }, gameLobbies, _pool, matchmakingOption, resolvedGameMatchmakingEndpoint.begin ()->endpoint (), resolvedUserGameViaMatchmakingEndpoint.begin ()->endpoint (), fullPathIncludingDatabaseName });
+                      _matchmakings->emplace_back (matchmaking);
+                      using namespace boost::asio::experimental::awaitable_operators;
+                      my_web_socket::coSpawnTraced (_ioContext,
+                                                    myWebsocket->readLoop (
+                                                        [myWebsocket, matchmaking] (const std::string &msg)
                                                           {
-                                                            myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, processEventResult.error () }));
-                                                          }
-                                                      }
-                                                  })
-                                                && myWebsocket->writeLoop (),
-                                            "matchmaking_proxy userMatchmaking read && write", [matchmaking] (auto) { matchmaking->cleanUp (); });
+                                                            if (matchmaking->hasProxyToGame () && not messageTypeSupportedByMatchmaking (msg))
+                                                              {
+                                                                matchmaking->sendMessageToGame (msg);
+                                                              }
+                                                            else
+                                                              {
+                                                                auto const &processEventResult = matchmaking->processEvent (msg);
+                                                                if (not processEventResult)
+                                                                  {
+                                                                    myWebsocket->queueMessage (objectToStringWithObjectName (user_matchmaking::UnhandledEventError{ msg, processEventResult.error () }));
+                                                                  }
+                                                              }
+                                                          })
+                                                        && myWebsocket->writeLoop (),
+                                                    "matchmaking_proxy userMatchmaking read && write", [matchmaking] (auto) { matchmaking->cleanUp (); });
+                    },
+                  "matchmaking_proxy Server::userMatchmaking accept");
             }
           catch (std::exception const &e)
             {
-              spdlog::error("Server::userMatchmaking() connect exception: {}", e.what());
+              spdlog::error ("Server::userMatchmaking() connect exception: {}", e.what ());
             }
         }
     }
   catch (std::exception const &e)
     {
-      spdlog::error("exception: {}", e.what());
+      spdlog::error ("exception: {}", e.what ());
     }
-  spdlog::info("exit matchmaking_proxy userMatchmaking");
+  spdlog::info ("exit matchmaking_proxy userMatchmaking");
 }
 
 boost::asio::awaitable<void>
@@ -237,7 +256,7 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
         {
           try
             {
-              spdlog::info("wait for game over");
+              spdlog::info ("wait for game over");
               auto socket = co_await gameMatchmakingAcceptor->async_accept ();
               auto connection = my_web_socket::WebSocket{ std::move (socket) };
               connection.set_option (websocket::stream_base::timeout::suggested (role_type::server));
@@ -260,14 +279,14 @@ Server::gameMatchmaking (std::filesystem::path fullPathIncludingDatabaseName, st
             }
           catch (std::exception const &e)
             {
-              spdlog::error("Server::gameMatchmaking() connect exception: {}", e.what());
+              spdlog::error ("Server::gameMatchmaking() connect exception: {}", e.what ());
             }
         }
     }
   catch (std::exception const &e)
     {
-      spdlog::error("exception: {}", e.what());
+      spdlog::error ("exception: {}", e.what ());
     }
-  spdlog::info("exit matchmaking_proxy gameMatchmaking");
+  spdlog::info ("exit matchmaking_proxy gameMatchmaking");
 }
 }

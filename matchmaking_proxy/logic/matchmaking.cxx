@@ -1330,7 +1330,7 @@ struct my_logger
   void
   log_state_change (const TSrcState &src, const TDstState &dst)
   {
-    spdlog::info ("[{}][transition]\t '{}' -> '{}'", aux::get_type_name<SM> (), src, dst);
+    spdlog::info ("[{}][transition]\t '{}' -> '{}'", aux::get_type_name<SM> (), src.c_str (), dst.c_str ());
   }
 };
 struct Matchmaking::StateMachineWrapper

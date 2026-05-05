@@ -163,7 +163,13 @@
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/microsoft-compiler-debug/conan_toolchain.cmake",
                 "CMAKE_CXX_FLAGS": "/D_WIN32_WINNT=0x0A00 /EHsc /bigobj",
                 "myproject_ENABLE_SANITIZER_ADDRESS": "ON",
-                "LOG_BOOST_ASIO": "OFF"
+                "LOG_BOOST_ASIO": "ON",
+                "LOG_FOR_STATE_MACHINE": "ON",
+                "LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME": "OFF",
+                "LOG_USER_MATCHMAKING_ACTION": "OFF",
+                "SSL_VERIFICATION": "OFF",
+                "myproject_WARNINGS_AS_ERRORS": "ON"
+
             }
         }
     ],

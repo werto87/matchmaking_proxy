@@ -1,5 +1,5 @@
 #include "matchmaking_proxy/database/database.hxx"
-#include "catch2/catch.hpp"
+#include <catch2/catch_all.hpp>
 #include "util.hxx"
 #include <boost/fusion/include/io.hpp>
 #include <boost/fusion/include/make_tuple.hpp>

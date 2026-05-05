@@ -1,5 +1,5 @@
 #pragma once
-#include "catch2/catch.hpp"
+#include <catch2/catch_all.hpp>
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "util.hxx"

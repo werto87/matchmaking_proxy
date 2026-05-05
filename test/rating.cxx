@@ -1,6 +1,6 @@
 #include "matchmaking_proxy/logic/rating.hxx"
 #include "matchmaking_proxy/database/database.hxx" // for Account
-#include <catch2/catch.hpp>                        // for AssertionHandler
+#include <catch2/catch_all.hpp>
 #include <type_traits>                             // for add_const<>::type
 using namespace matchmaking_proxy;
 TEST_CASE ("updateRatingWinLose", "[rating]")

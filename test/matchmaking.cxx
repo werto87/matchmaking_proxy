@@ -6,7 +6,7 @@
 #include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <confu_json/to_json.hxx>
 #include <modern_durak_game_option/userDefinedGameOption.hxx>
 #include <sstream>

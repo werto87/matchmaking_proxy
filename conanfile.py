@@ -24,10 +24,10 @@ class MatchmakingProxy(ConanFile):
         # We can control the options of our dependencies based on current options
         self.options["catch2"].with_main = True
         self.options["catch2"].with_benchmark = True
-        self.options["my_web_socket"].log_co_spawn_print_exception = True
-        self.options["my_web_socket"].log_write = True
-        self.options["my_web_socket"].log_read = True
-        self.options["my_web_socket"].log_boost_asio = False
+        # self.options["my_web_socket"].log_co_spawn_print_exception = True
+        # self.options["my_web_socket"].log_write = True
+        # self.options["my_web_socket"].log_read = True
+        # self.options["my_web_socket"].log_boost_asio = False
 
     def requirements(self):
         sharedConan = self.python_requires["shared"].module.SharedConan
@@ -48,7 +48,8 @@ class MatchmakingProxy(ConanFile):
             "spdlog",
             #deps for testing
             "modern_durak_game_shared",
-            "modern_durak_game_option"
+            "modern_durak_game_option",
+            "catch2"
             ##################
         ]
         for pkg_name in deps_to_use:
@@ -62,8 +63,3 @@ class MatchmakingProxy(ConanFile):
                 self.requires(
                     f"{pkg_name}/{version}{'@modern-durak' if isModernDurak else ''}"
                 )
-
-
-        ### only for testing please do not put this in the package build recept ###
-        self.requires("catch2/2.13.9")
-        ###########################################################################

@@ -11,7 +11,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/sml.hpp>
-#include <catch2/catch.hpp> // for Ass...
+#include <catch2/catch_all.hpp>
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <my_web_socket/mockServer.hxx>

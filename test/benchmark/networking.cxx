@@ -1,4 +1,4 @@
-#include "catch2/catch.hpp"
+#include <catch2/catch_all.hpp>
 #include "matchmaking_proxy/database/database.hxx"
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/server/server.hxx"
@@ -7,7 +7,7 @@
 #include "util.hxx"
 #include <algorithm>
 #include <boost/asio/signal_set.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <cstddef>
 #include <deque>
 #include <exception>

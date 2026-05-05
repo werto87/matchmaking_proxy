@@ -21,7 +21,7 @@
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 #endif
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <cstddef>
 #include <deque>
 #include <exception>

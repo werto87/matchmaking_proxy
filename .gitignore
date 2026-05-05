@@ -11,3 +11,4 @@ compile_commands.json
 CMakeUserPresets.json
 .editorconfig
 .vs
+vc140.pdb

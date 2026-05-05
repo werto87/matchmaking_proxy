@@ -12,6 +12,15 @@ set(Logging)
 if(LOG_BOOST_ASIO)
   list(APPEND Logging BOOST_ASIO_ENABLE_HANDLER_TRACKING)
 endif()
+if(LOG_USER_MATCHMAKING_ACTION)
+  list(APPEND Logging MATCHMAKING_PROXY_LOG_USER_MATCHMAKING_ACTION)
+endif()
+if(LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME)
+  list(APPEND Logging MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME)
+endif()
+if(LOG_FOR_STATE_MACHINE)
+  list(APPEND Logging MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE)
+endif()
 
 target_compile_definitions(matchmaking_proxy PUBLIC 
 ${Logging}
@@ -19,8 +28,8 @@ ${Logging}
 
 find_package(confu_soci)
 
-option(WITH_SSL_VERIFICATION "Enable ssl verification" OFF)
-if(WITH_SSL_VERIFICATION)
+option(SSL_VERIFICATION "Enable ssl verification" OFF)
+if(SSL_VERIFICATION)
   find_package(certify)
 endif()
 
@@ -46,12 +55,12 @@ target_link_libraries(
          confu_algorithm::confu_algorithm
          spdlog::spdlog
 )
-if(WITH_SSL_VERIFICATION)
+
+if(SSL_VERIFICATION)
   target_link_libraries(matchmaking_proxy PUBLIC certify::core)
+  target_compile_definitions(matchmaking_proxy PUBLIC MATCHMAKING_PROXY_SSL_VERIFICATION)
 endif()
-if(WITH_SSL_VERIFICATION)
-  target_compile_definitions(matchmaking_proxy PUBLIC MATCHMAKING_PROXY_WITH_SSL_VERIFICATION)
-endif()
+
 target_compile_features(matchmaking_proxy PUBLIC cxx_std_20)
 
 target_include_directories(matchmaking_proxy

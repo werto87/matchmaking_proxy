@@ -96,11 +96,11 @@ maintain (auto maintainTimer, auto webSockets, auto sslWebSockets, auto matchmak
 }
 
 void
-logUserMatchmakingAction (size_t connectionId, std::string const &action)
+logUserMatchmakingAction ([[maybe_unused]] size_t connectionId, [[maybe_unused]] std::string const &action)
 {
-  // #ifdef MATCHMAKING_PROXY_LOG_USER_MATCHMAKING_ACTION
+#ifdef MATCHMAKING_PROXY_LOG_USER_MATCHMAKING_ACTION
   spdlog::info ("matchmaking_proxy Server::userMatchmaking connectionId: '{}' calling: '{}'", connectionId, action);
-  // #endif
+#endif
 }
 
 boost::asio::awaitable<void>

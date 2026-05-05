@@ -22,8 +22,6 @@ target_link_libraries(_test myproject_options myproject_warnings
 target_compile_definitions(
   _test
   PUBLIC $<$<CONFIG:DEBUG>:DEBUG>
-  #  MATCHMAKING_PROXY_LOG_FOR_STATE_MACHINE
-  #  MATCHMAKING_PROXY_LOG_OBJECT_TO_STRING_WITH_OBJECT_NAME
 )
 target_compile_definitions(_test PRIVATE
   PATH_TO_SOURCE="${CMAKE_SOURCE_DIR}"

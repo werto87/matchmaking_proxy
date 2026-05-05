@@ -27,7 +27,6 @@ class MatchmakingProxy(ConanFile):
         # self.options["my_web_socket"].log_co_spawn_print_exception = True
         # self.options["my_web_socket"].log_write = True
         # self.options["my_web_socket"].log_read = True
-        # self.options["my_web_socket"].log_boost_asio = False
 
     def requirements(self):
         sharedConan = self.python_requires["shared"].module.SharedConan

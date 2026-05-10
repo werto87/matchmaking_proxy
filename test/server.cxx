@@ -4,7 +4,6 @@
 #include "matchmaking_proxy/logic/matchmakingGame.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "networkingUtil.hxx"
-#include "util.hxx"
 #include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/co_spawn.hpp>

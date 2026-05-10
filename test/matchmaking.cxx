@@ -3,15 +3,17 @@
 #include "matchmaking_proxy/logic/matchmakingData.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
 #include "matchmaking_proxy/util.hxx"
-#include "util.hxx"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <catch2/catch_all.hpp>
 #include <confu_json/to_json.hxx>
+#include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
+#include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <modern_durak_game_option/userDefinedGameOption.hxx>
 #include <sstream>
-using namespace user_matchmaking;
+
 using namespace matchmaking_proxy;
+using namespace user_matchmaking;
 TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
 {
   database::createEmptyDatabase ("matchmaking_proxy.db");

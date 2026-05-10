@@ -3,7 +3,6 @@
 #include "matchmaking_proxy/server/server.hxx"
 #include "matchmaking_proxy/util.hxx"
 #include "test/networkingUtil.hxx"
-#include "util.hxx"
 #include <algorithm>
 #include <boost/asio/signal_set.hpp>
 #include <catch2/catch_all.hpp>

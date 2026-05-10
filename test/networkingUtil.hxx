@@ -2,7 +2,6 @@
 #include <catch2/catch_all.hpp>
 #include "matchmaking_proxy/logic/matchmaking.hxx"
 #include "matchmaking_proxy/server/gameLobby.hxx"
-#include "util.hxx"
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/ip/basic_endpoint.hpp>
 #include <boost/asio/ip/tcp.hpp>

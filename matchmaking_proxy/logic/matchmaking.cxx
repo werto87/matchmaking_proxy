@@ -23,6 +23,8 @@
 #include <my_web_socket/myWebSocket.hxx>
 #include <ranges>
 #include <spdlog/spdlog.h>
+#include <steam/steam_api.h>
+
 using namespace boost::sml;
 
 #if defined(_MSC_VER)
@@ -92,6 +94,10 @@ struct WaitForConnectToGame
 {
 };
 
+struct WaitingForCheckSteam
+{
+};
+
 boost::asio::awaitable<void> startGame (auto gameLobbyItr, MatchmakingData &matchmakingData);
 
 template <typename Matchmaking, typename Event>
@@ -132,6 +138,33 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
           sm.process_event (PasswordDoesNotMatch{ loginAccountObject.accountName }, deps, subs);
         }
     }
+}
+
+boost::asio::awaitable<void>
+doCheckSteam (user_matchmaking::LoginAccountSteam loginAccountSteam, auto &&sm, auto &&deps, auto &&subs)
+{
+  using namespace boost::beast;
+  using namespace boost::asio;
+  auto &matchmakingData = aux::get<MatchmakingData &> (deps);
+  boost::asio::ssl::context ctx (boost::asio::ssl::context::tls);
+  auto connection = boost::beast::ssl_stream<boost::beast::tcp_stream>{ matchmakingData.ioContext, ctx };
+  get_lowest_layer (connection).expires_never ();
+  std::string const host = "api.steampowered.com";
+  std::string const port = "443";
+  std::string target = std::format ("/ISteamUserAuth/AuthenticateUserTicket/v1/?key={}&appid={}&ticket={}", "820595D129879D30B2FE54427168CFEC", 4249930, loginAccountSteam.ticket);
+  boost::asio::ip::tcp::resolver resolver (matchmakingData.ioContext);
+  auto results = co_await resolver.async_resolve (host, port, boost::asio::use_awaitable);
+  co_await get_lowest_layer (connection).async_connect (results, use_awaitable);
+  co_await connection.async_handshake (ssl::stream_base::client, use_awaitable);
+  boost::beast::http::request<http::string_body> req{ http::verb::get, target, 11 };
+  req.set (http::field::host, "api.steampowered.com");
+  req.set (http::field::user_agent, "auth-server");
+  co_await http::async_write (connection, req, use_awaitable);
+  flat_buffer buffer;
+  http::response<http::string_body> response;
+  co_await http::async_read (connection, buffer, response, use_awaitable);
+  // send message to steam
+  std::cout << response.body() << std::endl;
 }
 
 boost::asio::awaitable<void>
@@ -376,6 +409,9 @@ auto hashPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> vo
     my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doHashPassword (event, sm, deps, subs), "matchmaking_proxy hashPassword"); // NOLINT(clang-analyzer-core.NullDereference) //TODO check if this is really a false positive
   };
 auto checkPassword = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doCheckPassword (event, sm, deps, subs), "matchmaking_proxy doCheckPassword"); };
+
+auto const checkSteam = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, doCheckSteam (event, sm, deps, subs), "matchmaking_proxy doCheckSteam"); };
+
 auto const wantsToJoinAGameWrapper = [] (user_matchmaking::WantsToJoinGame const &wantsToJoinGameEv, MatchmakingData &matchmakingData) { my_web_socket::coSpawnTraced (matchmakingData.ioContext, wantsToJoinGame (wantsToJoinGameEv, matchmakingData), "matchmaking_proxy wantsToJoinGame"); };
 auto doConnectToGame = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, connectToGame (event, sm, deps, subs), "matchmaking_proxy connectToGame"); };
 auto createGameWrapper = [] (auto &&event, auto &&sm, auto &&deps, auto &&subs) -> void { my_web_socket::coSpawnTraced (aux::get<MatchmakingData &> (deps).ioContext, createGame (event, sm, deps, subs), "matchmaking_proxy createGame"); };
@@ -1228,6 +1264,10 @@ public:
 , state<NotLoggedIn>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<LoggedIn>
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
+, state<NotLoggedIn>                          + event<u_m::LoginAccountSteam>                                                     / checkSteam                              = state<WaitingForCheckSteam>
+
+
+
 // WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / (createAccount,possibleTopRatedPlayersChanged)                           = state<LoggedIn>
@@ -1475,7 +1515,7 @@ startGame (auto gameLobbyItr, MatchmakingData &matchmakingData)
   ws.set_option (boost::beast::websocket::stream_base::decorator ([] (boost::beast::websocket::request_type &req) { req.set (boost::beast::http::field::user_agent, std::string (BOOST_BEAST_VERSION_STRING) + " websocket-client-async"); }));
   co_await ws.async_handshake (matchmakingData.matchmakingGameEndpoint.address ().to_string () + std::to_string (matchmakingData.matchmakingGameEndpoint.port ()), "/");
   static size_t id = 0;
-  auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "sendStartGameToServer",  std::to_string (id++));
+  auto myWebSocket = std::make_shared<my_web_socket::MyWebSocket<my_web_socket::WebSocket>> (std::move (ws), "sendStartGameToServer", std::to_string (id++));
   using namespace boost::asio::experimental::awaitable_operators;
   my_web_socket::coSpawnTraced (co_await boost::asio::this_coro::executor,
                                 myWebSocket->readLoop (

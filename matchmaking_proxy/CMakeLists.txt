@@ -39,6 +39,7 @@ find_package(magic_enum)
 find_package(my_web_socket)
 find_package(confu_algorithm)
 find_package(spdlog)
+find_package(SteamworksSDK)
 target_link_libraries(
   matchmaking_proxy
   PUBLIC confu_soci::confu_soci
@@ -51,6 +52,7 @@ target_link_libraries(
          my_web_socket::my_web_socket
          confu_algorithm::confu_algorithm
          spdlog::spdlog
+         steamworks_sdk::steamworks_sdk
 )
 
 if(SSL_VERIFICATION)

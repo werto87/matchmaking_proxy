@@ -37,8 +37,9 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context{};
   thread_pool pool{ 2 };
@@ -54,7 +55,7 @@ TEST_CASE ("1000 messages from one player", "[!benchmark]")
   auto const PATH_TO_DH_File = PATH_TO_SOURCE + std::string{ "/test/cert" } + std::string{ "/dhparam.pem" };
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
-  my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) && server.gameMatchmaking ("matchmaking_proxy.db"), "test");
+  my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, fullPathToDatabase, POLLING_SLEEP_TIMER, MatchmakingOption{}, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) && server.gameMatchmaking (fullPathToDatabase), "test");
   auto messagesFromGamePlayer1 = std::vector<std::string>{};
   size_t messagesSend = 0;
   auto handleMsgFromGame = [&messagesSend, &server] (boost::asio::io_context &_ioContext, std::string const &msg, std::shared_ptr<my_web_socket::MyWebSocket<my_web_socket::SSLWebSocket>> myWebsocket)

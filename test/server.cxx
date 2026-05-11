@@ -53,8 +53,9 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context{};
   auto pool = thread_pool{ 2 };
@@ -77,7 +78,7 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
       handlecustomMessageCalled = true;
       my_web_socket::coSpawnTraced (ioContext, server.asyncStopRunning (), "test");
     };
-  my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, "matchmaking_proxy.db", POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking ("matchmaking_proxy.db"), "test");
+  my_web_socket::coSpawnTraced (ioContext, server.userMatchmaking (PATH_TO_CHAIN_FILE, PATH_TO_PRIVATE_File, PATH_TO_DH_File, fullPathToDatabase, POLLING_SLEEP_TIMER, matchmakingOption, "localhost", std::to_string (matchmakingGamePort), std::to_string (userGameViaMatchmakingPort)) || server.gameMatchmaking (fullPathToDatabase), "test");
   SECTION ("start, connect, create account, join game, leave", "[matchmaking]")
   {
     auto messagesFromGamePlayer1 = std::vector<std::string>{};
@@ -121,6 +122,7 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (fullPathToDatabase);
 }
 BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
 TEST_CASE ("Sandbox", "[.][Sandbox]")
@@ -131,9 +133,9 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
       std::terminate ();
       /* panic! the library couldn't be initialized, it is not safe to use */
     }
-  auto const pathToMatchmakingDatabase = std::filesystem::path{ PATH_TO_BINARY + std::string{ "/matchmaking_proxy.db" } };
-  database::createEmptyDatabase (pathToMatchmakingDatabase.string ());
-  database::createTables (pathToMatchmakingDatabase.string ());
+  auto const pathToMatchmakingDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (pathToMatchmakingDatabase);
+  database::createTables (pathToMatchmakingDatabase);
   using namespace boost::asio;
   auto ioContext = io_context{};
   auto pool = thread_pool{ 2 };

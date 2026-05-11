@@ -21,8 +21,9 @@ using namespace matchmaking_game;
 
 TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
@@ -30,23 +31,25 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   auto messages1 = std::vector<std::string>{};
   auto messages2 = std::vector<std::string>{};
-  auto matchmaking1 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages1] (std::string message) { messages1.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
-  auto matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages2] (std::string message) { messages2.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+  auto matchmaking1 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages1] (std::string message) { messages1.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
+  auto matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages2] (std::string message) { messages2.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
   matchmakings.emplace_back (matchmaking1);
   matchmakings.emplace_back (matchmaking2);
   REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" })));
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
   ioContext.run ();
-  auto matchmakingGameTmp = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
+  auto matchmakingGameTmp = MatchmakingGame{ { fullPathToDatabase, matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));
   REQUIRE (messages1.at (1) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1510}");
   REQUIRE (messages2.at (1) == "RatingChanged|{\"oldRating\":1500,\"newRating\":1490}");
+  std::filesystem::remove (fullPathToDatabase);
 }
 
 TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context{};
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -60,7 +63,7 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   auto matchmaking2 = std::shared_ptr<Matchmaking>{};
   auto messages2 = std::vector<std::string>{};
   auto player1Logic = [&] (auto const &) {};
-  matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+  matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
   matchmakings.push_back (matchmaking);
   auto player2Logic = [&] (auto const &msg)
     {
@@ -71,13 +74,13 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
           REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
         }
     };
-  matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+  matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
   matchmakings.push_back (matchmaking2);
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
   ioContext.run ();
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player1" })));
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player2" })));
-  auto matchmakingGameTmp = MatchmakingGame{ MatchmakingGameData{ "matchmaking_proxy.db", matchmakings, [] (auto) {} } };
+  auto matchmakingGameTmp = MatchmakingGame{ MatchmakingGameData{ fullPathToDatabase, matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "player1" }, { "player2" }, {} }));
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player1" })));
   REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::GetRatedPlayer{ "player2" })));
@@ -92,19 +95,22 @@ TEST_CASE ("SubscribeGetTopRatedPlayers game over", "[matchmaking game]")
   CHECK (messages2.at (8) == R"MyStringLiteral(RatedPlayer|{"name":"player2","rating":1490,"rank":2})MyStringLiteral");
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (fullPathToDatabase);
 }
 
 TEST_CASE ("matchmaking game custom message", "[matchmaking game]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool_{};
   std::list<std::weak_ptr<Matchmaking>> matchmakings{};
   auto gameLobbies = std::make_shared<std::list<GameLobby>> ();
   auto called = false;
-  auto matchmakingGame = MatchmakingGame{ { "matchmaking_proxy.db", matchmakings, [] (auto) {}, [&called] (std::string const &, std::string const &, MatchmakingGameData &) { called = true; } } };
+  auto matchmakingGame = MatchmakingGame{ { fullPathToDatabase, matchmakings, [] (auto) {}, [&called] (std::string const &, std::string const &, MatchmakingGameData &) { called = true; } } };
   matchmakingGame.process_event (objectToStringWithObjectName (matchmaking_game::CustomMessage{}));
   REQUIRE (called);
+  std::filesystem::remove (fullPathToDatabase);
 }

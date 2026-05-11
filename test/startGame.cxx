@@ -17,8 +17,9 @@ using namespace matchmaking_proxy;
 using namespace user_matchmaking;
 TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -47,7 +48,7 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     ioContext.run ();
@@ -55,12 +56,14 @@ TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (fullPathToDatabase);
 }
 
 TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -92,7 +95,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -111,7 +114,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -137,7 +140,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -160,7 +163,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -187,7 +190,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -205,7 +208,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -231,7 +234,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -249,7 +252,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -274,7 +277,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -288,7 +291,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -309,7 +312,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -327,7 +330,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -350,7 +353,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Messages = std::vector<std::string>{};
@@ -366,7 +369,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -392,7 +395,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -410,7 +413,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -435,7 +438,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -453,7 +456,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -463,13 +466,14 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (fullPathToDatabase);
 }
 
 TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
 {
-  auto const pathToMatchmakingDatabase = std::filesystem::path{ PATH_TO_BINARY + std::string{ "/matchmaking_proxy.db" } };
-  database::createEmptyDatabase (pathToMatchmakingDatabase.string ());
-  database::createTables (pathToMatchmakingDatabase.string ());
+  auto const pathToMatchmakingDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (pathToMatchmakingDatabase);
+  database::createTables (pathToMatchmakingDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -501,7 +505,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -520,7 +524,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -546,7 +550,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -560,7 +564,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -586,7 +590,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -600,7 +604,7 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 333 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -610,13 +614,14 @@ TEST_CASE ("2 player join quick game queue ranked", "[matchmaking]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (pathToMatchmakingDatabase);
 }
 
 TEST_CASE ("2 player join custom game", "[matchmaking]")
 {
-  auto const pathToMatchmakingDatabase = std::filesystem::path{ PATH_TO_BINARY + std::string{ "/matchmaking_proxy.db" } };
-  database::createEmptyDatabase (pathToMatchmakingDatabase.string ());
-  database::createTables (pathToMatchmakingDatabase.string ());
+  auto const pathToMatchmakingDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (pathToMatchmakingDatabase);
+  database::createTables (pathToMatchmakingDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -648,7 +653,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     auto player2Logic = [&] (std::string const &msg)
       {
@@ -673,7 +678,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -699,7 +704,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     auto player2Logic = [&] (std::string const &msg)
       {
@@ -728,7 +733,7 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -738,13 +743,14 @@ TEST_CASE ("2 player join custom game", "[matchmaking]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (pathToMatchmakingDatabase);
 }
 
 TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
 {
-  auto const pathToMatchmakingDatabase = std::filesystem::path{ PATH_TO_BINARY + std::string{ "/matchmaking_proxy.db" } };
-  database::createEmptyDatabase (pathToMatchmakingDatabase.string ());
-  database::createTables (pathToMatchmakingDatabase.string ());
+  auto const pathToMatchmakingDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (pathToMatchmakingDatabase);
+  database::createTables (pathToMatchmakingDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   auto matchmakingGame = my_web_socket::MockServer{ { boost::asio::ip::make_address ("127.0.0.1"), 0 }, { .requestStartsWithResponse = { { R"foo(StartGame)foo", R"foo(StartGameSuccess|{"gameName":"7731882c-50cd-4a7d-aa59-8f07989edb18"})foo" } } }, "MOCK_matchmaking_game", "0" };
@@ -778,7 +784,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     auto player2Logic = [&] (std::string const &msg)
       {
@@ -796,7 +802,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     auto player3Logic = [&, createGameAllreadyCalled = false] (std::string const &msg) mutable
       {
@@ -824,7 +830,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking3->disconnectFromProxy ();
           }
       };
-    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
@@ -851,7 +857,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking->disconnectFromProxy ();
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     auto player2Logic = [&] (std::string const &msg)
       {
@@ -869,7 +875,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking2->disconnectFromProxy ();
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     auto player3Logic = [&, createGameAllreadyCalled = false] (std::string const &msg) mutable
       {
@@ -901,7 +907,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             matchmaking3->disconnectFromProxy ();
           }
       };
-    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
@@ -927,7 +933,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking);
     auto player2Logic = [&] (std::string const &msg)
       {
@@ -944,7 +950,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ userGameViaMatchmakingPort } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking2);
     auto player3Logic = [&, createGameAllreadyCalled = false] (std::string const &msg) mutable
       {
@@ -971,7 +977,7 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
             messageReceived3 = true;
           }
       };
-    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 3000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase.string () });
+    matchmaking3 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player3Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::milliseconds{ 3000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), matchmakingGamePort }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), userGameViaMatchmakingPort }, pathToMatchmakingDatabase });
     matchmakings.push_back (matchmaking3);
     REQUIRE (matchmaking3->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player3", "abc" })));
     ioContext.run ();
@@ -982,12 +988,14 @@ TEST_CASE ("3 player join quick game queue not ranked", "[matchmaking]")
   }
   matchmakingGame.shutDownUsingMockServerIoContext ();
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (pathToMatchmakingDatabase);
 }
 
 TEST_CASE ("2 player join quick game game server is offline", "[matchmaking]")
 {
-  database::createEmptyDatabase ("matchmaking_proxy.db");
-  database::createTables ("matchmaking_proxy.db");
+  auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
+  database::createEmptyDatabase (fullPathToDatabase);
+  database::createTables (fullPathToDatabase);
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
@@ -1014,7 +1022,7 @@ TEST_CASE ("2 player join quick game game server is offline", "[matchmaking]")
             messageReceived = true;
           }
       };
-    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+    matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player1Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
     matchmakings.push_back (matchmaking);
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player1", "abc" })));
     auto player2Logic = [&] (auto const &msg)
@@ -1032,7 +1040,7 @@ TEST_CASE ("2 player join quick game game server is offline", "[matchmaking]")
             messageReceived2 = true;
           }
       };
-    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, "matchmaking_proxy.db" });
+    matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, player2Logic, gameLobbies, pool, MatchmakingOption{ .timeToAcceptInvite = std::chrono::seconds{ 1000 } }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
@@ -1042,4 +1050,5 @@ TEST_CASE ("2 player join quick game game server is offline", "[matchmaking]")
   }
   // matchmakingGame.shutDownUsingMockServerIoContext ();
   // userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
+  std::filesystem::remove (fullPathToDatabase);
 }

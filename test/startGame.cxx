@@ -12,7 +12,7 @@
 #include <login_matchmaking_game_shared/matchmakingGameSerialization.hxx>
 #include <login_matchmaking_game_shared/userMatchmakingSerialization.hxx>
 #include <my_web_socket/mockServer.hxx>
-
+#include <print>
 using namespace matchmaking_proxy;
 using namespace user_matchmaking;
 TEST_CASE ("playerOne joins queue and leaves", "[matchmaking]")
@@ -184,6 +184,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
         else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame|{}"))
           {
             REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (WantsToJoinGame{ true })));
+            REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false })));
           }
         else if (boost::starts_with (msg, "GameStartCanceled|{}"))
           {
@@ -199,10 +200,6 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
           {
             REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::JoinMatchMakingQueue{})));
           }
-        else if (boost::starts_with (msg, "AskIfUserWantsToJoinGame|{}"))
-          {
-            REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (WantsToJoinGame{ false })));
-          }
         else if (boost::starts_with (msg, "GameStartCanceledRemovedFromQueue|{}"))
           {
             messageReceived2 = true;
@@ -212,6 +209,7 @@ TEST_CASE ("2 player join quick game queue not ranked", "[matchmaking]")
     matchmakings.push_back (matchmaking2);
     REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "player2", "abc" })));
     ioContext.run ();
+    std::println ("{}", playerOneMessages);
     CHECK_FALSE (gameLobbies->empty ());
     CHECK (messageReceived);
     CHECK (playerOneMessages.at (3) == "GameStartCanceled|{}");

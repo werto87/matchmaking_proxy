@@ -65,7 +65,7 @@ createAccount (std::string const &accountName, std::string const &password, std:
   account.displayName = displayName;
   account.password = password;
   account.rating = startRating;
-  return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, account, true, true));
+  return confu_soci::findStruct<Account> (sql, "id", confu_soci::insertStruct (sql, account, true, true));
 }
 
 std::vector<Account>

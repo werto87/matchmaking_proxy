@@ -150,7 +150,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
   auto const POLLING_SLEEP_TIMER = std::chrono::seconds{ 2 };
   using namespace boost::asio::experimental::awaitable_operators;
   auto matchmakingOption = MatchmakingOption{};
-  matchmakingOption.handleCustomMessageFromUser = [] (std::string const &messageType, std::string const &message, MatchmakingData &matchmakingData)
+    matchmakingOption.handleCustomMessageFromUser = [] (std::string const &messageType, std::string const &message, MatchmakingData &matchmakingData)
     {
       boost::system::error_code ec{};
       auto messageAsObject = confu_json::read_json (message, ec);

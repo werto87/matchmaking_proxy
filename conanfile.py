@@ -45,7 +45,6 @@ class MatchmakingProxy(ConanFile):
             "openssl",
             "certify",
             "spdlog",
-            "steamworks_sdk",
             #deps for testing
             "modern_durak_game_shared",
             "modern_durak_game_option",

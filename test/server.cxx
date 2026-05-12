@@ -124,7 +124,7 @@ TEST_CASE ("user,matchmaking, game", "[matchmaking server]")
   userGameViaMatchmaking.shutDownUsingMockServerIoContext ();
   std::filesystem::remove (fullPathToDatabase);
 }
-BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
+BOOST_FUSION_DEFINE_STRUCT ((account_with_combinationsSolved), Account, (size_t, id) (std::string, displayName) (std::string, accountName) (std::string, password) (size_t, rating) (size_t, combinationsSolved))
 TEST_CASE ("Sandbox", "[.][Sandbox]")
 {
   if (sodium_init () < 0)
@@ -198,7 +198,7 @@ TEST_CASE ("Sandbox", "[.][Sandbox]")
                 }
             }
           if (!columnExists) sql << "ALTER TABLE Account ADD COLUMN combinationsSolved INTEGER NOT NULL DEFAULT 0";
-          if (auto accountResult = confu_soci::findStruct<account_with_combinationsSolved::Account> (sql, "accountName", combinationSolved.accountName)) confu_soci::updateStruct (sql, account_with_combinationsSolved::Account{ accountResult.value ().accountName, accountResult.value ().password, accountResult.value ().rating, accountResult.value ().combinationsSolved + 1 });
+          if (auto accountResult = confu_soci::findStruct<account_with_combinationsSolved::Account> (sql, "accountName", combinationSolved.accountName)) confu_soci::updateStruct (sql, account_with_combinationsSolved::Account{ accountResult.value ().id, accountResult.value ().displayName, accountResult.value ().accountName, accountResult.value ().password, accountResult.value ().rating, accountResult.value ().combinationsSolved + 1 });
         }
       else
         spdlog::warn ("no handler for custom message: '{}'", message);

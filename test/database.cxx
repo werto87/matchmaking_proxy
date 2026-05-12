@@ -25,12 +25,12 @@ TEST_CASE ("find top rated accounts", "[database]")
   {
     database::createEmptyDatabase (fullPathToDatabase);
     database::createTables (fullPathToDatabase);
-    database::createAccount ("aa", "myPw", fullPathToDatabase, 1600);
-    database::createAccount ("bb", "myPw", fullPathToDatabase, 1300);
-    database::createAccount ("cc", "myPw", fullPathToDatabase, 1500);
+    database::createAccount ("aa", "myPw", fullPathToDatabase, "", 1600);
+    database::createAccount ("bb", "myPw", fullPathToDatabase, "", 1300);
+    database::createAccount ("cc", "myPw", fullPathToDatabase, "", 1500);
     auto sql = soci::session{ soci::sqlite3, fullPathToDatabase };
     auto result = confu_soci::findStructsOrderBy<database::Account> (sql, 100, "rating", confu_soci::OrderMethod::Descending);
-    auto expectedResult = std::vector<database::Account>{ { "aa", "myPw", 1600 }, { "cc", "myPw", 1500 }, { "bb", "myPw", 1300 } };
+    auto expectedResult = std::vector<database::Account>{ { 0, "", "aa", "myPw", 1600 }, { 0, "", "cc", "myPw", 1500 }, { 0, "", "bb", "myPw", 1300 } };
     CHECK (result == expectedResult);
   }
   std::filesystem::remove (fullPathToDatabase);

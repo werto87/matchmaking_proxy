@@ -5,7 +5,7 @@
 #include <boost/optional.hpp>
 #include <filesystem>
 
-BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy::database), Account, (std::string, accountName) (std::string, password) (size_t, rating))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy::database), Account, (size_t, id) (std::string, displayName) (std::string, accountName) (std::string, password) (size_t, rating))
 namespace matchmaking_proxy
 {
 namespace database
@@ -20,7 +20,8 @@ std::vector<Account> getTopRatedAccounts (uint64_t count, std::string const &ful
 
 boost::optional<std::tuple<Account, uint64_t>> getRatingAndRankForName (std::string const &name, std::string const &fullPathIncludingDatabaseName);
 
-boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, size_t startRating = 1500);
+boost::optional<Account> createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, std::string const &displayName = "", size_t startRating = 1500);
+
 }
 }
 #endif /* B86FE02F_B7D0_4435_9031_A334C305B294 */

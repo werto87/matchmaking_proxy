@@ -6,9 +6,9 @@
 #include <soci/error.h>
 #include <soci/session.h>
 #include <soci/sqlite3/soci-sqlite3.h>
+#include <spdlog/spdlog.h>
 #include <sqlite3.h>
 #include <stdio.h>
-#include <spdlog/spdlog.h>
 
 namespace matchmaking_proxy
 {
@@ -23,7 +23,7 @@ createEmptyDatabase (std::string const &fullPathIncludingDatabaseName)
   rc = sqlite3_open (fullPathIncludingDatabaseName.c_str (), &db);
   if (rc)
     {
-      spdlog::error("Can't open database: {}", sqlite3_errmsg(db));
+      spdlog::error ("Can't open database: {}", sqlite3_errmsg (db));
       return;
     }
   sqlite3_close (db);
@@ -52,15 +52,20 @@ createTables (std::string const &fullPathIncludingDatabaseName)
     }
   catch (soci::soci_error const &error)
     {
-      spdlog::error("{}", error.get_error_message());
+      spdlog::error ("{}", error.get_error_message ());
     }
 }
 
 boost::optional<Account>
-createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, size_t startRating)
+createAccount (std::string const &accountName, std::string const &password, std::string const &fullPathIncludingDatabaseName, std::string const &displayName, size_t startRating)
 {
   soci::session sql (soci::sqlite3, fullPathIncludingDatabaseName.c_str ());
-  return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, Account{ accountName, password, startRating }, true));
+  auto account = Account{};
+  account.accountName = accountName;
+  account.displayName = displayName;
+  account.password = password;
+  account.rating = startRating;
+  return confu_soci::findStruct<Account> (sql, "accountName", confu_soci::insertStruct (sql, account, true, true));
 }
 
 std::vector<Account>

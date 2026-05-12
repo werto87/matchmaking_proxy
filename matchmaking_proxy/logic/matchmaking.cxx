@@ -37,6 +37,9 @@ BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ProxyToGame, )
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SendMessageToUser, (std::string, msg))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), PasswordDoesNotMatch, (std::string, accountName))
 BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), ConnectionToGameLost, )
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SteamParams, (std::string, result) (std::string, steamid) (std::string, ownersteamid) (bool, vacbanned) (bool, publisherbanned))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SteamError, (size_t, errorcode) (std::string, errordesc))
+BOOST_FUSION_DEFINE_STRUCT ((matchmaking_proxy), SteamPlayer, (std::string, steamid) (int, communityvisibilitystate) (int, profilestate) (std::string, personaname) (std::string, profileurl) (std::string, avatar) (std::string, avatarmedium) (std::string, avatarfull) (std::string, avatarhash) (std::int64_t, lastlogoff) (int, personastate) (std::string, primaryclanid) (std::int64_t, timecreated) (int, personastateflags) (std::string, gameextrainfo) (std::string, gameid))
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
@@ -98,6 +101,20 @@ struct WaitingForCheckSteam
 {
 };
 
+struct SteamLoginSuccess
+{
+  std::string accountName{};
+};
+struct SteamLoginError
+{
+  std::string error{};
+};
+
+struct SteamLoginSuccessAccountCreated
+{
+  std::string accountName{};
+};
+
 boost::asio::awaitable<void> startGame (auto gameLobbyItr, MatchmakingData &matchmakingData);
 
 template <typename Matchmaking, typename Event>
@@ -140,19 +157,19 @@ doCheckPassword (auto loginAccountObject, auto &&sm, auto &&deps, auto &&subs)
     }
 }
 
-boost::asio::awaitable<void>
-doCheckSteam (user_matchmaking::LoginAccountSteam loginAccountSteam, auto &&sm, auto &&deps, auto &&subs)
+boost::asio::awaitable<boost::json::object>
+fetchSteamAuth (std::string steamApiKey, uint32_t gameId, std::string steamTicket)
 {
   using namespace boost::beast;
   using namespace boost::asio;
-  auto &matchmakingData = aux::get<MatchmakingData &> (deps);
   boost::asio::ssl::context ctx (boost::asio::ssl::context::tls);
-  auto connection = boost::beast::ssl_stream<boost::beast::tcp_stream>{ matchmakingData.ioContext, ctx };
+  auto executor = co_await this_coro::executor;
+  auto connection = boost::beast::ssl_stream<boost::beast::tcp_stream>{ executor, ctx };
   get_lowest_layer (connection).expires_never ();
   std::string const host = "api.steampowered.com";
   std::string const port = "443";
-  std::string target = std::format ("/ISteamUserAuth/AuthenticateUserTicket/v1/?key={}&appid={}&ticket={}", "820595D129879D30B2FE54427168CFEC", 4249930, loginAccountSteam.ticket);
-  boost::asio::ip::tcp::resolver resolver (matchmakingData.ioContext);
+  std::string target = std::format ("/ISteamUserAuth/AuthenticateUserTicket/v1/?key={}&appid={}&ticket={}", steamApiKey, gameId, steamTicket);
+  boost::asio::ip::tcp::resolver resolver (executor);
   auto results = co_await resolver.async_resolve (host, port, boost::asio::use_awaitable);
   co_await get_lowest_layer (connection).async_connect (results, use_awaitable);
   co_await connection.async_handshake (ssl::stream_base::client, use_awaitable);
@@ -163,8 +180,70 @@ doCheckSteam (user_matchmaking::LoginAccountSteam loginAccountSteam, auto &&sm, 
   flat_buffer buffer;
   http::response<http::string_body> response;
   co_await http::async_read (connection, buffer, response, use_awaitable);
-  // send message to steam
-  std::cout << response.body() << std::endl;
+  co_return boost::json::parse (response.body ()).as_object ()["response"].as_object ();
+}
+
+boost::asio::awaitable<boost::json::object>
+getPlayerSummaries (std::string steamApiKey, std::string steamId)
+{
+  using namespace boost::beast;
+  using namespace boost::asio;
+  boost::asio::ssl::context ctx (boost::asio::ssl::context::tls);
+  auto executor = co_await this_coro::executor;
+  auto connection = boost::beast::ssl_stream<boost::beast::tcp_stream>{ executor, ctx };
+  get_lowest_layer (connection).expires_never ();
+  std::string const host = "api.steampowered.com";
+  std::string const port = "443";
+  std::string target = std::format ("/ISteamUser/GetPlayerSummaries/v2/?key={}&steamids={}", steamApiKey, steamId);
+  boost::asio::ip::tcp::resolver resolver (executor);
+  auto results = co_await resolver.async_resolve (host, port, boost::asio::use_awaitable);
+  co_await get_lowest_layer (connection).async_connect (results, use_awaitable);
+  co_await connection.async_handshake (ssl::stream_base::client, use_awaitable);
+  boost::beast::http::request<http::string_body> req{ http::verb::get, target, 11 };
+  req.set (http::field::host, "api.steampowered.com");
+  req.set (http::field::user_agent, "auth-server");
+  co_await http::async_write (connection, req, use_awaitable);
+  flat_buffer buffer;
+  http::response<http::string_body> response;
+  co_await http::async_read (connection, buffer, response, use_awaitable);
+  co_return boost::json::parse (response.body ()).as_object ()["response"].as_object ();
+}
+
+boost::asio::awaitable<void>
+doCheckSteam (user_matchmaking::LoginAccountSteam loginAccountSteam, auto &&sm, auto &&deps, auto &&subs)
+{
+  using namespace boost::beast;
+  using namespace boost::asio;
+  auto &matchmakingData = aux::get<MatchmakingData &> (deps);
+  auto const responseJson = co_await fetchSteamAuth (matchmakingData.matchmakingOption.steamApiKey, matchmakingData.matchmakingOption.gameId, loginAccountSteam.ticket);
+
+  if (responseJson.contains ("params"))
+    {
+      auto steamParams = confu_json::to_object<SteamParams> (responseJson.at ("params"));
+      auto playerSummaries = co_await getPlayerSummaries (matchmakingData.matchmakingOption.steamApiKey, steamParams.steamid);
+      auto steamPlayer = SteamPlayer{};
+      if (playerSummaries.contains ("players"))
+        {
+          steamPlayer = confu_json::to_object<SteamPlayer> (playerSummaries.at ("players").as_array ().at (0));
+        }
+      soci::session sql (soci::sqlite3, matchmakingData.fullPathIncludingDatabaseName.string ());
+      if (auto account = confu_soci::findStruct<database::Account> (sql, "accountName", steamParams.steamid))
+        {
+          account->displayName = std::format ("{}#{}", steamPlayer.personaname, account->id);
+          confu_soci::updateStruct (sql, account.value ());
+          sm.process_event (SteamLoginSuccess{ steamParams.steamid }, deps, subs);
+        }
+      else
+        {
+          database::createAccount (steamParams.steamid, "", matchmakingData.fullPathIncludingDatabaseName.string (), std::format ("{}#{}", steamPlayer.personaname, account->id));
+          sm.process_event (SteamLoginSuccessAccountCreated{ steamParams.steamid }, deps, subs);
+        }
+    }
+  else if (responseJson.contains ("error"))
+    {
+      auto steamError = confu_json::to_object<SteamError> (responseJson.at ("error"));
+      sm.process_event (SteamLoginError{ steamError.errordesc }, deps, subs);
+    }
 }
 
 boost::asio::awaitable<void>
@@ -953,6 +1032,8 @@ auto const accountInDatabase = [] (auto const &typeWithAccountName, MatchmakingD
     return confu_soci::findStruct<database::Account> (sql, "accountName", typeWithAccountName.accountName).has_value ();
   };
 
+auto const emptyPassword = [] (auto const &typeWithPassword) -> bool { return typeWithPassword.password.empty (); };
+
 auto const wantsToRelog = [] (user_matchmaking::RelogTo const &relogTo) -> bool { return relogTo.wantsToRelog; };
 
 std::string
@@ -1011,7 +1092,11 @@ auto const gameLobbyControlledByUsers = [] (auto const &typeWithAccountName, Mat
     return userGameLobby->lobbyAdminType == GameLobby::LobbyType::FirstUserInLobbyUsers;
   };
 
+auto const loginAccountSteamError = [] (SteamLoginError const &loginAccountSteamErrorEv, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ "steam authentication error so we do have no account name", loginAccountSteamErrorEv.error })); };
+
+auto const createAccountErrorEmptyPassword = [] (user_matchmaking::CreateAccount const &createAccountEv, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::CreateAccountError{ createAccountEv.accountName, "Empty Password is not allowed" })); };
 auto const loginAccountErrorPasswordAccountName = [] (auto const &objectWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ objectWithAccountName.accountName, "Incorrect Username or Password" })); };
+auto const loginAccountErrorEmptyPassword = [] (auto const &objectWithAccountName, MatchmakingData &matchmakingData) { matchmakingData.sendMsgToUser (objectToStringWithObjectName (user_matchmaking::LoginAccountError{ objectWithAccountName.accountName, "Empty Password is not allowed" })); };
 auto const loginAccountSuccess = [] (auto const &typeWithAccountName, MatchmakingData &matchmakingData)
   {
     matchmakingData.user.accountName = typeWithAccountName.accountName;
@@ -1260,14 +1345,17 @@ public:
     // clang-format off
   return make_transition_table(
 // NotLoggedIn-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-* state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
+* state<NotLoggedIn>                          + event<u_m::CreateAccount>                  [ emptyPassword ]                      / createAccountErrorEmptyPassword         
+, state<NotLoggedIn>                          + event<u_m::CreateAccount>                                                         / hashPassword                            = state<WaitingForPasswordHashed>
 , state<NotLoggedIn>                          + event<u_m::LoginAsGuest>                                                          / loginAsGuest                            = state<LoggedIn>
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ not accountInDatabase ]              / loginAccountErrorPasswordAccountName
+, state<NotLoggedIn>                          + event<u_m::LoginAccount>                   [ emptyPassword ]                      / loginAccountErrorEmptyPassword    
 , state<NotLoggedIn>                          + event<u_m::LoginAccount>                                                          / checkPassword                           = state<WaitingForPasswordCheck>
 , state<NotLoggedIn>                          + event<u_m::LoginAccountSteam>                                                     / checkSteam                              = state<WaitingForCheckSteam>
-
-
-
+// WaitingForCheckSteam---------------------------------------------------------------------------------------------------------------------------------------------------
+, state<WaitingForCheckSteam>                 + event<SteamLoginSuccessAccountCreated>                                            / (loginAccountSuccess,possibleTopRatedPlayersChanged)= state<LoggedIn>
+, state<WaitingForCheckSteam>                 + event<SteamLoginSuccess>                                                          / loginAccountSuccess                     = state<LoggedIn>
+, state<WaitingForCheckSteam>                 + event<SteamLoginError>                                                            / loginAccountSteamError                  = state<NotLoggedIn>
 // WaitingForPasswordHashed---------------------------------------------------------------------------------------------------------------------------------------------------
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                      [ accountInDatabase ]                  / createAccountErrorAccountAlreadyCreated = state<NotLoggedIn>
 , state<WaitingForPasswordHashed>             + event<PasswordHashed>                                                             / (createAccount,possibleTopRatedPlayersChanged)                           = state<LoggedIn>

@@ -35,8 +35,8 @@ TEST_CASE ("game sends message to matchmaking", "[matchmaking game]")
   auto matchmaking2 = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages2] (std::string message) { messages2.push_back (std::move (message)); }, gameLobbies, pool_, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
   matchmakings.emplace_back (matchmaking1);
   matchmakings.emplace_back (matchmaking2);
-  REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "" })));
-  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "" })));
+  REQUIRE (matchmaking1->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "a", "abc" })));
+  REQUIRE (matchmaking2->processEvent (objectToStringWithObjectName (user_matchmaking::CreateAccount{ "b", "abc" })));
   ioContext.run ();
   auto matchmakingGameTmp = MatchmakingGame{ { fullPathToDatabase, matchmakings, [] (auto) {} } };
   matchmakingGameTmp.process_event (objectToStringWithObjectName (GameOver{ {}, true, { "a" }, { "b" }, {} }));

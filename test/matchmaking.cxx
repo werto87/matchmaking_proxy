@@ -40,6 +40,12 @@ TEST_CASE ("matchmaking NotLoggedIn -> LoggedIn", "[matchmaking]")
     ioContext.run ();
     CHECK (R"foo(LoginAccountSuccess|{"accountName":"oldAcc"})foo" == messages.at (0));
   }
+  // SECTION ("LoginAccountSteam", "[matchmaking]")
+  // {
+  // TODO find a way to test this or mock this
+  // REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LoginAccountSteam{})));
+  // ioContext.run ();
+  // }
   SECTION ("LoginAsGuest", "[matchmaking]")
   {
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LoginAsGuest{})));
@@ -62,6 +68,19 @@ TEST_CASE ("matchmaking NotLoggedIn -> NotLoggedIn", "[matchmaking]")
   auto messages = std::vector<std::string>{};
   auto matchmaking = std::make_shared<Matchmaking> (MatchmakingData{ ioContext, matchmakings, [&messages] (std::string message) { messages.push_back (std::move (message)); }, gameLobbies, pool, MatchmakingOption{}, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 44444 }, boost::asio::ip::tcp::endpoint{ boost::asio::ip::make_address ("127.0.0.1"), 33333 }, fullPathToDatabase });
   matchmakings.emplace_back (matchmaking);
+  SECTION ("CreateAccount empty pw", "[matchmaking]")
+  {
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "" })));
+    ioContext.run ();
+    CHECK (R"foo(CreateAccountError|{"accountName":"newAcc","error":"Empty Password is not allowed"})foo" == messages.at (0));
+  }
+  SECTION ("LoginAccount empty pw", "[matchmaking]")
+  {
+    database::createAccount ("oldAcc", "$argon2id$v=19$m=8,t=1,p=1$+Z8rjMS3CYbgMdG+JRgc6A$IAmEYrfE66+wsRmzeyPkyZ+xUJn+ybnx0HzKykO9NeY", fullPathToDatabase);
+    REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (LoginAccount{ "oldAcc", "" })));
+    ioContext.run ();
+    CHECK (R"foo(LoginAccountError|{"accountName":"oldAcc","error":"Empty Password is not allowed"})foo" == messages.at (0));
+  }
   SECTION ("CreateAccountCancel", "[matchmaking]")
   {
     REQUIRE (matchmaking->processEvent (objectToStringWithObjectName (CreateAccount{ "newAcc", "abc" })));
@@ -440,10 +459,10 @@ TEST_CASE ("matchmaking GetTopRatedPlayers", "[matchmaking]")
   auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
   database::createEmptyDatabase (fullPathToDatabase);
   database::createTables (fullPathToDatabase);
-  database::createAccount ("aa", "", fullPathToDatabase, 0);
-  database::createAccount ("bb", "", fullPathToDatabase, 1);
-  database::createAccount ("cc", "", fullPathToDatabase, 3);
-  database::createAccount ("dd", "", fullPathToDatabase, 42);
+  database::createAccount ("aa", "", fullPathToDatabase, "", 0);
+  database::createAccount ("bb", "", fullPathToDatabase, "", 1);
+  database::createAccount ("cc", "", fullPathToDatabase, "", 3);
+  database::createAccount ("dd", "", fullPathToDatabase, "", 42);
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};
@@ -479,10 +498,10 @@ TEST_CASE ("matchmaking GetTopRatedPlayers same rating", "[matchmaking]")
   auto const fullPathToDatabase = std::string{ PATH_TO_BINARY } + std::format ("/{}.db", boost::uuids::to_string (boost::uuids::random_generator () ()));
   database::createEmptyDatabase (fullPathToDatabase);
   database::createTables (fullPathToDatabase);
-  database::createAccount ("aa", "", fullPathToDatabase, 0);
-  database::createAccount ("bb", "", fullPathToDatabase, 1);
-  database::createAccount ("cc", "", fullPathToDatabase, 42);
-  database::createAccount ("dd", "", fullPathToDatabase, 42);
+  database::createAccount ("aa", "", fullPathToDatabase, "", 0);
+  database::createAccount ("bb", "", fullPathToDatabase, "", 1);
+  database::createAccount ("cc", "", fullPathToDatabase, "", 42);
+  database::createAccount ("dd", "", fullPathToDatabase, "", 42);
   using namespace boost::asio;
   auto ioContext = io_context ();
   boost::asio::thread_pool pool{};

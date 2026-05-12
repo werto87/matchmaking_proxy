@@ -234,7 +234,9 @@ doCheckSteam (user_matchmaking::LoginAccountSteam loginAccountSteam, auto &&sm, 
         }
       else
         {
-          database::createAccount (steamParams.steamid, "", matchmakingData.fullPathIncludingDatabaseName.string (), std::format ("{}#{}", steamPlayer.personaname, account->id));
+          account = database::createAccount (steamParams.steamid, "", matchmakingData.fullPathIncludingDatabaseName.string (), "");
+          account->displayName = std::format ("{}#{}", steamPlayer.personaname, account->id);
+          confu_soci::updateStruct (sql, account.value ());
           sm.process_event (SteamLoginSuccessAccountCreated{ steamParams.steamid }, deps, subs);
         }
     }

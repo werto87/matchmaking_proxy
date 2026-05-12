@@ -23,7 +23,6 @@
 #include <my_web_socket/myWebSocket.hxx>
 #include <ranges>
 #include <spdlog/spdlog.h>
-#include <steam/steam_api.h>
 
 using namespace boost::sml;
 
